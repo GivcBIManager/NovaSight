@@ -1,0 +1,283 @@
+{#
+NovaSight ClickHouse Alter Table Template
+===========================================
+
+Generates ALTER TABLE statements for ClickHouse tables.
+
+Template Variables:
+- table_name: Name of the table to alter (required)
+- database: Database name (default: 'default')
+- operation: Type of alteration - add_column, drop_column, modify_column, 
+             rename_column, add_index, drop_index, modify_ttl, update, delete,
+             modify_setting, modify_order_by, clear_column, materialize_column (required)
+- columns: List of column operations (for column operations)
+- index: Index definition (for index operations)
+- ttl: TTL expression (for TTL operations)
+- where_clause: WHERE clause for UPDATE/DELETE (required for those operations)
+- settings: Settings to modify
+- if_exists: Add IF EXISTS clause (default: true)
+
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+-- ============================================================================
+-- NovaSight Generated ClickHouse ALTER TABLE: {{ table_name }}
+-- Operation: {{ operation }}
+-- Generated: {{ _generated_at | default(now().isoformat()) }}
+-- Template: clickhouse/alter_table.sql.j2 v{{ _template_version | default('1.0.0') }}
+-- WARNING: Auto-generated file - do not edit manually
+-- ============================================================================
+
+{% set db = database | default('default') %}
+{% set full_table_name = db ~ '.' ~ table_name %}
+{% set use_if_exists = if_exists | default(true) %}
+
+{% if operation == 'add_column' %}
+-- Add new columns to table
+ALTER TABLE {{ full_table_name }}
+{% for col in columns %}
+    ADD COLUMN {% if use_if_exists %}IF NOT EXISTS {% endif %}{{ col.name | sql_safe }} {% if col.nullable | default(false) %}Nullable({{ col.type }}){% else %}{{ col.type }}{% endif %}
+    {%- if col.default is defined and col.default %} DEFAULT {{ col.default }}{% endif %}
+    {%- if col.codec is defined and col.codec %} CODEC({{ col.codec }}){% endif %}
+    {%- if col.ttl is defined and col.ttl %} TTL {{ col.ttl }}{% endif %}
+    {%- if col.after is defined and col.after %} AFTER {{ col.after | sql_safe }}{% endif %}
+    {%- if col.first is defined and col.first %} FIRST{% endif %}
+    {%- if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'drop_column' %}
+-- Drop columns from table
+ALTER TABLE {{ full_table_name }}
+{% for col in columns %}
+    DROP COLUMN {% if use_if_exists %}IF EXISTS {% endif %}{{ col.name | sql_safe }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'modify_column' %}
+-- Modify column definitions
+ALTER TABLE {{ full_table_name }}
+{% for col in columns %}
+    MODIFY COLUMN {% if use_if_exists %}IF EXISTS {% endif %}{{ col.name | sql_safe }} {% if col.nullable | default(false) %}Nullable({{ col.type }}){% else %}{{ col.type }}{% endif %}
+    {%- if col.default is defined %} DEFAULT {{ col.default }}{% endif %}
+    {%- if col.codec is defined and col.codec %} CODEC({{ col.codec }}){% endif %}
+    {%- if col.ttl is defined and col.ttl %} TTL {{ col.ttl }}{% endif %}
+    {%- if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'rename_column' %}
+-- Rename columns
+ALTER TABLE {{ full_table_name }}
+{% for col in columns %}
+    RENAME COLUMN {% if use_if_exists %}IF EXISTS {% endif %}{{ col.old_name | sql_safe }} TO {{ col.new_name | sql_safe }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'clear_column' %}
+-- Clear column data (set to default values)
+ALTER TABLE {{ full_table_name }}
+{% for col in columns %}
+    CLEAR COLUMN {% if use_if_exists %}IF EXISTS {% endif %}{{ col.name | sql_safe }}
+    {%- if col.partition is defined and col.partition %} IN PARTITION {{ col.partition }}{% endif %}
+    {%- if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'materialize_column' %}
+-- Materialize column (compute values for existing rows)
+ALTER TABLE {{ full_table_name }}
+{% for col in columns %}
+    MATERIALIZE COLUMN {{ col.name | sql_safe }}
+    {%- if col.partition is defined and col.partition %} IN PARTITION {{ col.partition }}{% endif %}
+    {%- if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'add_index' %}
+-- Add secondary indexes
+ALTER TABLE {{ full_table_name }}
+{% for idx in indexes %}
+    ADD INDEX {% if use_if_exists %}IF NOT EXISTS {% endif %}{{ idx.name | sql_safe }} {{ idx.expression }}
+    TYPE {{ idx.type | default('minmax') }}
+    GRANULARITY {{ idx.granularity | default(3) }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'drop_index' %}
+-- Drop secondary indexes
+ALTER TABLE {{ full_table_name }}
+{% for idx in indexes %}
+    DROP INDEX {% if use_if_exists %}IF EXISTS {% endif %}{{ idx.name | sql_safe }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'materialize_index' %}
+-- Materialize index for existing data
+ALTER TABLE {{ full_table_name }}
+{% for idx in indexes %}
+    MATERIALIZE INDEX {{ idx.name | sql_safe }}
+    {%- if idx.partition is defined and idx.partition %} IN PARTITION {{ idx.partition }}{% endif %}
+    {%- if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'modify_ttl' %}
+-- Modify table TTL
+ALTER TABLE {{ full_table_name }}
+    MODIFY TTL {{ ttl }};
+
+{% elif operation == 'remove_ttl' %}
+-- Remove table TTL
+ALTER TABLE {{ full_table_name }}
+    REMOVE TTL;
+
+{% elif operation == 'modify_setting' %}
+-- Modify table settings
+ALTER TABLE {{ full_table_name }}
+    MODIFY SETTING
+{% for key, value in settings.items() %}
+    {{ key }} = {{ value }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'reset_setting' %}
+-- Reset table settings to defaults
+ALTER TABLE {{ full_table_name }}
+    RESET SETTING {{ settings | join(', ') }};
+
+{% elif operation == 'modify_order_by' %}
+-- Modify ORDER BY (only possible if new key is a prefix of old key or table is empty)
+ALTER TABLE {{ full_table_name }}
+    MODIFY ORDER BY ({{ order_by | join(', ') }});
+
+{% elif operation == 'update' %}
+-- Update rows (mutation)
+ALTER TABLE {{ full_table_name }}
+    UPDATE
+{% for col_name, col_value in updates.items() %}
+    {{ col_name | sql_safe }} = {{ col_value }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    WHERE {{ where_clause }};
+
+{% elif operation == 'delete' %}
+-- Delete rows (mutation)
+ALTER TABLE {{ full_table_name }}
+    DELETE WHERE {{ where_clause }};
+
+{% elif operation == 'add_constraint' %}
+-- Add check constraint
+ALTER TABLE {{ full_table_name }}
+{% for constraint in constraints %}
+    ADD CONSTRAINT {% if use_if_exists %}IF NOT EXISTS {% endif %}{{ constraint.name | sql_safe }}
+    CHECK {{ constraint.expression }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'drop_constraint' %}
+-- Drop check constraint
+ALTER TABLE {{ full_table_name }}
+{% for constraint in constraints %}
+    DROP CONSTRAINT {% if use_if_exists %}IF EXISTS {% endif %}{{ constraint.name | sql_safe }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'add_projection' %}
+-- Add projection (see projections.sql.j2 for detailed projection templates)
+ALTER TABLE {{ full_table_name }}
+{% for proj in projections %}
+    ADD PROJECTION {% if use_if_exists %}IF NOT EXISTS {% endif %}{{ proj.name | sql_safe }}
+    ({{ proj.definition }}){% if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'drop_projection' %}
+-- Drop projection
+ALTER TABLE {{ full_table_name }}
+{% for proj in projections %}
+    DROP PROJECTION {% if use_if_exists %}IF EXISTS {% endif %}{{ proj.name | sql_safe }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'materialize_projection' %}
+-- Materialize projection for existing data
+ALTER TABLE {{ full_table_name }}
+{% for proj in projections %}
+    MATERIALIZE PROJECTION {{ proj.name | sql_safe }}
+    {%- if proj.partition is defined and proj.partition %} IN PARTITION {{ proj.partition }}{% endif %}
+    {%- if not loop.last %},{% endif %}
+
+{% endfor %}
+;
+
+{% elif operation == 'freeze_partition' %}
+-- Freeze partition for backup
+ALTER TABLE {{ full_table_name }}
+    FREEZE PARTITION {{ partition }}
+    {%- if backup_name is defined and backup_name %} WITH NAME '{{ backup_name }}'{% endif %};
+
+{% elif operation == 'unfreeze_partition' %}
+-- Unfreeze partition
+ALTER TABLE {{ full_table_name }}
+    UNFREEZE PARTITION {{ partition }}
+    {%- if backup_name is defined and backup_name %} WITH NAME '{{ backup_name }}'{% endif %};
+
+{% elif operation == 'drop_partition' %}
+-- Drop partition
+ALTER TABLE {{ full_table_name }}
+    DROP PARTITION {{ partition }};
+
+{% elif operation == 'detach_partition' %}
+-- Detach partition
+ALTER TABLE {{ full_table_name }}
+    DETACH PARTITION {{ partition }};
+
+{% elif operation == 'attach_partition' %}
+-- Attach partition
+ALTER TABLE {{ full_table_name }}
+    ATTACH PARTITION {{ partition }}
+    {%- if from_table is defined and from_table %} FROM {{ db }}.{{ from_table | sql_safe }}{% endif %};
+
+{% elif operation == 'move_partition' %}
+-- Move partition to another table or disk
+ALTER TABLE {{ full_table_name }}
+{% if target_table is defined and target_table %}
+    MOVE PARTITION {{ partition }} TO TABLE {{ db }}.{{ target_table | sql_safe }};
+{% else %}
+    MOVE PARTITION {{ partition }} TO {{ target_type | upper }} '{{ target_name }}';
+{% endif %}
+
+{% elif operation == 'replace_partition' %}
+-- Replace partition from another table
+ALTER TABLE {{ full_table_name }}
+    REPLACE PARTITION {{ partition }} FROM {{ db }}.{{ source_table | sql_safe }};
+
+{% elif operation == 'comment' %}
+-- Modify table comment
+ALTER TABLE {{ full_table_name }}
+    MODIFY COMMENT '{{ comment | sql_escape }}';
+
+{% else %}
+-- Unknown operation: {{ operation }}
+-- Please use one of: add_column, drop_column, modify_column, rename_column,
+-- clear_column, materialize_column, add_index, drop_index, materialize_index,
+-- modify_ttl, remove_ttl, modify_setting, reset_setting, modify_order_by,
+-- update, delete, add_constraint, drop_constraint, add_projection,
+-- drop_projection, materialize_projection, freeze_partition, unfreeze_partition,
+-- drop_partition, detach_partition, attach_partition, move_partition,
+-- replace_partition, comment
+{% endif %}

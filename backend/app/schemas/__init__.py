@@ -12,6 +12,18 @@ from app.schemas.dag_schemas import (
     TaskConfigCreate,
     DagConfigResponse,
 )
+from app.schemas.connection_schemas import (
+    ConnectionCreateSchema,
+    ConnectionUpdateSchema,
+    ConnectionTestSchema,
+    ConnectionResponseSchema,
+    ConnectionTestResultSchema,
+    ConnectionListQuerySchema,
+    ConnectionListResponseSchema,
+    SchemaResponseSchema,
+    TableSchema,
+    ColumnSchema,
+)
 
 __all__ = [
     "LoginRequest",
@@ -20,4 +32,14 @@ __all__ = [
     "DagConfigUpdate",
     "TaskConfigCreate",
     "DagConfigResponse",
+    "ConnectionCreateSchema",
+    "ConnectionUpdateSchema",
+    "ConnectionTestSchema",
+    "ConnectionResponseSchema",
+    "ConnectionTestResultSchema",
+    "ConnectionListQuerySchema",
+    "ConnectionListResponseSchema",
+    "SchemaResponseSchema",
+    "TableSchema",
+    "ColumnSchema",
 ]

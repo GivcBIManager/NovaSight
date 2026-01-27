@@ -1,0 +1,190 @@
+{#
+NovaSight ClickHouse Tenant Database Template
+===============================================
+
+Creates a tenant-specific ClickHouse database with base tables.
+
+Template Variables:
+- tenant_id: UUID of the tenant (required)
+- tenant_slug: URL-safe tenant identifier (required)
+- retention_days: Data retention period in days (default: 730)
+- buffer_settings: Buffer table configuration (optional)
+
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+-- ============================================================================
+-- NovaSight Generated ClickHouse Tenant Database: tenant_{{ tenant_slug | sql_safe }}
+-- Generated: {{ _generated_at | default(now().isoformat()) }}
+-- Template: clickhouse/tenant_database.sql.j2 v{{ _template_version | default('1.0.0') }}
+-- WARNING: Auto-generated file - do not edit manually
+-- ============================================================================
+
+{% set db_name = 'tenant_' ~ (tenant_slug | sql_safe) %}
+{% set retention = retention_days | default(730) %}
+
+-- =============================================================================
+-- Database Creation
+-- =============================================================================
+CREATE DATABASE IF NOT EXISTS {{ db_name }}
+ENGINE = Atomic
+COMMENT 'NovaSight tenant database for {{ tenant_slug }} (ID: {{ tenant_id }})';
+
+-- =============================================================================
+-- Core Events Table
+-- =============================================================================
+-- Primary table for all ingested events with optimized partitioning and TTL
+CREATE TABLE IF NOT EXISTS {{ db_name }}.events
+(
+    -- Primary identifiers
+    event_id UUID DEFAULT generateUUIDv4(),
+    event_type LowCardinality(String),
+    
+    -- Temporal columns
+    event_timestamp DateTime64(3),
+    event_date Date DEFAULT toDate(event_timestamp),
+    
+    -- User/session tracking
+    user_id String,
+    session_id String,
+    
+    -- Flexible properties (JSON)
+    properties String CODEC(ZSTD(3)),
+    
+    -- Metadata
+    source_table LowCardinality(String) DEFAULT '',
+    source_connection LowCardinality(String) DEFAULT '',
+    ingestion_job_id String DEFAULT '',
+    
+    -- Audit columns
+    created_at DateTime DEFAULT now(),
+    _loaded_at DateTime64(3) DEFAULT now64(3)
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(event_date)
+ORDER BY (event_type, event_timestamp, event_id)
+PRIMARY KEY (event_type, event_timestamp)
+TTL event_date + INTERVAL {{ retention }} DAY
+SETTINGS 
+    index_granularity = 8192,
+    ttl_only_drop_parts = 1;
+
+-- =============================================================================
+-- Events Buffer Table
+-- =============================================================================
+-- Buffer table for high-throughput ingestion
+CREATE TABLE IF NOT EXISTS {{ db_name }}.events_buffer
+AS {{ db_name }}.events
+ENGINE = Buffer(
+    '{{ db_name }}', 'events',
+    {{ buffer_settings.num_layers | default(16) }},      -- num_layers
+    {{ buffer_settings.min_time | default(10) }}, {{ buffer_settings.max_time | default(100) }},    -- min/max time (seconds)
+    {{ buffer_settings.min_rows | default(10000) }}, {{ buffer_settings.max_rows | default(1000000) }},     -- min/max rows
+    {{ buffer_settings.min_bytes | default(10000000) }}, {{ buffer_settings.max_bytes | default(100000000) }}  -- min/max bytes
+);
+
+-- =============================================================================
+-- Ingestion Audit Table
+-- =============================================================================
+-- Tracks all data ingestion runs
+CREATE TABLE IF NOT EXISTS {{ db_name }}.ingestion_audit
+(
+    audit_id UUID DEFAULT generateUUIDv4(),
+    job_name String,
+    job_run_id String,
+    source_table String,
+    target_table String,
+    
+    -- Metrics
+    rows_read UInt64 DEFAULT 0,
+    rows_written UInt64 DEFAULT 0,
+    bytes_processed UInt64 DEFAULT 0,
+    
+    -- Timing
+    started_at DateTime64(3),
+    completed_at DateTime64(3),
+    duration_ms UInt64 DEFAULT 0,
+    
+    -- Status
+    status LowCardinality(String) DEFAULT 'running',
+    error_message String DEFAULT '',
+    
+    -- Metadata
+    created_at DateTime DEFAULT now()
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(started_at)
+ORDER BY (job_name, started_at, audit_id)
+TTL started_at + INTERVAL {{ retention }} DAY
+SETTINGS index_granularity = 8192;
+
+-- =============================================================================
+-- Data Quality Metrics Table
+-- =============================================================================
+-- Stores data quality check results
+CREATE TABLE IF NOT EXISTS {{ db_name }}.data_quality_metrics
+(
+    metric_id UUID DEFAULT generateUUIDv4(),
+    check_name String,
+    table_name String,
+    column_name String DEFAULT '',
+    
+    -- Check results
+    check_type LowCardinality(String),
+    passed UInt8 DEFAULT 1,
+    value Float64 DEFAULT 0,
+    threshold Float64 DEFAULT 0,
+    
+    -- Context
+    row_count UInt64 DEFAULT 0,
+    failed_count UInt64 DEFAULT 0,
+    sample_failures String DEFAULT '' CODEC(ZSTD(3)),
+    
+    -- Timing
+    checked_at DateTime64(3) DEFAULT now64(3),
+    
+    -- Metadata
+    job_run_id String DEFAULT ''
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(checked_at)
+ORDER BY (table_name, check_name, checked_at)
+TTL checked_at + INTERVAL {{ retention }} DAY
+SETTINGS index_granularity = 8192;
+
+-- =============================================================================
+-- Schema Registry Table
+-- =============================================================================
+-- Tracks schema versions for all ingested tables
+CREATE TABLE IF NOT EXISTS {{ db_name }}.schema_registry
+(
+    schema_id UUID DEFAULT generateUUIDv4(),
+    table_name String,
+    version UInt32,
+    
+    -- Schema definition
+    columns String CODEC(ZSTD(3)),  -- JSON array of column definitions
+    primary_keys String DEFAULT '',  -- JSON array
+    
+    -- Metadata
+    created_at DateTime DEFAULT now(),
+    created_by String DEFAULT 'system',
+    is_active UInt8 DEFAULT 1
+)
+ENGINE = ReplacingMergeTree(version)
+ORDER BY (table_name, version)
+SETTINGS index_granularity = 8192;
+
+-- =============================================================================
+-- Tenant Metadata View
+-- =============================================================================
+-- Summary view for tenant dashboard
+CREATE VIEW IF NOT EXISTS {{ db_name }}.tenant_summary AS
+SELECT
+    '{{ tenant_id }}' AS tenant_id,
+    '{{ tenant_slug }}' AS tenant_slug,
+    (SELECT count() FROM {{ db_name }}.events) AS total_events,
+    (SELECT count(DISTINCT event_type) FROM {{ db_name }}.events) AS event_types,
+    (SELECT min(event_timestamp) FROM {{ db_name }}.events) AS first_event,
+    (SELECT max(event_timestamp) FROM {{ db_name }}.events) AS last_event,
+    (SELECT sum(rows_written) FROM {{ db_name }}.ingestion_audit WHERE status = 'completed') AS total_rows_ingested,
+    now() AS queried_at;

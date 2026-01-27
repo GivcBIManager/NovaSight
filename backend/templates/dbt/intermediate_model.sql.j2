@@ -1,0 +1,86 @@
+{#
+NovaSight dbt Intermediate Model Template
+==========================================
+
+Generates a dbt intermediate model for business logic and joins.
+Intermediate models combine staging models and apply business rules.
+
+Template Variables:
+- model_name: str - Model name (required, should start with int_)
+- description: str - Model description
+- source_models: List[SourceModel] - List of source models to join
+- columns: List[ColumnDef] - Output column definitions
+- joins: List[JoinDef] - Join definitions
+- where_clause: str - Optional WHERE clause
+- group_by: List[str] - Optional GROUP BY columns
+- materialized: str - Materialization (default: view)
+
+Template Version: {{ _template_version | default('1.0.0') }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+{#-
+============================================================================
+NovaSight Generated dbt Intermediate Model: {{ model_name }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+Template: dbt/intermediate_model.sql.j2 v{{ _template_version | default('1.0.0') }}
+WARNING: Auto-generated file - do not edit manually
+============================================================================
+-#}
+{% raw %}{{{% endraw %}
+  config(
+    materialized='{{ materialized | default('view') }}',
+    tags=['intermediate'{% if tags is defined %}{% for tag in tags %}, '{{ tag }}'{% endfor %}{% endif %}]
+  )
+{% raw %}}}{% endraw %}
+
+{% if description is defined and description %}
+-- {{ description }}
+{% endif %}
+
+{#- Define CTEs for each source model -#}
+{% for source in source_models %}
+{% set alias = source.alias | default(source.name | replace('stg_', '') | replace('int_', '')) %}
+WITH {{ alias }} AS (
+    SELECT *
+    FROM {% raw %}{{ ref('{% endraw %}{{ source.name }}{% raw %}') }}{% endraw %}
+
+{% if source.where is defined and source.where %}
+    WHERE {{ source.where }}
+{% endif %}
+){% if not loop.last %},{% endif %}
+
+{% endfor %}
+
+{#- Build the final select with joins -#}
+{% set primary_source = source_models[0] %}
+{% set primary_alias = primary_source.alias | default(primary_source.name | replace('stg_', '') | replace('int_', '')) %}
+SELECT
+{% for col in columns %}
+{% if col.expression is defined and col.expression %}
+    {{ col.expression }} AS {{ col.name }}{% if not loop.last %},{% endif %}
+
+{% else %}
+    {{ col.source_alias | default(primary_alias) }}.{{ col.source_column | default(col.name) }}{% if col.alias is defined and col.alias != col.name %} AS {{ col.alias }}{% endif %}{% if not loop.last %},{% endif %}
+
+{% endif %}
+{% endfor %}
+FROM {{ primary_alias }}
+{% if joins is defined and joins | length > 0 %}
+{% for join in joins %}
+{{ join.type | default('LEFT') | upper }} JOIN {{ join.model_alias | default(join.model | replace('stg_', '') | replace('int_', '')) }}
+    ON {{ primary_alias }}.{{ join.left_key }} = {{ join.model_alias | default(join.model | replace('stg_', '') | replace('int_', '')) }}.{{ join.right_key }}
+{% if join.additional_conditions is defined %}
+    AND {{ join.additional_conditions }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if where_clause is defined and where_clause %}
+WHERE {{ where_clause }}
+{% endif %}
+{% if group_by is defined and group_by | length > 0 %}
+GROUP BY
+{% for col in group_by %}
+    {{ col }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% endif %}

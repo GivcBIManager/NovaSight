@@ -1,0 +1,188 @@
+{#
+NovaSight ClickHouse Projections Template
+===========================================
+
+Creates ClickHouse projections for query optimization.
+
+Template Variables:
+- table_name: Name of the table to add projections to (required)
+- database: Database name (default: 'default')
+- projections: List of projection definitions (required)
+  Each projection has:
+    - name: Projection name (required)
+    - select: SELECT clause columns/expressions (required)
+    - group_by: GROUP BY columns for aggregate projections (optional)
+    - order_by: ORDER BY columns (optional, defaults to select columns)
+- materialize: Whether to materialize projections after creation (default: true)
+- tenant_aware: Include tenant_id in projections (default: true)
+
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+-- ============================================================================
+-- NovaSight Generated ClickHouse Projections for: {{ table_name }}
+-- Generated: {{ _generated_at | default(now().isoformat()) }}
+-- Template: clickhouse/projections.sql.j2 v{{ _template_version | default('1.0.0') }}
+-- WARNING: Auto-generated file - do not edit manually
+-- ============================================================================
+
+{% set db = database | default('default') %}
+{% set full_table_name = db ~ '.' ~ table_name %}
+{% set should_materialize = materialize | default(true) %}
+
+{% for proj in projections %}
+-- =============================================================================
+-- Projection: {{ proj.name }}
+{% if proj.description is defined and proj.description %}
+-- Description: {{ proj.description }}
+{% endif %}
+-- =============================================================================
+
+{% if proj.type | default('normal') == 'aggregate' %}
+-- Aggregate projection for {{ proj.name }}
+ALTER TABLE {{ full_table_name }}
+    ADD PROJECTION IF NOT EXISTS {{ proj.name | sql_safe }}
+    (
+        SELECT
+{% if tenant_aware | default(true) %}
+            tenant_id,
+{% endif %}
+{% for col in proj.group_by %}
+            {{ col }}{% if not loop.last or proj.aggregates %},{% endif %}
+
+{% endfor %}
+{% for agg in proj.aggregates | default([]) %}
+            {{ agg.func }}({{ agg.column }}){% if agg.alias is defined %} AS {{ agg.alias }}{% endif %}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+        GROUP BY
+{% if tenant_aware | default(true) %}
+            tenant_id,
+{% endif %}
+            {{ proj.group_by | join(', ') }}
+    );
+
+{% elif proj.type | default('normal') == 'minmax' %}
+-- MinMax projection for fast filtering
+ALTER TABLE {{ full_table_name }}
+    ADD PROJECTION IF NOT EXISTS {{ proj.name | sql_safe }}
+    (
+        SELECT
+{% if tenant_aware | default(true) %}
+            tenant_id,
+{% endif %}
+{% for col in proj.select %}
+            {{ col }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+        ORDER BY ({% if tenant_aware | default(true) %}tenant_id, {% endif %}{{ proj.order_by | default(proj.select) | join(', ') }})
+    );
+
+{% else %}
+-- Normal projection for {{ proj.name }}
+ALTER TABLE {{ full_table_name }}
+    ADD PROJECTION IF NOT EXISTS {{ proj.name | sql_safe }}
+    (
+        SELECT
+{% if tenant_aware | default(true) %}
+            tenant_id,
+{% endif %}
+{% for col in proj.select %}
+            {{ col }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% if proj.order_by is defined and proj.order_by %}
+        ORDER BY ({% if tenant_aware | default(true) %}tenant_id, {% endif %}{{ proj.order_by | join(', ') }})
+{% endif %}
+    );
+
+{% endif %}
+
+{% if should_materialize %}
+-- Materialize projection for existing data
+ALTER TABLE {{ full_table_name }}
+    MATERIALIZE PROJECTION {{ proj.name | sql_safe }};
+
+{% endif %}
+{% endfor %}
+
+-- =============================================================================
+-- Common Projection Patterns for Analytics Tables
+-- =============================================================================
+
+{% if include_common_projections | default(false) %}
+-- Time-series projection: Optimized for time-range queries
+ALTER TABLE {{ full_table_name }}
+    ADD PROJECTION IF NOT EXISTS proj_by_time
+    (
+        SELECT *
+        ORDER BY ({% if tenant_aware | default(true) %}tenant_id, {% endif %}{{ time_column | default('created_at') }})
+    );
+
+-- User lookup projection: Optimized for user-specific queries
+{% if user_column is defined and user_column %}
+ALTER TABLE {{ full_table_name }}
+    ADD PROJECTION IF NOT EXISTS proj_by_user
+    (
+        SELECT *
+        ORDER BY ({% if tenant_aware | default(true) %}tenant_id, {% endif %}{{ user_column }}, {{ time_column | default('created_at') }})
+    );
+
+{% endif %}
+-- Daily aggregation projection: Pre-computed daily totals
+{% if count_column is defined and count_column %}
+ALTER TABLE {{ full_table_name }}
+    ADD PROJECTION IF NOT EXISTS proj_daily_counts
+    (
+        SELECT
+{% if tenant_aware | default(true) %}
+            tenant_id,
+{% endif %}
+            toDate({{ time_column | default('created_at') }}) AS date,
+{% if category_column is defined and category_column %}
+            {{ category_column }},
+{% endif %}
+            count() AS count,
+            sum({{ count_column }}) AS total
+        GROUP BY
+{% if tenant_aware | default(true) %}
+            tenant_id,
+{% endif %}
+            date{% if category_column is defined and category_column %}, {{ category_column }}{% endif %}
+
+    );
+
+{% endif %}
+-- Materialize common projections
+{% if should_materialize %}
+ALTER TABLE {{ full_table_name }} MATERIALIZE PROJECTION proj_by_time;
+{% if user_column is defined and user_column %}
+ALTER TABLE {{ full_table_name }} MATERIALIZE PROJECTION proj_by_user;
+{% endif %}
+{% if count_column is defined and count_column %}
+ALTER TABLE {{ full_table_name }} MATERIALIZE PROJECTION proj_daily_counts;
+{% endif %}
+{% endif %}
+{% endif %}
+
+-- =============================================================================
+-- Projection Usage Notes
+-- =============================================================================
+/*
+To verify projection usage in queries, use:
+    EXPLAIN indexes = 1 SELECT ... FROM {{ full_table_name }} WHERE ...
+
+To check projection storage:
+    SELECT 
+        name,
+        formatReadableSize(sum(data_compressed_bytes)) as compressed,
+        formatReadableSize(sum(data_uncompressed_bytes)) as uncompressed
+    FROM system.projection_parts
+    WHERE database = '{{ db }}' AND table = '{{ table_name }}'
+    GROUP BY name;
+
+To drop a projection:
+    ALTER TABLE {{ full_table_name }} DROP PROJECTION <projection_name>;
+
+To clear projection data (keeps definition):
+    ALTER TABLE {{ full_table_name }} CLEAR PROJECTION <projection_name>;
+*/

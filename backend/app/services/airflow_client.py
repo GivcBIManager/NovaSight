@@ -327,3 +327,38 @@ class AirflowClient:
             f"/dags/{dag_id}/dagRuns/{run_id}/taskInstances/{task_id}/logs/{try_number}"
         )
         return result.get("content", "")
+    
+    # DAG File Management
+    
+    def trigger_dag_parse(self) -> None:
+        """
+        Trigger DAG file parsing to refresh DAG list.
+        This is useful after creating/updating DAG files.
+        """
+        try:
+            # Airflow doesn't have a direct "parse" endpoint
+            # Files are automatically parsed on interval
+            # We can trigger a refresh by listing DAGs
+            self._request("GET", "/dags", params={"limit": 1})
+            logger.info("Triggered DAG file refresh")
+        except Exception as e:
+            logger.warning(f"Failed to trigger DAG parse: {e}")
+    
+    def delete_dag(self, dag_id: str) -> None:
+        """
+        Delete a DAG from Airflow.
+        
+        Args:
+            dag_id: DAG identifier
+        """
+        try:
+            self._request("DELETE", f"/dags/{dag_id}")
+            logger.info(f"Deleted DAG: {dag_id}")
+        except Exception as e:
+            logger.warning(f"Failed to delete DAG {dag_id}: {e}")
+    
+    def close(self) -> None:
+        """Close HTTP client."""
+        if self._client:
+            self._client.close()
+            self._client = None

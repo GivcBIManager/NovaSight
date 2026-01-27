@@ -1,0 +1,72 @@
+{#
+NovaSight dbt Staging Model Template
+=====================================
+
+Generates a dbt staging model following best practices.
+Staging models are 1:1 with source tables, with minimal transformations.
+
+Template Variables:
+- model_name: str - Model name (required, should start with stg_)
+- source_name: str - Source name (required)
+- source_table: str - Source table name (required)
+- columns: List[ColumnDef] - Column definitions with renaming/casting
+- description: str - Model description
+- primary_key: str - Primary key column
+- tenant_column: str - Tenant ID column (default: tenant_id)
+
+Template Version: {{ _template_version | default('1.0.0') }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+{#-
+============================================================================
+NovaSight Generated dbt Staging Model: {{ model_name }}
+Source: {{ source_name }}.{{ source_table }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+Template: dbt/staging_model.sql.j2 v{{ _template_version | default('1.0.0') }}
+WARNING: Auto-generated file - do not edit manually
+============================================================================
+-#}
+{% raw %}{{{% endraw %}
+  config(
+    materialized='view',
+    tags=['staging', '{{ source_name }}']
+  )
+{% raw %}}}{% endraw %}
+
+{#- Staging layer: minimal transformation, 1:1 with source -#}
+
+WITH source AS (
+    SELECT *
+    FROM {% raw %}{{ source('{% endraw %}{{ source_name }}{% raw %}', '{% endraw %}{{ source_table }}{% raw %}') }}{% endraw %}
+
+),
+
+renamed AS (
+    SELECT
+{% if primary_key is defined and primary_key %}
+        -- Primary key
+        {{ primary_key }} AS {{ primary_key }},
+{% endif %}
+{% if tenant_column | default('tenant_id') %}
+        -- Tenant isolation
+        {{ tenant_column | default('tenant_id') }} AS tenant_id,
+{% endif %}
+{% for col in columns %}
+{% if col.name != primary_key and col.name != (tenant_column | default('tenant_id')) %}
+        -- {{ col.description | default(col.name) }}
+{% if col.cast is defined and col.cast %}
+        CAST({{ col.source_name | default(col.name) }} AS {{ col.cast }}) AS {{ col.alias | default(col.name) }}{% if not loop.last %},{% endif %}
+
+{% elif col.alias is defined and col.alias != col.name %}
+        {{ col.source_name | default(col.name) }} AS {{ col.alias }}{% if not loop.last %},{% endif %}
+
+{% else %}
+        {{ col.source_name | default(col.name) }}{% if not loop.last %},{% endif %}
+
+{% endif %}
+{% endif %}
+{% endfor %}
+    FROM source
+)
+
+SELECT * FROM renamed

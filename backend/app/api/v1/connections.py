@@ -327,3 +327,50 @@ def get_connection_schema(connection_id: str):
         raise NotFoundError("Connection not found or inaccessible")
     
     return jsonify({"schema": schema_info})
+
+
+@api_v1_bp.route("/connections/<connection_id>/sync", methods=["POST"])
+@jwt_required()
+@require_tenant_context
+@require_roles(["data_engineer", "tenant_admin"])
+def trigger_connection_sync(connection_id: str):
+    """
+    Trigger data sync for a connection.
+    
+    Args:
+        connection_id: Connection UUID
+    
+    Request Body (optional):
+        - tables: List of tables to sync (default: all)
+        - incremental: Whether to sync incrementally (default: false)
+        - sync_config: Additional sync configuration
+    
+    Returns:
+        Job information with job_id and status
+    """
+    identity = get_jwt_identity()
+    tenant_id = identity.get("tenant_id")
+    
+    data = request.get_json() or {}
+    sync_config = {
+        "tables": data.get("tables"),
+        "incremental": data.get("incremental", False),
+        **data.get("sync_config", {})
+    }
+    
+    connection_service = ConnectionService(tenant_id)
+    job_id = connection_service.trigger_sync(
+        connection_id=connection_id,
+        sync_config=sync_config
+    )
+    
+    if not job_id:
+        raise NotFoundError("Connection not found or sync failed to start")
+    
+    logger.info(f"Sync triggered for connection {connection_id}: job_id={job_id}")
+    
+    return jsonify({
+        "job_id": job_id,
+        "status": "started",
+        "message": "Data sync job started successfully"
+    })

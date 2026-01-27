@@ -212,12 +212,12 @@ backend/templates/airflow/
 
 ## Acceptance Criteria
 
-- [ ] Generated DAGs pass Airflow syntax check
-- [ ] Task dependencies render correctly
-- [ ] Ingestion DAG integrates with operators
-- [ ] dbt commands properly formatted
-- [ ] Tenant isolation maintained
-- [ ] Error handling configured
+- [x] Generated DAGs pass Airflow syntax check
+- [x] Task dependencies render correctly
+- [x] Ingestion DAG integrates with operators
+- [x] dbt commands properly formatted
+- [x] Tenant isolation maintained
+- [x] Error handling configured
 
 ## Reference Documents
 

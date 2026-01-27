@@ -1,0 +1,108 @@
+{#
+NovaSight dbt Metric/Semantic Model Template
+==============================================
+
+Generates a dbt semantic_models definition for metrics.
+
+Template Variables:
+- model: str - Base model name (required)
+- metric_name: str - Metric name (required)
+- label: str - Human-readable label
+- description: str - Metric description
+- expression: str - SQL expression for the metric
+- calculation: str - Aggregation type (sum, count, average, etc.)
+- dimensions: List[DimensionDef] - Dimension definitions
+- entities: List[EntityDef] - Entity definitions
+- time_dimension: str - Time dimension column (default: event_date)
+- filters: List[FilterDef] - Filter definitions
+
+Template Version: {{ _template_version | default('1.0.0') }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+# ============================================================================
+# NovaSight Generated dbt Semantic Model: {{ model }}_semantic
+# Generated: {{ _generated_at | default(now().isoformat()) }}
+# Template: dbt/metric.yml.j2 v{{ _template_version | default('1.0.0') }}
+# WARNING: Auto-generated file - do not edit manually
+# ============================================================================
+
+version: 2
+
+semantic_models:
+  - name: {{ model }}_semantic
+    description: "Semantic model for {{ model }}"
+    model: ref('{{ model }}')
+    defaults:
+      agg_time_dimension: {{ time_dimension | default('event_date') }}
+    
+    entities:
+{% if entities is defined and entities | length > 0 %}
+{% for entity in entities %}
+      - name: {{ entity.name }}
+        type: {{ entity.type | default('primary') }}
+{% if entity.expr is defined and entity.expr %}
+        expr: {{ entity.expr }}
+{% endif %}
+{% endfor %}
+{% else %}
+      - name: {{ model }}_id
+        type: primary
+        expr: id
+{% endif %}
+    
+    measures:
+      - name: {{ metric_name }}
+{% if label is defined and label %}
+        label: "{{ label }}"
+{% endif %}
+        description: "{{ description | default('') }}"
+        agg: {{ calculation | default('sum') }}
+        expr: {{ expression }}
+{% if create_metric | default(true) %}
+        create_metric: true
+{% endif %}
+{% if additional_measures is defined and additional_measures | length > 0 %}
+{% for measure in additional_measures %}
+      - name: {{ measure.name }}
+{% if measure.label is defined %}
+        label: "{{ measure.label }}"
+{% endif %}
+{% if measure.description is defined %}
+        description: "{{ measure.description }}"
+{% endif %}
+        agg: {{ measure.agg | default('sum') }}
+        expr: {{ measure.expr }}
+{% if measure.create_metric | default(false) %}
+        create_metric: true
+{% endif %}
+{% endfor %}
+{% endif %}
+    
+    dimensions:
+{% for dim in dimensions %}
+      - name: {{ dim.name }}
+        type: {{ dim.type | default('categorical') }}
+{% if dim.expr is defined and dim.expr %}
+        expr: {{ dim.expr }}
+{% elif dim.type == 'time' %}
+        type_params:
+          time_granularity: {{ dim.time_granularity | default('day') }}
+{% endif %}
+{% if dim.description is defined and dim.description %}
+        description: "{{ dim.description }}"
+{% endif %}
+{% endfor %}
+
+{% if filters is defined and filters | length > 0 %}
+# Saved filters for this semantic model
+saved_queries:
+{% for filter in filters %}
+  - name: {{ filter.name }}
+    description: "{{ filter.description | default('') }}"
+    query_params:
+      metrics:
+        - {{ metric_name }}
+      where:
+        - {{ filter.where }}
+{% endfor %}
+{% endif %}

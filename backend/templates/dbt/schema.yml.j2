@@ -27,6 +27,11 @@ models:
     description: >
       {{ description | wordwrap(70) | indent(6) }}
 {% endif %}
+{% if contract_enforced | default(false) %}
+    config:
+      contract:
+        enforced: true
+{% endif %}
 {% if meta is defined and meta %}
     meta:
 {% for key, value in meta.items() %}
@@ -44,7 +49,23 @@ models:
 {% for column in columns %}
       - name: {{ column.name }}
 {% if column.description is defined and column.description %}
-        description: {{ column.description }}
+        description: "{{ column.description }}"
+{% endif %}
+{% if column.data_type is defined and column.data_type %}
+        data_type: {{ column.data_type }}
+{% endif %}
+{% if column.constraints is defined and column.constraints | length > 0 %}
+        constraints:
+{% for constraint in column.constraints %}
+{% if constraint is string %}
+          - type: {{ constraint }}
+{% elif constraint is mapping %}
+          - type: {{ constraint.type }}
+{% if constraint.expression is defined %}
+            expression: "{{ constraint.expression }}"
+{% endif %}
+{% endif %}
+{% endfor %}
 {% endif %}
 {% if column.tests is defined and column.tests | length > 0 %}
         tests:

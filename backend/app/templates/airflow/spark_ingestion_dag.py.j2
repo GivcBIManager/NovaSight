@@ -1,0 +1,68 @@
+"""
+Auto-generated Airflow DAG for ingesting data from {{ datasource_name }}
+Generated for tenant: {{ tenant_id }}
+Datasource ID: {{ datasource_id }}
+"""
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+from airflow.operators.python import PythonOperator
+from airflow.utils.dates import days_ago
+
+# Default arguments for the DAG
+default_args = {
+    'owner': 'novasight',
+    'depends_on_past': False,
+    'start_date': days_ago(1),
+    'email_on_failure': True,
+    'email_on_retry': False,
+    'retries': 2,
+    'retry_delay': timedelta(minutes=5),
+}
+
+# DAG definition
+with DAG(
+    dag_id='{{ dag_id }}',
+    default_args=default_args,
+    description='Ingest data from {{ datasource_name }} ({{ datasource_type }}) to ClickHouse',
+    schedule_interval='{{ schedule }}',
+    catchup=False,
+    max_active_runs=1,
+    tags=['ingestion', '{{ datasource_type }}', 'tenant_{{ tenant_id }}'],
+) as dag:
+    
+    # Task to submit PySpark job to Spark cluster
+    ingest_data = SparkSubmitOperator(
+        task_id='ingest_{{ datasource_type }}_data',
+        application='{{ spark_app_path }}',
+        name='ingest_{{ datasource_id }}',
+        conn_id='spark_default',  # Airflow connection to Spark cluster
+        application_args=[
+            '/opt/airflow/spark_apps/configs/{{ dag_id }}_config.json'
+        ],
+        conf={
+            {% for key, value in spark_conf.items() %}
+            '{{ key }}': '{{ value }}',
+            {% endfor %}
+        },
+        jars='/opt/spark/jars/postgresql-42.6.0.jar,/opt/spark/jars/clickhouse-jdbc-0.4.6-all.jar',
+        driver_memory='1g',
+        executor_memory='{{ spark_conf.get("spark.executor.memory", "2g") }}',
+        executor_cores={{ spark_conf.get("spark.executor.cores", "2") }},
+        num_executors=None,  # Dynamic allocation enabled
+        verbose=True,
+    )
+    
+    def log_completion(**context):
+        """Log completion of ingestion."""
+        print(f"Ingestion completed for {{ datasource_name }}")
+        print(f"Processed {{ num_tables }} tables")
+    
+    log_task = PythonOperator(
+        task_id='log_completion',
+        python_callable=log_completion,
+        provide_context=True,
+    )
+    
+    # Task dependencies
+    ingest_data >> log_task

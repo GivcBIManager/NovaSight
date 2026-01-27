@@ -206,11 +206,506 @@
         }
       }
     },
+    "dbt/metric.yml.j2": {
+      "description": "Generates a dbt semantic model with metrics",
+      "category": "dbt",
+      "schema": {
+        "type": "object",
+        "required": ["model", "metric_name", "expression", "dimensions"],
+        "properties": {
+          "model": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Base model name"
+          },
+          "metric_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Metric name"
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expression": {
+            "type": "string",
+            "description": "SQL expression for the metric"
+          },
+          "calculation": {
+            "type": "string",
+            "enum": ["sum", "count", "count_distinct", "average", "min", "max", "median"],
+            "default": "sum"
+          },
+          "dimensions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": {"type": "string"},
+                "type": {"type": "string", "enum": ["categorical", "time"], "default": "categorical"},
+                "expr": {"type": "string"},
+                "description": {"type": "string"}
+              }
+            }
+          },
+          "time_dimension": {
+            "type": "string",
+            "default": "event_date"
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {"type": "string"},
+                "type": {"type": "string", "enum": ["primary", "foreign", "natural"]},
+                "expr": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "dbt/staging_model.sql.j2": {
+      "description": "Generates a dbt staging model (1:1 with source)",
+      "category": "dbt",
+      "schema": {
+        "type": "object",
+        "required": ["model_name", "source_name", "source_table", "columns"],
+        "properties": {
+          "model_name": {
+            "type": "string",
+            "pattern": "^stg_[a-z][a-z0-9_]*$",
+            "description": "Model name (must start with stg_)"
+          },
+          "source_name": {
+            "type": "string"
+          },
+          "source_table": {
+            "type": "string"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/DbtColumn"
+            }
+          },
+          "description": {
+            "type": "string"
+          },
+          "primary_key": {
+            "type": "string"
+          },
+          "tenant_column": {
+            "type": "string",
+            "default": "tenant_id"
+          }
+        }
+      }
+    },
+    "dbt/intermediate_model.sql.j2": {
+      "description": "Generates a dbt intermediate model (joins and business logic)",
+      "category": "dbt",
+      "schema": {
+        "type": "object",
+        "required": ["model_name", "source_models", "columns"],
+        "properties": {
+          "model_name": {
+            "type": "string",
+            "pattern": "^int_[a-z][a-z0-9_]*$",
+            "description": "Model name (must start with int_)"
+          },
+          "description": {
+            "type": "string"
+          },
+          "source_models": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": {"type": "string"},
+                "alias": {"type": "string"},
+                "where": {"type": "string"}
+              }
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/DbtColumn"
+            }
+          },
+          "joins": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["model", "left_key", "right_key"],
+              "properties": {
+                "model": {"type": "string"},
+                "model_alias": {"type": "string"},
+                "type": {"type": "string", "enum": ["LEFT", "RIGHT", "INNER", "FULL"], "default": "LEFT"},
+                "left_key": {"type": "string"},
+                "right_key": {"type": "string"},
+                "additional_conditions": {"type": "string"}
+              }
+            }
+          },
+          "where_clause": {
+            "type": "string"
+          },
+          "group_by": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "materialized": {
+            "type": "string",
+            "enum": ["view", "table", "ephemeral"],
+            "default": "view"
+          }
+        }
+      }
+    },
+    "dbt/marts_model.sql.j2": {
+      "description": "Generates a dbt marts model (final business entities)",
+      "category": "dbt",
+      "schema": {
+        "type": "object",
+        "required": ["model_name", "source_models", "columns"],
+        "properties": {
+          "model_name": {
+            "type": "string",
+            "pattern": "^(dim|fct|rpt)_[a-z][a-z0-9_]*$",
+            "description": "Model name (must start with dim_, fct_, or rpt_)"
+          },
+          "description": {
+            "type": "string"
+          },
+          "materialized": {
+            "type": "string",
+            "enum": ["table", "incremental"],
+            "default": "table"
+          },
+          "source_models": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": {"type": "string"},
+                "alias": {"type": "string"},
+                "where": {"type": "string"}
+              }
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/DbtColumn"
+            }
+          },
+          "unique_key": {
+            "oneOf": [
+              {"type": "string"},
+              {"type": "array", "items": {"type": "string"}}
+            ]
+          },
+          "incremental_strategy": {
+            "type": "string",
+            "enum": ["append", "delete+insert", "merge"],
+            "default": "merge"
+          },
+          "partition_by": {
+            "type": "string"
+          },
+          "cluster_by": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "schema": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "airflow/dag.py.j2": {
       "description": "Generates an Airflow DAG Python file",
       "category": "airflow",
       "schema": {
         "$ref": "#/definitions/AirflowDag"
+      }
+    },
+    "airflow/ingestion_dag.py.j2": {
+      "description": "Generates an Airflow DAG for data ingestion",
+      "category": "airflow",
+      "schema": {
+        "type": "object",
+        "required": ["tenant_id", "datasource_id", "datasource_type", "connection_id", "table_mappings"],
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Tenant identifier"
+          },
+          "datasource_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Datasource identifier"
+          },
+          "datasource_type": {
+            "type": "string",
+            "enum": ["postgres", "mysql", "sqlserver", "oracle", "mongodb"],
+            "description": "Type of datasource"
+          },
+          "connection_id": {
+            "type": "string",
+            "description": "Airflow connection ID"
+          },
+          "table_mappings": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["source_table", "target_table"],
+              "properties": {
+                "source_schema": {"type": "string"},
+                "source_table": {"type": "string"},
+                "target_schema": {"type": "string", "default": "raw"},
+                "target_table": {"type": "string"},
+                "incremental_column": {"type": "string", "default": "updated_at"},
+                "mode": {"type": "string", "enum": ["full", "incremental"], "default": "incremental"},
+                "primary_keys": {"type": "array", "items": {"type": "string"}},
+                "columns": {"type": "array", "items": {"type": "string"}},
+                "where_clause": {"type": "string"},
+                "batch_size": {"type": "integer", "default": 100000}
+              }
+            }
+          },
+          "schedule": {
+            "type": "string",
+            "default": "@daily"
+          },
+          "start_date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "default": "2024-01-01"
+          },
+          "max_active_runs": {
+            "type": "integer",
+            "default": 1
+          },
+          "retries": {
+            "type": "integer",
+            "default": 3
+          }
+        }
+      }
+    },
+    "airflow/transformation_dag.py.j2": {
+      "description": "Generates an Airflow DAG for dbt transformations",
+      "category": "airflow",
+      "schema": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "project_name": {
+            "type": "string",
+            "default": "dbt"
+          },
+          "schedule": {
+            "type": "string",
+            "default": "@daily"
+          },
+          "dbt_models": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "task_id": {"type": "string"},
+                "name": {"type": "string"},
+                "select": {"type": "string"},
+                "exclude": {"type": "string"},
+                "full_refresh": {"type": "boolean", "default": false},
+                "vars": {"type": "object"},
+                "timeout_minutes": {"type": "integer", "default": 60}
+              }
+            }
+          },
+          "run_tests": {
+            "type": "boolean",
+            "default": true
+          },
+          "upstream_dag_id": {
+            "type": "string",
+            "description": "Optional upstream DAG to wait for"
+          },
+          "dbt_project_dir": {
+            "type": "string",
+            "default": "/opt/airflow/dbt"
+          },
+          "dbt_target": {
+            "type": "string",
+            "default": "prod"
+          }
+        }
+      }
+    },
+    "airflow/dbt_task.py.j2": {
+      "description": "Generates an Airflow BashOperator for dbt commands",
+      "category": "airflow",
+      "schema": {
+        "type": "object",
+        "required": ["task_id", "dbt_command"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "dbt_command": {
+            "type": "string",
+            "enum": ["run", "test", "build", "snapshot", "seed", "compile", "docs"]
+          },
+          "select": {
+            "type": "string",
+            "description": "Model selector"
+          },
+          "exclude": {
+            "type": "string",
+            "description": "Models to exclude"
+          },
+          "vars": {
+            "type": "object",
+            "description": "dbt variables"
+          },
+          "full_refresh": {
+            "type": "boolean",
+            "default": false
+          },
+          "target": {
+            "type": "string",
+            "default": "prod"
+          },
+          "project_dir": {
+            "type": "string",
+            "default": "/opt/airflow/dbt"
+          },
+          "profiles_dir": {
+            "type": "string",
+            "default": "/opt/airflow/dbt"
+          },
+          "timeout_minutes": {
+            "type": "integer",
+            "default": 60
+          },
+          "retries": {
+            "type": "integer",
+            "default": 2
+          }
+        }
+      }
+    },
+    "airflow/operators/python_task.py.j2": {
+      "description": "Generates an Airflow PythonOperator task",
+      "category": "airflow",
+      "schema": {
+        "type": "object",
+        "required": ["task_id"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "python_callable": {
+            "type": "string",
+            "description": "Fully qualified callable name"
+          },
+          "import_path": {
+            "type": "string",
+            "description": "Module path to import from"
+          },
+          "callable_name": {
+            "type": "string",
+            "description": "Name of the callable function"
+          },
+          "op_kwargs": {
+            "type": "object",
+            "description": "Keyword arguments for the callable"
+          },
+          "op_args": {
+            "type": "array",
+            "description": "Positional arguments"
+          },
+          "timeout_minutes": {
+            "type": "integer",
+            "default": 30
+          },
+          "retries": {
+            "type": "integer",
+            "default": 3
+          },
+          "trigger_rule": {
+            "type": "string",
+            "enum": ["all_success", "all_failed", "all_done", "one_success", "one_failed", "none_failed", "none_skipped"],
+            "default": "all_success"
+          }
+        }
+      }
+    },
+    "airflow/operators/sql_task.py.j2": {
+      "description": "Generates an Airflow SQLExecuteQueryOperator task",
+      "category": "airflow",
+      "schema": {
+        "type": "object",
+        "required": ["task_id", "conn_id"],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "conn_id": {
+            "type": "string",
+            "description": "Airflow connection ID"
+          },
+          "sql": {
+            "type": "string",
+            "description": "SQL query"
+          },
+          "sql_file": {
+            "type": "string",
+            "description": "Path to SQL file"
+          },
+          "parameters": {
+            "type": "object",
+            "description": "Query parameters"
+          },
+          "autocommit": {
+            "type": "boolean",
+            "default": true
+          },
+          "timeout_minutes": {
+            "type": "integer",
+            "default": 30
+          },
+          "retries": {
+            "type": "integer",
+            "default": 3
+          },
+          "trigger_rule": {
+            "type": "string",
+            "enum": ["all_success", "all_failed", "all_done", "one_success", "one_failed", "none_failed", "none_skipped"],
+            "default": "all_success"
+          }
+        }
       }
     },
     "clickhouse/create_table.sql.j2": {
@@ -279,6 +774,393 @@
           "order_by": {
             "type": "array",
             "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "clickhouse/tenant_database.sql.j2": {
+      "description": "Creates a tenant-specific ClickHouse database with base tables for data ingestion",
+      "category": "clickhouse",
+      "schema": {
+        "type": "object",
+        "required": ["tenant_id", "tenant_slug"],
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the tenant"
+          },
+          "tenant_slug": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "maxLength": 63,
+            "description": "URL-safe tenant identifier"
+          },
+          "retention_days": {
+            "type": "integer",
+            "default": 730,
+            "minimum": 30,
+            "maximum": 3650,
+            "description": "Data retention period in days"
+          },
+          "buffer_settings": {
+            "type": "object",
+            "properties": {
+              "num_layers": {
+                "type": "integer",
+                "default": 16
+              },
+              "min_time": {
+                "type": "integer",
+                "default": 10
+              },
+              "max_time": {
+                "type": "integer",
+                "default": 100
+              },
+              "min_rows": {
+                "type": "integer",
+                "default": 10000
+              },
+              "max_rows": {
+                "type": "integer",
+                "default": 1000000
+              },
+              "min_bytes": {
+                "type": "integer",
+                "default": 10000000
+              },
+              "max_bytes": {
+                "type": "integer",
+                "default": 100000000
+              }
+            }
+          }
+        }
+      }
+    },
+    "clickhouse/dictionary.sql.j2": {
+      "description": "Creates a ClickHouse dictionary for dimension lookups",
+      "category": "clickhouse",
+      "schema": {
+        "type": "object",
+        "required": ["dict_name", "source_type", "source_config", "structure", "layout"],
+        "properties": {
+          "dict_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Name of the dictionary"
+          },
+          "database": {
+            "type": "string",
+            "default": "default"
+          },
+          "source_type": {
+            "type": "string",
+            "enum": ["clickhouse", "postgresql", "mysql", "http", "file", "odbc"],
+            "description": "Type of data source"
+          },
+          "source_config": {
+            "type": "object",
+            "description": "Source-specific configuration"
+          },
+          "structure": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "type"],
+              "properties": {
+                "name": {"type": "string"},
+                "type": {"type": "string"},
+                "is_key": {"type": "boolean", "default": false},
+                "default": {"type": "string"},
+                "expression": {"type": "string"},
+                "hierarchical": {"type": "boolean"},
+                "injective": {"type": "boolean"}
+              }
+            }
+          },
+          "layout": {
+            "type": "string",
+            "enum": ["flat", "hashed", "sparse_hashed", "complex_key_hashed", "complex_key_sparse_hashed", "range_hashed", "cache", "complex_key_cache", "ssd_cache", "direct", "ip_trie"],
+            "description": "Dictionary layout type"
+          },
+          "layout_config": {
+            "type": "object",
+            "description": "Layout-specific configuration"
+          },
+          "lifetime": {
+            "type": "object",
+            "properties": {
+              "min": {"type": "integer", "default": 300},
+              "max": {"type": "integer", "default": 600}
+            }
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "clickhouse/alter_table.sql.j2": {
+      "description": "Generates ALTER TABLE statements for ClickHouse tables",
+      "category": "clickhouse",
+      "schema": {
+        "type": "object",
+        "required": ["table_name", "operation"],
+        "properties": {
+          "table_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "database": {
+            "type": "string",
+            "default": "default"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["add_column", "drop_column", "modify_column", "rename_column", "clear_column", "materialize_column", "add_index", "drop_index", "materialize_index", "modify_ttl", "remove_ttl", "modify_setting", "reset_setting", "modify_order_by", "update", "delete", "add_constraint", "drop_constraint", "add_projection", "drop_projection", "materialize_projection", "freeze_partition", "unfreeze_partition", "drop_partition", "detach_partition", "attach_partition", "move_partition", "replace_partition", "comment"],
+            "description": "Type of ALTER operation"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ClickHouseColumn"
+            }
+          },
+          "indexes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": {"type": "string"},
+                "expression": {"type": "string"},
+                "type": {"type": "string", "default": "minmax"},
+                "granularity": {"type": "integer", "default": 3}
+              }
+            }
+          },
+          "ttl": {
+            "type": "string"
+          },
+          "settings": {
+            "type": "object"
+          },
+          "order_by": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "where_clause": {
+            "type": "string",
+            "description": "WHERE clause for UPDATE/DELETE operations"
+          },
+          "updates": {
+            "type": "object",
+            "description": "Column updates for UPDATE operation"
+          },
+          "if_exists": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      }
+    },
+    "clickhouse/projections.sql.j2": {
+      "description": "Creates ClickHouse projections for query optimization",
+      "category": "clickhouse",
+      "schema": {
+        "type": "object",
+        "required": ["table_name", "projections"],
+        "properties": {
+          "table_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "database": {
+            "type": "string",
+            "default": "default"
+          },
+          "projections": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["name", "select"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": ["normal", "aggregate", "minmax"],
+                  "default": "normal"
+                },
+                "select": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                },
+                "group_by": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                },
+                "order_by": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                },
+                "aggregates": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["func", "column"],
+                    "properties": {
+                      "func": {"type": "string"},
+                      "column": {"type": "string"},
+                      "alias": {"type": "string"}
+                    }
+                  }
+                },
+                "description": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "materialize": {
+            "type": "boolean",
+            "default": true
+          },
+          "tenant_aware": {
+            "type": "boolean",
+            "default": true
+          },
+          "include_common_projections": {
+            "type": "boolean",
+            "default": false
+          },
+          "time_column": {
+            "type": "string"
+          },
+          "user_column": {
+            "type": "string"
+          },
+          "category_column": {
+            "type": "string"
+          },
+          "count_column": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sql/add_foreign_key.sql.j2": {
+      "description": "Adds a foreign key constraint to an existing table",
+      "category": "sql",
+      "schema": {
+        "type": "object",
+        "required": ["table_name", "constraint_name", "column", "references_table", "references_column"],
+        "properties": {
+          "table_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Source table name"
+          },
+          "constraint_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Name for the constraint"
+          },
+          "column": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Column in source table"
+          },
+          "references_table": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Referenced table"
+          },
+          "references_column": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Referenced column"
+          },
+          "on_delete": {
+            "type": "string",
+            "enum": ["CASCADE", "SET NULL", "RESTRICT", "NO ACTION"],
+            "default": "RESTRICT",
+            "description": "Action on delete"
+          },
+          "on_update": {
+            "type": "string",
+            "enum": ["CASCADE", "SET NULL", "RESTRICT", "NO ACTION"],
+            "default": "NO ACTION",
+            "description": "Action on update"
+          },
+          "schema_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "default": "public"
+          }
+        }
+      }
+    },
+    "sql/drop_table.sql.j2": {
+      "description": "Safely drops a PostgreSQL table",
+      "category": "sql",
+      "schema": {
+        "type": "object",
+        "required": ["table_name"],
+        "properties": {
+          "table_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Name of the table to drop"
+          },
+          "schema_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "default": "public"
+          },
+          "cascade": {
+            "type": "boolean",
+            "default": false,
+            "description": "Drop dependent objects"
+          },
+          "if_exists": {
+            "type": "boolean",
+            "default": true,
+            "description": "Only drop if table exists"
+          },
+          "tenant_aware": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether table has tenant policies to clean up"
+          }
+        }
+      }
+    },
+    "sql/alter_table_add_column.sql.j2": {
+      "description": "Adds a new column to an existing PostgreSQL table",
+      "category": "sql",
+      "schema": {
+        "type": "object",
+        "required": ["table_name", "column"],
+        "properties": {
+          "table_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Name of the table"
+          },
+          "column": {
+            "$ref": "#/definitions/Column",
+            "description": "Column definition"
+          },
+          "schema_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "default": "public"
           }
         }
       }

@@ -1,0 +1,63 @@
+{#
+NovaSight Python Task Template
+===============================
+
+Generates an Airflow PythonOperator task.
+
+Template Variables:
+- task_id: str - Task identifier (required)
+- python_callable: str - Fully qualified callable name
+- op_kwargs: Dict[str, Any] - Keyword arguments for the callable
+- op_args: List[Any] - Positional arguments for the callable
+- templates_dict: Dict[str, str] - Templates to render
+- provide_context: bool - Provide Airflow context (deprecated in 2.x)
+- retries: int - Number of retries (default: 3)
+- timeout_minutes: int - Execution timeout (default: 30)
+- trigger_rule: str - Trigger rule (default: all_success)
+
+Template Version: {{ _template_version | default('1.0.0') }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+    # Python task: {{ task_id }}
+{% if import_path is defined and import_path %}
+    from {{ import_path }} import {{ callable_name }}
+{% endif %}
+    {{ task_id }} = PythonOperator(
+        task_id='{{ task_id }}',
+{% if python_callable is defined and python_callable %}
+        python_callable={{ python_callable }},
+{% elif callable_name is defined and callable_name %}
+        python_callable={{ callable_name }},
+{% else %}
+        python_callable=lambda **kwargs: print('Task {{ task_id }} executed'),
+{% endif %}
+{% if op_kwargs is defined and op_kwargs | length > 0 %}
+        op_kwargs={
+{% for key, value in op_kwargs.items() %}
+            '{{ key }}': {{ value | tojson }},
+{% endfor %}
+        },
+{% endif %}
+{% if op_args is defined and op_args | length > 0 %}
+        op_args={{ op_args | tojson }},
+{% endif %}
+{% if templates_dict is defined and templates_dict | length > 0 %}
+        templates_dict={
+{% for key, value in templates_dict.items() %}
+            '{{ key }}': '{{ value }}',
+{% endfor %}
+        },
+{% endif %}
+        execution_timeout=timedelta(minutes={{ timeout_minutes | default(30) }}),
+        retries={{ retries | default(3) }},
+        retry_delay=timedelta(minutes={{ retry_delay_minutes | default(5) }}),
+{% if trigger_rule is defined and trigger_rule %}
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+{% endif %}
+{% if pool is defined and pool %}
+        pool='{{ pool }}',
+{% endif %}
+{% if priority_weight is defined and priority_weight %}
+        priority_weight={{ priority_weight }},
+{% endif %}
+    )

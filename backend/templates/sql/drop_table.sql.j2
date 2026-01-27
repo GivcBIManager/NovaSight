@@ -1,0 +1,35 @@
+{#
+NovaSight PostgreSQL Drop Table Template
+=========================================
+
+Safely drops a PostgreSQL table with optional cascade.
+
+Template Variables:
+- table_name: str - Name of the table to drop (required)
+- schema_name: str - Schema name (default: 'public')
+- cascade: bool - Drop dependent objects (default: false)
+- if_exists: bool - Only drop if table exists (default: true)
+
+Template Version: {{ _template_version | default('1.0.0') }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+-- ============================================================================
+-- NovaSight Drop Table: {{ table_name }}
+-- Generated: {{ _generated_at | default(now().isoformat()) }}
+-- Template: sql/drop_table.sql.j2 v{{ _template_version | default('1.0.0') }}
+-- WARNING: Auto-generated file - do not edit manually
+-- ============================================================================
+
+{% set schema = schema_name | default('public') %}
+{% set full_table_name = schema ~ '.' ~ (table_name | sql_safe) %}
+
+-- Drop associated trigger first (if exists)
+DROP TRIGGER IF EXISTS update_{{ table_name }}_updated_at ON {{ full_table_name }};
+
+-- Drop RLS policies (if any)
+{% if tenant_aware | default(true) %}
+DROP POLICY IF EXISTS {{ table_name }}_tenant_isolation_policy ON {{ full_table_name }};
+{% endif %}
+
+-- Drop the table
+DROP TABLE {% if if_exists | default(true) %}IF EXISTS {% endif %}{{ full_table_name }}{% if cascade | default(false) %} CASCADE{% endif %};

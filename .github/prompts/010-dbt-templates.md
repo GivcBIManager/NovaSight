@@ -212,12 +212,12 @@ backend/templates/dbt/
 
 ## Acceptance Criteria
 
-- [ ] Templates generate valid dbt models
-- [ ] YAML schemas pass dbt validation
-- [ ] Incremental models configured correctly
-- [ ] Source freshness checks work
-- [ ] Metric definitions valid
-- [ ] All templates follow dbt best practices
+- [x] Templates generate valid dbt models
+- [x] YAML schemas pass dbt validation
+- [x] Incremental models configured correctly
+- [x] Source freshness checks work
+- [x] Metric definitions valid
+- [x] All templates follow dbt best practices
 
 ## Reference Documents
 

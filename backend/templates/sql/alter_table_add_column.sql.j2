@@ -1,0 +1,39 @@
+{#
+NovaSight PostgreSQL Alter Table Add Column Template
+=====================================================
+
+Adds a new column to an existing PostgreSQL table.
+
+Template Variables:
+- table_name: str - Name of the table (required)
+- column: dict - Column definition (required)
+  - name: str - Column name
+  - type: str - PostgreSQL data type
+  - nullable: bool - Allow NULL values (default: true)
+  - default: any - Default value (optional)
+  - description: str - Column comment (optional)
+- schema_name: str - Schema name (default: 'public')
+
+Template Version: {{ _template_version | default('1.0.0') }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+-- ============================================================================
+-- NovaSight Alter Table Add Column: {{ table_name }}.{{ column.name }}
+-- Generated: {{ _generated_at | default(now().isoformat()) }}
+-- Template: sql/alter_table_add_column.sql.j2 v{{ _template_version | default('1.0.0') }}
+-- WARNING: Auto-generated file - do not edit manually
+-- ============================================================================
+
+{% set schema = schema_name | default('public') %}
+{% set full_table_name = schema ~ '.' ~ (table_name | sql_safe) %}
+
+-- Add column
+ALTER TABLE {{ full_table_name }}
+    ADD COLUMN IF NOT EXISTS {{ column.name | sql_safe }} {{ column.type }}
+    {%- if not column.nullable | default(true) %} NOT NULL{% endif %}
+    {%- if column.default is defined and column.default is not none %} DEFAULT {{ column.default }}{% endif %};
+
+{% if column.description is defined and column.description %}
+-- Column comment
+COMMENT ON COLUMN {{ full_table_name }}.{{ column.name | sql_safe }} IS '{{ column.description | sql_escape }}';
+{% endif %}

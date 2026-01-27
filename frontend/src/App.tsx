@@ -13,6 +13,7 @@ import { DagsListPage } from '@/pages/orchestration/DagsListPage'
 import { DagBuilderPage } from '@/pages/orchestration/DagBuilderPage'
 import { DagMonitorPage } from '@/pages/orchestration/DagMonitorPage'
 import { ConnectionsPage } from '@/pages/connections/ConnectionsPage'
+import { DataSourcesPage, DataSourceDetailPage } from '@/features/datasources'
 
 function App() {
   return (
@@ -36,6 +37,10 @@ function App() {
           >
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
+            
+            {/* Data Sources */}
+            <Route path="datasources" element={<DataSourcesPage />} />
+            <Route path="datasources/:id" element={<DataSourceDetailPage />} />
             
             {/* Data Connections */}
             <Route path="connections" element={<ConnectionsPage />} />

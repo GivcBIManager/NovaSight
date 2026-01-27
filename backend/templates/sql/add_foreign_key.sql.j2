@@ -1,0 +1,36 @@
+{#
+NovaSight PostgreSQL Foreign Key Template
+==========================================
+
+Adds a foreign key constraint to an existing table.
+
+Template Variables:
+- table_name: str - Source table name (required)
+- constraint_name: str - Name for the constraint (required)
+- column: str - Column in source table (required)
+- references_table: str - Referenced table (required)
+- references_column: str - Referenced column (required)
+- on_delete: str - Action on delete (CASCADE, SET NULL, RESTRICT, NO ACTION)
+- on_update: str - Action on update (optional, defaults to NO ACTION)
+- schema_name: str - Schema name (default: 'public')
+
+Template Version: {{ _template_version | default('1.0.0') }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+-- ============================================================================
+-- NovaSight Generated Foreign Key: {{ constraint_name }}
+-- Generated: {{ _generated_at | default(now().isoformat()) }}
+-- Template: sql/add_foreign_key.sql.j2 v{{ _template_version | default('1.0.0') }}
+-- WARNING: Auto-generated file - do not edit manually
+-- ============================================================================
+
+{% set schema = schema_name | default('public') %}
+{% set full_table_name = schema ~ '.' ~ (table_name | sql_safe) %}
+{% set full_ref_table = schema ~ '.' ~ (references_table | sql_safe) %}
+
+ALTER TABLE {{ full_table_name }}
+    ADD CONSTRAINT {{ constraint_name | sql_safe }}
+    FOREIGN KEY ({{ column | sql_safe }})
+    REFERENCES {{ full_ref_table }} ({{ references_column | sql_safe }})
+    ON DELETE {{ on_delete | default('RESTRICT') | upper }}
+    ON UPDATE {{ on_update | default('NO ACTION') | upper }};

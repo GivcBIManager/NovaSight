@@ -1,0 +1,63 @@
+{#
+NovaSight SQL Task Template
+============================
+
+Generates an Airflow SQLExecuteQueryOperator task.
+
+Template Variables:
+- task_id: str - Task identifier (required)
+- conn_id: str - Airflow connection ID (required)
+- sql: str - SQL query or path to SQL file (required)
+- parameters: Dict[str, Any] - Query parameters (optional)
+- autocommit: bool - Auto-commit transactions (default: true)
+- split_statements: bool - Split SQL into statements (default: true)
+- handler: str - Result handler function (optional)
+- retries: int - Number of retries (default: 3)
+- timeout_minutes: int - Execution timeout (default: 30)
+- trigger_rule: str - Trigger rule (default: all_success)
+
+Template Version: {{ _template_version | default('1.0.0') }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+    # SQL task: {{ task_id }}
+    {{ task_id }} = SQLExecuteQueryOperator(
+        task_id='{{ task_id }}',
+        conn_id='{{ conn_id }}',
+{% if sql_file is defined and sql_file %}
+        sql='{{ sql_file }}',
+{% elif sql is defined and sql %}
+{% if sql | length > 100 %}
+        sql='''
+{{ sql | indent(12) }}
+        ''',
+{% else %}
+        sql='{{ sql | replace("'", "\\'") }}',
+{% endif %}
+{% endif %}
+{% if parameters is defined and parameters | length > 0 %}
+        parameters={
+{% for key, value in parameters.items() %}
+            '{{ key }}': {{ value | tojson }},
+{% endfor %}
+        },
+{% endif %}
+        autocommit={{ autocommit | default(true) | lower | capitalize }},
+{% if split_statements is defined %}
+        split_statements={{ split_statements | lower | capitalize }},
+{% endif %}
+{% if return_last is defined %}
+        return_last={{ return_last | lower | capitalize }},
+{% endif %}
+{% if show_return_value_in_logs is defined %}
+        show_return_value_in_logs={{ show_return_value_in_logs | lower | capitalize }},
+{% endif %}
+        execution_timeout=timedelta(minutes={{ timeout_minutes | default(30) }}),
+        retries={{ retries | default(3) }},
+        retry_delay=timedelta(minutes={{ retry_delay_minutes | default(5) }}),
+{% if trigger_rule is defined and trigger_rule %}
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+{% endif %}
+{% if pool is defined and pool %}
+        pool='{{ pool }}',
+{% endif %}
+    )

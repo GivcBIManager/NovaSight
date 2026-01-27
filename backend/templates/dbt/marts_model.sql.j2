@@ -1,0 +1,124 @@
+{#
+NovaSight dbt Marts Model Template
+===================================
+
+Generates a dbt marts model for final business entities and facts.
+Marts models are the final layer consumed by BI tools and applications.
+
+Template Variables:
+- model_name: str - Model name (required, should start with dim_, fct_, or rpt_)
+- description: str - Model description
+- materialized: str - Materialization (table, incremental)
+- source_models: List[SourceModel] - Source intermediate/staging models
+- columns: List[ColumnDef] - Output column definitions
+- unique_key: str|List[str] - Unique key(s) for incremental
+- incremental_strategy: str - Strategy for incremental (merge, delete+insert)
+- partition_by: str - Partition column for BigQuery/Snowflake
+- cluster_by: List[str] - Cluster columns
+
+Template Version: {{ _template_version | default('1.0.0') }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+{#-
+============================================================================
+NovaSight Generated dbt Marts Model: {{ model_name }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+Template: dbt/marts_model.sql.j2 v{{ _template_version | default('1.0.0') }}
+WARNING: Auto-generated file - do not edit manually
+============================================================================
+-#}
+{% raw %}{{{% endraw %}
+  config(
+    materialized='{{ materialized | default('table') }}'{% if unique_key is defined or schema is defined or partition_by is defined %},{% endif %}
+
+{% if schema is defined and schema %}
+    schema='{{ schema }}'{% if unique_key is defined or partition_by is defined %},{% endif %}
+
+{% endif %}
+{% if materialized == 'incremental' and unique_key is defined %}
+{% if unique_key is string %}
+    unique_key='{{ unique_key }}'{% if incremental_strategy is defined or partition_by is defined %},{% endif %}
+
+{% else %}
+    unique_key={{ unique_key | tojson }}{% if incremental_strategy is defined or partition_by is defined %},{% endif %}
+
+{% endif %}
+{% if incremental_strategy is defined %}
+    incremental_strategy='{{ incremental_strategy }}'{% if partition_by is defined %},{% endif %}
+
+{% endif %}
+{% endif %}
+{% if partition_by is defined and partition_by %}
+    partition_by={'field': '{{ partition_by }}', 'data_type': 'date'}{% if cluster_by is defined %},{% endif %}
+
+{% endif %}
+{% if cluster_by is defined and cluster_by | length > 0 %}
+    cluster_by={{ cluster_by | tojson }}
+{% endif %}
+    tags=['marts', '{{ model_name | split('_') | first }}']
+  )
+{% raw %}}}{% endraw %}
+
+{% if description is defined and description %}
+{#- {{ description }} -#}
+{% endif %}
+
+{#- Define CTEs for source models -#}
+{% for source in source_models %}
+{% set alias = source.alias | default(source.name | replace('int_', '') | replace('stg_', '')) %}
+{% if loop.first %}WITH {% else %}     {% endif %}{{ alias }} AS (
+    SELECT *
+    FROM {% raw %}{{ ref('{% endraw %}{{ source.name }}{% raw %}') }}{% endraw %}
+
+{% if source.where is defined and source.where %}
+    WHERE {{ source.where }}
+{% endif %}
+){% if not loop.last %},{% endif %}
+
+{% endfor %}
+
+{#- Final select for marts layer -#}
+{% set primary_source = source_models[0] %}
+{% set primary_alias = primary_source.alias | default(primary_source.name | replace('int_', '') | replace('stg_', '')) %}
+, final AS (
+    SELECT
+{% for col in columns %}
+{% if col.expression is defined and col.expression %}
+        {{ col.expression }} AS {{ col.name }}{% if not loop.last %},{% endif %}
+
+{% else %}
+        {{ col.source_alias | default(primary_alias) }}.{{ col.source_column | default(col.name) }}{% if col.alias is defined %} AS {{ col.alias }}{% endif %}{% if not loop.last %},{% endif %}
+
+{% endif %}
+{% endfor %}
+    FROM {{ primary_alias }}
+{% if joins is defined and joins | length > 0 %}
+{% for join in joins %}
+    {{ join.type | default('LEFT') | upper }} JOIN {{ join.model_alias | default(join.model | replace('int_', '') | replace('stg_', '')) }}
+        ON {{ primary_alias }}.{{ join.left_key }} = {{ join.model_alias | default(join.model | replace('int_', '') | replace('stg_', '')) }}.{{ join.right_key }}
+{% if join.additional_conditions is defined %}
+        AND {{ join.additional_conditions }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if where_clause is defined and where_clause %}
+    WHERE {{ where_clause }}
+{% endif %}
+{% if group_by is defined and group_by | length > 0 %}
+    GROUP BY
+{% for col in group_by %}
+        {{ col }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% endif %}
+)
+
+SELECT *
+FROM final
+{% if materialized == 'incremental' %}
+{% raw %}{% if is_incremental() %}{% endraw %}
+
+WHERE updated_at > (SELECT MAX(updated_at) FROM {% raw %}{{ this }}{% endraw %})
+{% raw %}{% endif %}{% endraw %}
+
+{% endif %}

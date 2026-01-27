@@ -1,0 +1,64 @@
+{#
+NovaSight dbt Task Template
+============================
+
+Generates an Airflow BashOperator task for dbt commands.
+
+Template Variables:
+- task_id: str - Task identifier (required)
+- dbt_command: str - dbt command (run, test, build, snapshot, seed, etc.)
+- select: str - Model selector (optional)
+- exclude: str - Models to exclude (optional)
+- vars: Dict[str, Any] - dbt variables (optional)
+- full_refresh: bool - Run with --full-refresh (optional)
+- target: str - dbt target environment (default: prod)
+- profiles_dir: str - dbt profiles directory (optional)
+- project_dir: str - dbt project directory (optional)
+- retries: int - Number of retries (default: 2)
+- timeout_minutes: int - Execution timeout (default: 60)
+
+Template Version: {{ _template_version | default('1.0.0') }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+    # dbt {{ dbt_command }} task: {{ task_id }}
+    {{ task_id }} = BashOperator(
+        task_id='{{ task_id }}',
+        bash_command='''
+            set -e
+            cd {{ project_dir | default('/opt/airflow/dbt') }} && \
+            dbt {{ dbt_command }} \
+{% if select is defined and select %}
+                --select {{ select }} \
+{% endif %}
+{% if exclude is defined and exclude %}
+                --exclude {{ exclude }} \
+{% endif %}
+{% if full_refresh | default(false) %}
+                --full-refresh \
+{% endif %}
+{% if vars is defined and vars | length > 0 %}
+{% for key, value in vars.items() %}
+                --vars '{"{{ key }}": {{ value | tojson }}}' \
+{% endfor %}
+{% endif %}
+{% if threads is defined and threads %}
+                --threads {{ threads }} \
+{% endif %}
+                --target {{ target | default('prod') }} \
+                --profiles-dir {{ profiles_dir | default('/opt/airflow/dbt') }}
+        '''.strip(),
+        env={
+            'DBT_PROFILES_DIR': '{{ profiles_dir | default('/opt/airflow/dbt') }}',
+{% if env_vars is defined and env_vars | length > 0 %}
+{% for key, value in env_vars.items() %}
+            '{{ key }}': '{{ value }}',
+{% endfor %}
+{% endif %}
+        },
+        execution_timeout=timedelta(minutes={{ timeout_minutes | default(60) }}),
+        retries={{ retries | default(2) }},
+        retry_delay=timedelta(minutes={{ retry_delay_minutes | default(5) }}),
+{% if trigger_rule is defined and trigger_rule %}
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+{% endif %}
+    )

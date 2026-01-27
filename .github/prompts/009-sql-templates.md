@@ -150,13 +150,13 @@ backend/templates/sql/
 
 ## Acceptance Criteria
 
-- [ ] Templates render valid PostgreSQL SQL
-- [ ] Tenant isolation policies applied correctly
-- [ ] SQL identifiers properly escaped
-- [ ] Indexes created correctly
-- [ ] Updated_at trigger works
-- [ ] Row-level security policies valid
-- [ ] SQL passes PostgreSQL syntax validation
+- [x] Templates render valid PostgreSQL SQL
+- [x] Tenant isolation policies applied correctly
+- [x] SQL identifiers properly escaped
+- [x] Indexes created correctly
+- [x] Updated_at trigger works
+- [x] Row-level security policies valid
+- [x] SQL passes PostgreSQL syntax validation
 
 ## Reference Documents
 

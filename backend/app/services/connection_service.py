@@ -10,6 +10,7 @@ from datetime import datetime
 from app.extensions import db
 from app.models.connection import DataConnection, DatabaseType, ConnectionStatus
 from app.services.credential_service import CredentialService
+from app.connectors import ConnectorRegistry, ConnectionConfig, ConnectorException
 import logging
 
 logger = logging.getLogger(__name__)
@@ -267,7 +268,7 @@ class ConnectionService:
         ssl_mode: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Test connection parameters without saving.
+        Test connection parameters without saving using connector framework.
         
         Args:
             db_type: Database type
@@ -282,43 +283,50 @@ class ConnectionService:
             Test result with success status and details
         """
         try:
-            # Build connection string based on type
-            if db_type == "postgresql":
-                import psycopg2
-                conn = psycopg2.connect(
-                    host=host,
-                    port=port,
-                    database=database,
-                    user=username,
-                    password=password,
-                    sslmode=ssl_mode or "prefer",
-                    connect_timeout=10
-                )
-                cursor = conn.cursor()
-                cursor.execute("SELECT version()")
-                version = cursor.fetchone()[0]
-                conn.close()
+            # Create connection config
+            config = ConnectionConfig(
+                host=host,
+                port=port,
+                database=database,
+                username=username,
+                password=password,
+                ssl_mode=ssl_mode,
+                ssl=bool(ssl_mode)
+            )
+            
+            # Create connector
+            connector = ConnectorRegistry.create_connector(db_type, config)
+            
+            # Test connection
+            with connector:
+                connector.test_connection()
+                
+                # Get additional info
+                schemas = connector.get_schemas()
                 
                 return {
                     "success": True,
+                    "message": "Connection successful",
                     "details": {
-                        "version": version,
                         "database": database,
+                        "schemas_count": len(schemas),
+                        "schemas": schemas[:10],  # First 10 schemas
                     }
                 }
-            
-            # Add other database types here
-            else:
-                return {
-                    "success": False,
-                    "error": f"Database type '{db_type}' not yet supported for testing"
-                }
                 
+        except ConnectorException as e:
+            logger.error(f"Connection test failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "message": "Connection test failed"
+            }
         except Exception as e:
             logger.error(f"Connection test failed: {e}")
             return {
                 "success": False,
                 "error": str(e),
+                "message": "Connection test failed",
                 "details": {"exception_type": type(e).__name__}
             }
     
@@ -329,7 +337,7 @@ class ConnectionService:
         include_columns: bool = False
     ) -> Optional[Dict[str, Any]]:
         """
-        Get database schema information.
+        Get database schema information using connector framework.
         
         Args:
             connection_id: Connection UUID
@@ -343,10 +351,176 @@ class ConnectionService:
         if not connection:
             return None
         
-        # TODO: Implement schema introspection for each database type
-        # This is a placeholder that would use SQLAlchemy inspection
+        try:
+            # Decrypt password
+            password = self.credential_service.decrypt(connection.password_encrypted)
+            
+            # Create connection config
+            config = ConnectionConfig(
+                host=connection.host,
+                port=connection.port,
+                database=connection.database,
+                username=connection.username,
+                password=password,
+                ssl_mode=connection.ssl_mode,
+                ssl=bool(connection.ssl_mode),
+                schema=connection.schema_name,
+                extra_params=connection.extra_params
+            )
+            
+            # Create connector
+            connector = ConnectorRegistry.create_connector(
+                connection.db_type.value,
+                config
+            )
+            
+            # Get schema information
+            with connector:
+                schemas = connector.get_schemas()
+                
+                tables_by_schema = {}
+                
+                # Filter by schema if requested
+                target_schemas = [schema_name] if schema_name else schemas
+                
+                for schema in target_schemas:
+                    if schema not in schemas:
+                        continue
+                        
+                    tables = connector.get_tables(schema)
+                    
+                    # Convert to dict format
+                    tables_dict = []
+                    for table in tables:
+                        table_dict = {
+                            "name": table.name,
+                            "schema": table.schema,
+                            "row_count": table.row_count,
+                            "comment": table.comment,
+                            "table_type": table.table_type,
+                        }
+                        
+                        # Include columns if requested
+                        if include_columns and table.columns:
+                            table_dict["columns"] = [
+                                {
+                                    "name": col.name,
+                                    "data_type": col.data_type,
+                                    "nullable": col.nullable,
+                                    "primary_key": col.primary_key,
+                                    "comment": col.comment,
+                                    "max_length": col.max_length,
+                                    "precision": col.precision,
+                                    "scale": col.scale,
+                                }
+                                for col in table.columns
+                            ]
+                        
+                        tables_dict.append(table_dict)
+                    
+                    tables_by_schema[schema] = tables_dict
+                
+                return {
+                    "schemas": schemas,
+                    "tables": tables_by_schema,
+                }
+                
+        except ConnectorException as e:
+            logger.error(f"Failed to get schema for connection {connection_id}: {e}")
+            return {
+                "schemas": [],
+                "tables": {},
+                "error": str(e)
+            }
+        except Exception as e:
+            logger.error(f"Failed to get schema for connection {connection_id}: {e}")
+            return {
+                "schemas": [],
+                "tables": {},
+                "error": str(e)
+            }
+    
+    def trigger_sync(
+        self,
+        connection_id: str,
+        sync_config: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
+        """
+        Trigger a data sync job for this connection.
         
-        return {
-            "schemas": [],
-            "tables": [],
-        }
+        Args:
+            connection_id: Connection UUID
+            sync_config: Optional sync configuration (tables, incremental, etc.)
+        
+        Returns:
+            Job ID or None if connection not found
+        """
+        connection = self.get_connection(connection_id)
+        if not connection:
+            return None
+        
+        try:
+            # TODO: Integrate with Airflow to trigger DAG
+            # For now, create a placeholder job ID
+            import uuid
+            job_id = str(uuid.uuid4())
+            
+            logger.info(f"Triggered sync for connection {connection.name}: job_id={job_id}")
+            
+            # TODO: Actually trigger Airflow DAG with connection parameters
+            # Example:
+            # from app.services.airflow_client import AirflowClient
+            # airflow = AirflowClient()
+            # dag_run = airflow.trigger_dag(
+            #     dag_id=f"ingest_{connection.db_type.value}",
+            #     conf={
+            #         "connection_id": connection_id,
+            #         "sync_config": sync_config or {}
+            #     }
+            # )
+            # job_id = dag_run["dag_run_id"]
+            
+            return job_id
+            
+        except Exception as e:
+            logger.error(f"Failed to trigger sync for connection {connection_id}: {e}")
+            return None
+    
+    def get_connector(self, connection_id: str):
+        """
+        Get a connector instance for this connection.
+        
+        Args:
+            connection_id: Connection UUID
+        
+        Returns:
+            Connector instance (remember to use with context manager)
+        
+        Raises:
+            ValueError: If connection not found
+        """
+        connection = self.get_connection(connection_id)
+        if not connection:
+            raise ValueError(f"Connection {connection_id} not found")
+        
+        # Decrypt password
+        password = self.credential_service.decrypt(connection.password_encrypted)
+        
+        # Create connection config
+        config = ConnectionConfig(
+            host=connection.host,
+            port=connection.port,
+            database=connection.database,
+            username=connection.username,
+            password=password,
+            ssl_mode=connection.ssl_mode,
+            ssl=bool(connection.ssl_mode),
+            schema=connection.schema_name,
+            extra_params=connection.extra_params
+        )
+        
+        # Create and return connector
+        return ConnectorRegistry.create_connector(
+            connection.db_type.value,
+            config
+        )

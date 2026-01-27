@@ -28,22 +28,32 @@ Generated: {{ _generated_at | default(now().isoformat()) }}
 
 -- Create table
 CREATE TABLE IF NOT EXISTS {{ full_table_name }} (
+    -- Primary key
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 {% if tenant_aware | default(true) %}
     -- Tenant isolation column
     tenant_id UUID NOT NULL,
 {% endif %}
 {% for column in columns %}
-    {{ column.name | sql_safe }} {{ column.type }}{% if not column.nullable | default(true) %} NOT NULL{% endif %}{% if column.default is defined and column.default is not none %} DEFAULT {{ column.default }}{% endif %}{% if column.primary_key | default(false) %} PRIMARY KEY{% endif %}{% if column.unique | default(false) and not column.primary_key | default(false) %} UNIQUE{% endif %}{% if not loop.last or (tenant_aware | default(true)) or indexes %},{% endif %}
-
+    {{ column.name | sql_safe }} {{ column.type }}{% if not column.nullable | default(true) %} NOT NULL{% endif %}{% if column.default is defined and column.default is not none %} DEFAULT {{ column.default }}{% endif %}{% if column.unique | default(false) %} UNIQUE{% endif %},
 {% endfor %}
-{% if tenant_aware | default(true) %}
+    -- Audit timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP{% if tenant_aware | default(true) %},
     -- Add tenant constraint for row-level security
     CONSTRAINT {{ table_name }}_tenant_fk 
         FOREIGN KEY (tenant_id) 
         REFERENCES public.tenants(id) 
         ON DELETE CASCADE
 {% endif %}
+
 );
+
+-- Add updated_at trigger
+CREATE OR REPLACE TRIGGER update_{{ table_name }}_updated_at
+    BEFORE UPDATE ON {{ full_table_name }}
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
 {% if description %}
 -- Table comment
