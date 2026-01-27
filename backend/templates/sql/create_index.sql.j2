@@ -1,0 +1,35 @@
+{#
+NovaSight PostgreSQL Index Template
+====================================
+
+Creates a PostgreSQL index.
+
+Template Variables:
+- name: Index name (required)
+- table_name: Table name (required)
+- schema_name: Schema name (default: 'public')
+- columns: List of column names (required)
+- unique: Create unique index (default: false)
+- method: Index method (btree, hash, gist, gin, etc.)
+- where: Partial index condition (optional)
+
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+-- ============================================================================
+-- NovaSight Generated Index: {{ name }}
+-- Generated: {{ _generated_at | default(now().isoformat()) }}
+-- Template: sql/create_index.sql.j2 v{{ _template_version | default('1.0.0') }}
+-- ============================================================================
+
+{% set schema = schema_name | default('public') %}
+{% set full_table_name = schema ~ '.' ~ table_name %}
+
+CREATE {% if unique | default(false) %}UNIQUE {% endif %}INDEX {% if concurrent | default(false) %}CONCURRENTLY {% endif %}IF NOT EXISTS {{ name | sql_safe }}
+    ON {{ full_table_name }}
+{% if method is defined and method and method != 'btree' %}
+    USING {{ method }}
+{% endif %}
+    ({{ columns | join(', ') }})
+{% if where is defined and where %}
+    WHERE {{ where }}
+{% endif %};

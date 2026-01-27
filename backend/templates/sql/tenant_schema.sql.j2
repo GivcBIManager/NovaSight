@@ -1,0 +1,55 @@
+{#
+NovaSight Tenant Schema Template
+=================================
+
+Creates a tenant-specific schema for data isolation.
+
+Template Variables:
+- tenant_id: Tenant UUID (required)
+- tenant_slug: Tenant slug for naming (optional)
+
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+-- ============================================================================
+-- NovaSight Tenant Schema
+-- Tenant ID: {{ tenant_id }}
+-- Generated: {{ _generated_at | default(now().isoformat()) }}
+-- Template: sql/tenant_schema.sql.j2 v{{ _template_version | default('1.0.0') }}
+-- ============================================================================
+
+{% set schema_name = 'tenant_' ~ (tenant_slug | default(tenant_id | replace('-', '_'))) | sql_safe %}
+
+-- Create tenant schema
+CREATE SCHEMA IF NOT EXISTS {{ schema_name }};
+
+-- Grant permissions to application role
+GRANT USAGE ON SCHEMA {{ schema_name }} TO novasight_app;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA {{ schema_name }} TO novasight_app;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {{ schema_name }} TO novasight_app;
+
+-- Set default privileges for future objects
+ALTER DEFAULT PRIVILEGES IN SCHEMA {{ schema_name }}
+    GRANT ALL PRIVILEGES ON TABLES TO novasight_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA {{ schema_name }}
+    GRANT ALL PRIVILEGES ON SEQUENCES TO novasight_app;
+
+-- Schema comment
+COMMENT ON SCHEMA {{ schema_name }} IS 'NovaSight tenant schema for tenant_id={{ tenant_id }}';
+
+-- Create tenant metadata table in schema
+CREATE TABLE IF NOT EXISTS {{ schema_name }}._metadata (
+    key VARCHAR(255) PRIMARY KEY,
+    value JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Insert tenant metadata
+INSERT INTO {{ schema_name }}._metadata (key, value)
+VALUES 
+    ('tenant_id', '"{{ tenant_id }}"'),
+    ('created_at', '"{{ _generated_at | default(now().isoformat()) }}"'),
+    ('schema_version', '"1.0.0"')
+ON CONFLICT (key) DO UPDATE SET
+    value = EXCLUDED.value,
+    updated_at = NOW();

@@ -1,0 +1,104 @@
+{#
+NovaSight dbt Sources YAML Template
+=====================================
+
+Generates a dbt sources.yml file for source definitions.
+
+Template Variables:
+- source_name: Name of the source (required)
+- database: Database name (optional)
+- schema: Schema name (optional)
+- tables: List of source tables (required)
+- description: Source description
+- loader: Data loader name
+- freshness: Freshness configuration
+
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+# ============================================================================
+# NovaSight Generated dbt Sources: {{ source_name }}
+# Generated: {{ _generated_at | default(now().isoformat()) }}
+# Template: dbt/sources.yml.j2 v{{ _template_version | default('1.0.0') }}
+# WARNING: Auto-generated file - do not edit manually
+# ============================================================================
+
+version: 2
+
+sources:
+  - name: {{ source_name }}
+{% if description is defined and description %}
+    description: >
+      {{ description | wordwrap(70) | indent(6) }}
+{% endif %}
+{% if database is defined and database %}
+    database: {{ database }}
+{% endif %}
+{% if schema is defined and schema %}
+    schema: {{ schema }}
+{% endif %}
+{% if loader is defined and loader %}
+    loader: {{ loader }}
+{% endif %}
+{% if meta is defined and meta %}
+    meta:
+{% for key, value in meta.items() %}
+      {{ key }}: {{ value | tojson }}
+{% endfor %}
+{% endif %}
+{% if freshness is defined and freshness %}
+    freshness:
+{% if freshness.warn_after is defined %}
+      warn_after:
+        count: {{ freshness.warn_after.count | default(24) }}
+        period: {{ freshness.warn_after.period | default('hour') }}
+{% endif %}
+{% if freshness.error_after is defined %}
+      error_after:
+        count: {{ freshness.error_after.count | default(48) }}
+        period: {{ freshness.error_after.period | default('hour') }}
+{% endif %}
+{% if freshness.loaded_at_field is defined %}
+    loaded_at_field: {{ freshness.loaded_at_field }}
+{% endif %}
+{% endif %}
+    tables:
+{% for table in tables %}
+      - name: {{ table.name }}
+{% if table.description is defined and table.description %}
+        description: {{ table.description }}
+{% endif %}
+{% if table.identifier is defined and table.identifier %}
+        identifier: {{ table.identifier }}
+{% endif %}
+{% if table.loaded_at_field is defined and table.loaded_at_field %}
+        loaded_at_field: {{ table.loaded_at_field }}
+{% endif %}
+{% if table.freshness is defined and table.freshness %}
+        freshness:
+{% if table.freshness.warn_after is defined %}
+          warn_after:
+            count: {{ table.freshness.warn_after.count }}
+            period: {{ table.freshness.warn_after.period }}
+{% endif %}
+{% if table.freshness.error_after is defined %}
+          error_after:
+            count: {{ table.freshness.error_after.count }}
+            period: {{ table.freshness.error_after.period }}
+{% endif %}
+{% endif %}
+{% if table.columns is defined and table.columns | length > 0 %}
+        columns:
+{% for column in table.columns %}
+          - name: {{ column.name }}
+{% if column.description is defined and column.description %}
+            description: {{ column.description }}
+{% endif %}
+{% if column.tests is defined and column.tests | length > 0 %}
+            tests:
+{% for test in column.tests %}
+              - {{ test }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}

@@ -1,0 +1,114 @@
+{#
+NovaSight dbt Model Template
+=============================
+
+Generates a dbt SQL model file with proper configuration.
+
+Template Variables:
+- model_name: Name of the model (required)
+- description: Model description
+- materialized: view|table|incremental|ephemeral
+- schema: Target schema
+- source_name: Source name for ref()
+- source_table: Source table name
+- columns: List of column definitions with transformations
+- unique_key: Key(s) for incremental models
+- incremental_strategy: append|delete+insert|merge
+- tags: List of tags
+- meta: Metadata dictionary
+
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+{#-
+============================================================================
+NovaSight Generated dbt Model: {{ model_name }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+Template: dbt/model.sql.j2 v{{ _template_version | default('1.0.0') }}
+WARNING: Auto-generated file - do not edit manually
+============================================================================
+-#}
+{% raw %}{{{% endraw %}
+  config(
+{% if materialized | default('view') != 'view' %}
+    materialized='{{ materialized | default('view') }}'{% if schema is defined and schema %},{% endif %}
+
+{% endif %}
+{% if schema is defined and schema %}
+    schema='{{ schema }}'{% if materialized == 'incremental' %},{% endif %}
+
+{% endif %}
+{% if materialized == 'incremental' %}
+{% if unique_key is defined and unique_key %}
+{% if unique_key is string %}
+    unique_key='{{ unique_key }}'{% if incremental_strategy is defined %},{% endif %}
+
+{% else %}
+    unique_key={{ unique_key | tojson }}{% if incremental_strategy is defined %},{% endif %}
+
+{% endif %}
+{% endif %}
+{% if incremental_strategy is defined and incremental_strategy %}
+    incremental_strategy='{{ incremental_strategy | default('append') }}'
+{% endif %}
+{% endif %}
+  )
+{% raw %}}}{% endraw %}
+
+{% if description is defined and description %}
+{#- Model description as comment -#}
+-- {{ description }}
+
+{% endif %}
+{% if source_name is defined and source_table is defined %}
+{% if materialized == 'incremental' %}
+{% raw %}{% if is_incremental() %}{% endraw %}
+
+WITH source_data AS (
+    SELECT *
+    FROM {% raw %}{{ source('{% endraw %}{{ source_name }}{% raw %}', '{% endraw %}{{ source_table }}{% raw %}') }}{% endraw %}
+
+    WHERE updated_at > (SELECT MAX(updated_at) FROM {% raw %}{{ this }}{% endraw %})
+)
+
+{% raw %}{% else %}{% endraw %}
+
+WITH source_data AS (
+    SELECT *
+    FROM {% raw %}{{ source('{% endraw %}{{ source_name }}{% raw %}', '{% endraw %}{{ source_table }}{% raw %}') }}{% endraw %}
+
+)
+
+{% raw %}{% endif %}{% endraw %}
+
+{% else %}
+WITH source_data AS (
+    SELECT *
+    FROM {% raw %}{{ source('{% endraw %}{{ source_name }}{% raw %}', '{% endraw %}{{ source_table }}{% raw %}') }}{% endraw %}
+
+)
+
+{% endif %}
+{% else %}
+{#- No source defined, use placeholder -#}
+WITH source_data AS (
+    -- TODO: Define your source data here
+    SELECT 1 AS placeholder
+)
+
+{% endif %}
+{% if columns is defined and columns | length > 0 %}
+SELECT
+{% for column in columns %}
+{% if column.expression is defined and column.expression %}
+    {{ column.expression }} AS {{ column.name }}{% if not loop.last %},{% endif %}
+
+{% else %}
+    {{ column.name }}{% if not loop.last %},{% endif %}
+
+{% endif %}
+{% endfor %}
+FROM source_data
+{% else %}
+SELECT *
+FROM source_data
+{% endif %}

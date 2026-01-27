@@ -1,0 +1,425 @@
+{
+  "version": "1.0.0",
+  "description": "NovaSight template manifest - defines available templates and their schemas",
+  "last_updated": "2026-01-27",
+  "templates": {
+    "sql/create_table.sql.j2": {
+      "description": "Creates a PostgreSQL table with optional tenant awareness",
+      "category": "sql",
+      "schema": {
+        "type": "object",
+        "required": ["table_name", "columns"],
+        "properties": {
+          "table_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "maxLength": 63,
+            "description": "Name of the table to create"
+          },
+          "schema_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "default": "public"
+          },
+          "columns": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/definitions/Column"
+            }
+          },
+          "indexes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Index"
+            },
+            "default": []
+          },
+          "tenant_aware": {
+            "type": "boolean",
+            "default": true,
+            "description": "Add tenant_id column and constraint"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        }
+      }
+    },
+    "sql/create_index.sql.j2": {
+      "description": "Creates a PostgreSQL index",
+      "category": "sql",
+      "schema": {
+        "type": "object",
+        "required": ["name", "table_name", "columns"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "table_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "schema_name": {
+            "type": "string",
+            "default": "public"
+          },
+          "columns": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "unique": {
+            "type": "boolean",
+            "default": false
+          },
+          "method": {
+            "type": "string",
+            "enum": ["btree", "hash", "gist", "gin", "spgist", "brin"],
+            "default": "btree"
+          },
+          "where": {
+            "type": "string",
+            "description": "Partial index condition"
+          }
+        }
+      }
+    },
+    "sql/tenant_schema.sql.j2": {
+      "description": "Creates a tenant-specific schema",
+      "category": "sql",
+      "schema": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_slug": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        }
+      }
+    },
+    "dbt/model.sql.j2": {
+      "description": "Generates a dbt SQL model file",
+      "category": "dbt",
+      "schema": {
+        "type": "object",
+        "required": ["model_name"],
+        "properties": {
+          "model_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "materialized": {
+            "type": "string",
+            "enum": ["view", "table", "incremental", "ephemeral"],
+            "default": "view"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "source_name": {
+            "type": "string"
+          },
+          "source_table": {
+            "type": "string"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/DbtColumn"
+            }
+          },
+          "unique_key": {
+            "oneOf": [
+              {"type": "string"},
+              {"type": "array", "items": {"type": "string"}}
+            ]
+          },
+          "incremental_strategy": {
+            "type": "string",
+            "enum": ["append", "delete+insert", "merge"],
+            "default": "append"
+          }
+        }
+      }
+    },
+    "dbt/schema.yml.j2": {
+      "description": "Generates a dbt schema.yml file for a model",
+      "category": "dbt",
+      "schema": {
+        "type": "object",
+        "required": ["model_name"],
+        "properties": {
+          "model_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/DbtColumn"
+            }
+          }
+        }
+      }
+    },
+    "dbt/sources.yml.j2": {
+      "description": "Generates a dbt sources.yml file",
+      "category": "dbt",
+      "schema": {
+        "type": "object",
+        "required": ["source_name", "tables"],
+        "properties": {
+          "source_name": {
+            "type": "string"
+          },
+          "database": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "tables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {"type": "string"},
+                "description": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "airflow/dag.py.j2": {
+      "description": "Generates an Airflow DAG Python file",
+      "category": "airflow",
+      "schema": {
+        "$ref": "#/definitions/AirflowDag"
+      }
+    },
+    "clickhouse/create_table.sql.j2": {
+      "description": "Creates a ClickHouse table",
+      "category": "clickhouse",
+      "schema": {
+        "type": "object",
+        "required": ["table_name", "columns", "order_by"],
+        "properties": {
+          "table_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "database": {
+            "type": "string",
+            "default": "default"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ClickHouseColumn"
+            }
+          },
+          "engine": {
+            "type": "string",
+            "default": "MergeTree"
+          },
+          "order_by": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "partition_by": {
+            "type": "string"
+          },
+          "primary_key": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "tenant_aware": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      }
+    },
+    "clickhouse/materialized_view.sql.j2": {
+      "description": "Creates a ClickHouse materialized view",
+      "category": "clickhouse",
+      "schema": {
+        "type": "object",
+        "required": ["view_name", "source_table", "select_query", "order_by"],
+        "properties": {
+          "view_name": {
+            "type": "string"
+          },
+          "source_table": {
+            "type": "string"
+          },
+          "select_query": {
+            "type": "string"
+          },
+          "engine": {
+            "type": "string",
+            "default": "SummingMergeTree"
+          },
+          "order_by": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Column": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "maxLength": 63
+        },
+        "type": {
+          "type": "string",
+          "description": "PostgreSQL data type"
+        },
+        "nullable": {
+          "type": "boolean",
+          "default": true
+        },
+        "default": {
+          "type": "string",
+          "description": "Default value expression"
+        },
+        "primary_key": {
+          "type": "boolean",
+          "default": false
+        },
+        "unique": {
+          "type": "boolean",
+          "default": false
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "Index": {
+      "type": "object",
+      "required": ["name", "columns"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "columns": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "unique": {
+          "type": "boolean",
+          "default": false
+        },
+        "method": {
+          "type": "string",
+          "enum": ["btree", "hash", "gist", "gin", "spgist", "brin"],
+          "default": "btree"
+        }
+      }
+    },
+    "DbtColumn": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "tests": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "meta": {
+          "type": "object"
+        }
+      }
+    },
+    "AirflowDag": {
+      "type": "object",
+      "required": ["dag_id", "start_date", "tasks"],
+      "properties": {
+        "dag_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.-]*$"
+        },
+        "description": {
+          "type": "string"
+        },
+        "schedule": {
+          "type": "string"
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "catchup": {
+          "type": "boolean",
+          "default": false
+        },
+        "max_active_runs": {
+          "type": "integer",
+          "default": 1
+        },
+        "tags": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "tasks": {
+          "type": "array",
+          "minItems": 1
+        }
+      }
+    },
+    "ClickHouseColumn": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "nullable": {
+          "type": "boolean",
+          "default": false
+        },
+        "default": {
+          "type": "string"
+        },
+        "codec": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

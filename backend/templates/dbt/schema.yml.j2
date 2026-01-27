@@ -1,0 +1,71 @@
+{#
+NovaSight dbt Schema YAML Template
+===================================
+
+Generates a dbt schema.yml file for model documentation and testing.
+
+Template Variables:
+- model_name: Name of the model (required)
+- description: Model description
+- columns: List of column definitions with tests
+- meta: Model metadata
+
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+# ============================================================================
+# NovaSight Generated dbt Schema: {{ model_name }}
+# Generated: {{ _generated_at | default(now().isoformat()) }}
+# Template: dbt/schema.yml.j2 v{{ _template_version | default('1.0.0') }}
+# WARNING: Auto-generated file - do not edit manually
+# ============================================================================
+
+version: 2
+
+models:
+  - name: {{ model_name }}
+{% if description is defined and description %}
+    description: >
+      {{ description | wordwrap(70) | indent(6) }}
+{% endif %}
+{% if meta is defined and meta %}
+    meta:
+{% for key, value in meta.items() %}
+      {{ key }}: {{ value | tojson }}
+{% endfor %}
+{% endif %}
+{% if tags is defined and tags | length > 0 %}
+    tags:
+{% for tag in tags %}
+      - {{ tag }}
+{% endfor %}
+{% endif %}
+{% if columns is defined and columns | length > 0 %}
+    columns:
+{% for column in columns %}
+      - name: {{ column.name }}
+{% if column.description is defined and column.description %}
+        description: {{ column.description }}
+{% endif %}
+{% if column.tests is defined and column.tests | length > 0 %}
+        tests:
+{% for test in column.tests %}
+{% if test is string %}
+          - {{ test }}
+{% elif test is mapping %}
+{% for test_name, test_config in test.items() %}
+          - {{ test_name }}:
+{% for config_key, config_value in test_config.items() %}
+              {{ config_key }}: {{ config_value | tojson }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if column.meta is defined and column.meta %}
+        meta:
+{% for key, value in column.meta.items() %}
+          {{ key }}: {{ value | tojson }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}

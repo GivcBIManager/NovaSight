@@ -1,0 +1,69 @@
+{#
+NovaSight ClickHouse Table Template
+====================================
+
+Creates a ClickHouse table with MergeTree engine family.
+
+Template Variables:
+- table_name: Name of the table (required)
+- database: Database name (default: 'default')
+- columns: List of column definitions (required)
+- engine: Table engine (default: 'MergeTree')
+- order_by: ORDER BY columns (required)
+- partition_by: PARTITION BY expression (optional)
+- primary_key: PRIMARY KEY columns (optional, defaults to order_by)
+- sample_by: SAMPLE BY expression (optional)
+- ttl: Table-level TTL expression (optional)
+- settings: Engine settings dictionary
+- tenant_aware: Add tenant_id column (default: true)
+
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+-- ============================================================================
+-- NovaSight Generated ClickHouse Table: {{ table_name }}
+-- Generated: {{ _generated_at | default(now().isoformat()) }}
+-- Template: clickhouse/create_table.sql.j2 v{{ _template_version | default('1.0.0') }}
+-- WARNING: Auto-generated file - do not edit manually
+-- ============================================================================
+
+{% set db = database | default('default') %}
+{% set full_table_name = db ~ '.' ~ table_name %}
+
+CREATE TABLE IF NOT EXISTS {{ full_table_name }}
+(
+{% if tenant_aware | default(true) %}
+    -- Tenant isolation column
+    tenant_id UUID,
+{% endif %}
+{% for column in columns %}
+    {{ column.name }} {% if column.nullable | default(false) %}Nullable({{ column.type }}){% else %}{{ column.type }}{% endif %}{% if column.default is defined and column.default %} DEFAULT {{ column.default }}{% endif %}{% if column.codec is defined and column.codec %} CODEC({{ column.codec }}){% endif %}{% if column.ttl is defined and column.ttl %} TTL {{ column.ttl }}{% endif %}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+)
+ENGINE = {{ engine | default('MergeTree') }}
+{% if partition_by is defined and partition_by %}
+PARTITION BY {{ partition_by }}
+{% endif %}
+{% if primary_key is defined and primary_key %}
+PRIMARY KEY ({% if tenant_aware | default(true) %}tenant_id, {% endif %}{{ primary_key | join(', ') }})
+{% endif %}
+ORDER BY ({% if tenant_aware | default(true) %}tenant_id, {% endif %}{{ order_by | join(', ') }})
+{% if sample_by is defined and sample_by %}
+SAMPLE BY {{ sample_by }}
+{% endif %}
+{% if ttl is defined and ttl %}
+TTL {{ ttl }}
+{% endif %}
+{% if settings is defined and settings %}
+SETTINGS
+{% for key, value in settings.items() %}
+    {{ key }} = {{ value }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+{% endif %}
+;
+
+{% if description is defined and description %}
+-- Table comment (ClickHouse doesn't support COMMENT ON, using ALTER)
+ALTER TABLE {{ full_table_name }} MODIFY COMMENT '{{ description | sql_escape }}';
+{% endif %}

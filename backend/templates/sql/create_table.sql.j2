@@ -1,0 +1,84 @@
+{#
+NovaSight PostgreSQL Table Template
+====================================
+
+Creates a PostgreSQL table with optional tenant awareness.
+All identifiers are validated before rendering.
+
+Template Variables:
+- table_name: Name of the table (required, validated)
+- schema_name: Schema name (default: 'public')
+- columns: List of column definitions (required)
+- indexes: List of index definitions (optional)
+- tenant_aware: Add tenant_id column (default: true)
+- description: Table description (optional)
+
+Template Version: {{ _template_version | default('1.0.0') }}
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+-- ============================================================================
+-- NovaSight Generated Table: {{ table_name }}
+-- Generated: {{ _generated_at | default(now().isoformat()) }}
+-- Template: sql/create_table.sql.j2 v{{ _template_version | default('1.0.0') }}
+-- WARNING: Auto-generated file - do not edit manually
+-- ============================================================================
+
+{% set schema = schema_name | default('public') %}
+{% set full_table_name = schema ~ '.' ~ table_name %}
+
+-- Create table
+CREATE TABLE IF NOT EXISTS {{ full_table_name }} (
+{% if tenant_aware | default(true) %}
+    -- Tenant isolation column
+    tenant_id UUID NOT NULL,
+{% endif %}
+{% for column in columns %}
+    {{ column.name | sql_safe }} {{ column.type }}{% if not column.nullable | default(true) %} NOT NULL{% endif %}{% if column.default is defined and column.default is not none %} DEFAULT {{ column.default }}{% endif %}{% if column.primary_key | default(false) %} PRIMARY KEY{% endif %}{% if column.unique | default(false) and not column.primary_key | default(false) %} UNIQUE{% endif %}{% if not loop.last or (tenant_aware | default(true)) or indexes %},{% endif %}
+
+{% endfor %}
+{% if tenant_aware | default(true) %}
+    -- Add tenant constraint for row-level security
+    CONSTRAINT {{ table_name }}_tenant_fk 
+        FOREIGN KEY (tenant_id) 
+        REFERENCES public.tenants(id) 
+        ON DELETE CASCADE
+{% endif %}
+);
+
+{% if description %}
+-- Table comment
+COMMENT ON TABLE {{ full_table_name }} IS '{{ description | sql_escape }}';
+{% endif %}
+
+{% for column in columns %}
+{% if column.description is defined and column.description %}
+COMMENT ON COLUMN {{ full_table_name }}.{{ column.name | sql_safe }} IS '{{ column.description | sql_escape }}';
+{% endif %}
+{% endfor %}
+
+{% if tenant_aware | default(true) %}
+-- Create index for tenant_id (critical for performance)
+CREATE INDEX IF NOT EXISTS idx_{{ table_name }}_tenant_id 
+    ON {{ full_table_name }} (tenant_id);
+
+-- Enable Row Level Security
+ALTER TABLE {{ full_table_name }} ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policy for tenant isolation
+CREATE POLICY {{ table_name }}_tenant_isolation_policy 
+    ON {{ full_table_name }}
+    FOR ALL 
+    USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+{% endif %}
+
+{% for index in indexes | default([]) %}
+-- Index: {{ index.name }}
+CREATE {% if index.unique | default(false) %}UNIQUE {% endif %}INDEX IF NOT EXISTS {{ index.name | sql_safe }}
+    ON {{ full_table_name }}
+    {% if index.method | default('btree') != 'btree' %}USING {{ index.method }}{% endif %}
+
+    ({{ index.columns | join(', ') }}){% if index.where is defined and index.where %}
+
+    WHERE {{ index.where }}{% endif %};
+
+{% endfor %}

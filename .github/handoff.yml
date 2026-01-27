@@ -302,6 +302,28 @@ handoff_rules:
       - "022-ollama-integration.md"
       - "023-nl-to-sql.md"
 
+  # Documentation tasks
+  - patterns:
+      - "api documentation|openapi|swagger"
+      - "user documentation|user guide|help"
+      - "developer documentation|readme|contributing"
+    target: backend
+    prompts:
+      - "046-api-documentation.md"
+      - "047-user-documentation.md"
+      - "048-developer-documentation.md"
+
+  # Deployment tasks
+  - patterns:
+      - "deployment runbook|deploy steps|rollback"
+      - "launch checklist|go-live|production ready"
+      - "alerting|alerts|pagerduty|opsgenie"
+    target: infrastructure
+    prompts:
+      - "042-alerting-configuration.md"
+      - "049-deployment-runbook.md"
+      - "050-launch-checklist.md"
+
   # Admin tasks
   - patterns:
       - "tenant management|user management"
@@ -527,3 +549,39 @@ delegation:
     📊 Progress: {progress}
     
     Next: {next_task}
+
+# ============================================
+# PRIORITY RESOLUTION
+# ============================================
+# When multiple patterns match, use this priority order:
+# 1. security (highest) - security-critical tasks
+# 2. template-engine - code generation tasks
+# 3. Specific domain agent (ai, dbt, orchestration, etc.)
+# 4. backend/frontend - general implementation
+# 5. testing - verification tasks
+# 6. infrastructure (lowest for non-infra tasks)
+
+priority_order:
+  - security
+  - template-engine
+  - ai
+  - dbt
+  - orchestration
+  - dashboard
+  - data-sources
+  - backend
+  - frontend
+  - admin
+  - testing
+  - infrastructure
+
+# ============================================
+# METADATA
+# ============================================
+metadata:
+  version: "1.0.0"
+  last_updated: "2026-01-27"
+  reviewed_by: "novasight-orchestrator"
+  total_agents: 13
+  total_prompts: 50
+  total_phases: 8

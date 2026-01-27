@@ -1,0 +1,71 @@
+{#
+NovaSight ClickHouse Materialized View Template
+=================================================
+
+Creates a ClickHouse materialized view for aggregations.
+
+Template Variables:
+- view_name: Name of the view (required)
+- database: Database name (default: 'default')
+- source_table: Source table for the view (required)
+- target_table: Target table for materialized data (optional)
+- select_query: SELECT query for the view (required)
+- engine: Storage engine (default: 'SummingMergeTree')
+- order_by: ORDER BY columns (required)
+- partition_by: PARTITION BY expression (optional)
+- populate: Whether to populate on creation (default: false)
+- tenant_aware: Include tenant_id in grouping (default: true)
+
+Generated: {{ _generated_at | default(now().isoformat()) }}
+#}
+-- ============================================================================
+-- NovaSight Generated ClickHouse Materialized View: {{ view_name }}
+-- Generated: {{ _generated_at | default(now().isoformat()) }}
+-- Template: clickhouse/materialized_view.sql.j2 v{{ _template_version | default('1.0.0') }}
+-- WARNING: Auto-generated file - do not edit manually
+-- ============================================================================
+
+{% set db = database | default('default') %}
+{% set full_view_name = db ~ '.' ~ view_name %}
+{% set full_source_table = db ~ '.' ~ source_table %}
+
+{% if target_table is defined and target_table %}
+{% set full_target_table = db ~ '.' ~ target_table %}
+
+-- Create target table for materialized data
+CREATE TABLE IF NOT EXISTS {{ full_target_table }}
+(
+{% if tenant_aware | default(true) %}
+    tenant_id UUID,
+{% endif %}
+{% for column in columns | default([]) %}
+    {{ column.name }} {{ column.type }}{% if not loop.last %},{% endif %}
+
+{% endfor %}
+)
+ENGINE = {{ engine | default('SummingMergeTree') }}
+{% if partition_by is defined and partition_by %}
+PARTITION BY {{ partition_by }}
+{% endif %}
+ORDER BY ({% if tenant_aware | default(true) %}tenant_id, {% endif %}{{ order_by | join(', ') }})
+;
+
+{% endif %}
+
+-- Create materialized view
+CREATE MATERIALIZED VIEW IF NOT EXISTS {{ full_view_name }}
+{% if target_table is defined and target_table %}
+TO {{ full_target_table }}
+{% else %}
+ENGINE = {{ engine | default('SummingMergeTree') }}
+{% if partition_by is defined and partition_by %}
+PARTITION BY {{ partition_by }}
+{% endif %}
+ORDER BY ({% if tenant_aware | default(true) %}tenant_id, {% endif %}{{ order_by | join(', ') }})
+{% endif %}
+{% if populate | default(false) %}
+POPULATE
+{% endif %}
+AS
+{{ select_query }}
+;
