@@ -11,12 +11,14 @@ import {
   ChevronRight,
   Sparkles,
   Boxes,
+  MessageSquare,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Ask Data', href: '/query', icon: MessageSquare },
   { name: 'Connections', href: '/connections', icon: Database },
   { name: 'DAGs', href: '/dags', icon: GitBranch },
   { name: 'PySpark Apps', href: '/pyspark', icon: Sparkles },

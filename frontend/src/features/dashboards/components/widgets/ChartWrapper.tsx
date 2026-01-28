@@ -1,5 +1,6 @@
 /**
  * Chart Wrapper Component
+ * Unified chart rendering with consistent styling and theming
  */
 
 import {
@@ -21,6 +22,8 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
+import { useTheme } from '@/contexts/ThemeContext'
+import { CustomTooltip, PieTooltip } from './CustomTooltip'
 import type { VizConfig, WidgetType } from '@/types/dashboard'
 
 interface ChartWrapperProps {
@@ -39,6 +42,9 @@ const DEFAULT_COLORS = [
 ]
 
 export function ChartWrapper({ type, data, config }: ChartWrapperProps) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -51,26 +57,48 @@ export function ChartWrapper({ type, data, config }: ChartWrapperProps) {
   const showLegend = config.showLegend !== false
   const showGrid = config.showGrid !== false
   
+  // Theme-aware axis styling
+  const axisStyle = {
+    stroke: isDark ? '#6B7280' : '#9CA3AF',
+    fontSize: 12,
+    tickLine: { stroke: isDark ? '#4B5563' : '#D1D5DB' },
+  }
+  
+  const gridStyle = {
+    strokeDasharray: '3 3',
+    stroke: isDark ? '#374151' : '#E5E7EB',
+  }
+  
   const commonProps = {
     data,
-    margin: { top: 5, right: 20, left: 0, bottom: 5 },
+    margin: { top: 10, right: 30, left: 0, bottom: 0 },
   }
   
   const renderChart = () => {
     if (type === 'bar_chart') {
       return (
         <BarChart {...commonProps}>
-          {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-          <XAxis dataKey={config.xAxis} />
-          <YAxis />
-          <Tooltip />
+          {showGrid && <CartesianGrid {...gridStyle} />}
+          <XAxis dataKey={config.xAxis} {...axisStyle} />
+          <YAxis {...axisStyle} />
+          <Tooltip content={<CustomTooltip />} />
           {showLegend && <Legend />}
           {Array.isArray(config.yAxis) ? (
             config.yAxis.map((key, idx) => (
-              <Bar key={key} dataKey={key} fill={colors[idx % colors.length]} />
+              <Bar
+                key={key}
+                dataKey={key}
+                fill={colors[idx % colors.length]}
+                stackId={config.stacked ? 'stack' : undefined}
+                radius={[4, 4, 0, 0]}
+              />
             ))
           ) : (
-            <Bar dataKey={config.yAxis as string || 'value'} fill={colors[0]} />
+            <Bar
+              dataKey={config.yAxis as string || 'value'}
+              fill={colors[0]}
+              radius={[4, 4, 0, 0]}
+            />
           )}
         </BarChart>
       )
@@ -79,27 +107,31 @@ export function ChartWrapper({ type, data, config }: ChartWrapperProps) {
     if (type === 'line_chart') {
       return (
         <LineChart {...commonProps}>
-          {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-          <XAxis dataKey={config.xAxis} />
-          <YAxis />
-          <Tooltip />
+          {showGrid && <CartesianGrid {...gridStyle} />}
+          <XAxis dataKey={config.xAxis} {...axisStyle} />
+          <YAxis {...axisStyle} />
+          <Tooltip content={<CustomTooltip />} />
           {showLegend && <Legend />}
           {Array.isArray(config.yAxis) ? (
             config.yAxis.map((key, idx) => (
-              <Line 
+              <Line
                 key={key}
                 type="monotone"
                 dataKey={key}
                 stroke={colors[idx % colors.length]}
                 strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 6 }}
               />
             ))
           ) : (
-            <Line 
+            <Line
               type="monotone"
               dataKey={config.yAxis as string || 'value'}
               stroke={colors[0]}
               strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 6 }}
             />
           )}
         </LineChart>
@@ -109,10 +141,10 @@ export function ChartWrapper({ type, data, config }: ChartWrapperProps) {
     if (type === 'area_chart') {
       return (
         <AreaChart {...commonProps}>
-          {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-          <XAxis dataKey={config.xAxis} />
-          <YAxis />
-          <Tooltip />
+          {showGrid && <CartesianGrid {...gridStyle} />}
+          <XAxis dataKey={config.xAxis} {...axisStyle} />
+          <YAxis {...axisStyle} />
+          <Tooltip content={<CustomTooltip />} />
           {showLegend && <Legend />}
           {Array.isArray(config.yAxis) ? (
             config.yAxis.map((key, idx) => (
@@ -122,7 +154,8 @@ export function ChartWrapper({ type, data, config }: ChartWrapperProps) {
                 dataKey={key}
                 fill={colors[idx % colors.length]}
                 stroke={colors[idx % colors.length]}
-                stackId={config.stacked ? '1' : undefined}
+                fillOpacity={0.3}
+                stackId={config.stacked ? 'stack' : undefined}
               />
             ))
           ) : (
@@ -131,6 +164,7 @@ export function ChartWrapper({ type, data, config }: ChartWrapperProps) {
               dataKey={config.yAxis as string || 'value'}
               fill={colors[0]}
               stroke={colors[0]}
+              fillOpacity={0.3}
             />
           )}
         </AreaChart>
@@ -147,13 +181,14 @@ export function ChartWrapper({ type, data, config }: ChartWrapperProps) {
             cx="50%"
             cy="50%"
             outerRadius={80}
-            label
+            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+            labelLine={false}
           >
             {data.map((_entry, index) => (
               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
             ))}
           </Pie>
-          <Tooltip />
+          <Tooltip content={<PieTooltip />} />
           {showLegend && <Legend />}
         </PieChart>
       )
@@ -162,12 +197,12 @@ export function ChartWrapper({ type, data, config }: ChartWrapperProps) {
     if (type === 'scatter_chart') {
       return (
         <ScatterChart {...commonProps}>
-          {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-          <XAxis dataKey={config.xAxis} type="number" />
-          <YAxis dataKey={config.yAxis as string} type="number" />
-          <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+          {showGrid && <CartesianGrid {...gridStyle} />}
+          <XAxis dataKey={config.xAxis} type="number" {...axisStyle} />
+          <YAxis dataKey={config.yAxis as string} type="number" {...axisStyle} />
+          <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
           {showLegend && <Legend />}
-          <Scatter data={data} fill={colors[0]} />
+          <Scatter data={data} fill={colors[0]} fillOpacity={0.7} />
         </ScatterChart>
       )
     }

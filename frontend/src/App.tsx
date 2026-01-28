@@ -21,6 +21,7 @@ import {
 } from '@/pages/pyspark'
 import { SemanticModelsPage, ModelDetailPage } from '@/features/semantic'
 import { DashboardsListPage, DashboardBuilderPage } from '@/features/dashboards'
+import { QueryPage } from '@/features/query'
 
 function App() {
   return (
@@ -71,6 +72,9 @@ function App() {
             {/* Analytics Dashboards */}
             <Route path="dashboards" element={<DashboardsListPage />} />
             <Route path="dashboards/:dashboardId" element={<DashboardBuilderPage />} />
+            
+            {/* AI Query Interface */}
+            <Route path="query" element={<QueryPage />} />
           </Route>
 
           {/* Catch all */}
