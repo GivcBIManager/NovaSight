@@ -69,6 +69,7 @@ class Tenant(db.Model):
     users = db.relationship("User", back_populates="tenant", lazy="dynamic")
     connections = db.relationship("DataConnection", back_populates="tenant", lazy="dynamic")
     dag_configs = db.relationship("DagConfig", back_populates="tenant", lazy="dynamic")
+    pyspark_jobs = db.relationship("PySparkJobConfig", back_populates="tenant", lazy="dynamic")
     
     def __repr__(self):
         return f"<Tenant {self.slug}>"

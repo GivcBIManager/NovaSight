@@ -9,6 +9,7 @@ from app.models.tenant import Tenant, TenantStatus
 from app.models.user import User, Role, UserRole, UserStatus
 from app.models.connection import DataConnection
 from app.models.dag import DagConfig, DagVersion, TaskConfig
+from app.models.pyspark_job import PySparkJobConfig, SourceType, SCDType, WriteMode, JobStatus
 from app.models.audit import AuditLog
 from app.models.mixins import (
     TenantMixin,
@@ -29,6 +30,11 @@ __all__ = [
     "DagConfig",
     "DagVersion",
     "TaskConfig",
+    "PySparkJobConfig",
+    "SourceType",
+    "SCDType",
+    "WriteMode",
+    "JobStatus",
     "AuditLog",
     # Mixins
     "TenantMixin",
