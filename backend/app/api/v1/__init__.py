@@ -15,3 +15,4 @@ from app.api.v1 import tenants
 from app.api.v1 import users
 from app.api.v1 import connections
 from app.api.v1 import dags
+from app.api.v1 import pyspark_jobs

@@ -374,3 +374,200 @@ def trigger_connection_sync(connection_id: str):
         "status": "started",
         "message": "Data sync job started successfully"
     })
+
+
+@api_v1_bp.route("/connections/<connection_id>/tables", methods=["GET"])
+@jwt_required()
+@require_tenant_context
+def list_connection_tables(connection_id: str):
+    """
+    List all tables in a connection's database.
+    
+    Args:
+        connection_id: Connection UUID
+    
+    Query Parameters:
+        - schema_name: Filter by schema name (optional)
+        - search: Search tables by name (optional)
+    
+    Returns:
+        List of table names
+    """
+    identity = get_jwt_identity()
+    tenant_id = identity.get("tenant_id")
+    
+    schema_name = request.args.get("schema_name")
+    search = request.args.get("search")
+    
+    connection_service = ConnectionService(tenant_id)
+    
+    # Get connection
+    connection = connection_service.get_connection(connection_id)
+    if not connection:
+        raise NotFoundError("Connection not found")
+    
+    try:
+        # Get schema information with tables
+        schema_info = connection_service.get_schema(
+            connection_id=connection_id,
+            schema_name=schema_name,
+            include_columns=False
+        )
+        
+        if schema_info is None:
+            raise ConnectionTestError("Failed to retrieve schema information")
+        
+        tables = schema_info.get("tables", [])
+        
+        # Filter by search if provided
+        if search:
+            search_lower = search.lower()
+            tables = [t for t in tables if search_lower in t.lower()]
+        
+        return jsonify({
+            "connection_id": connection_id,
+            "schema_name": schema_name or connection.schema_name,
+            "tables": tables,
+            "count": len(tables)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error listing tables for connection {connection_id}: {str(e)}")
+        raise ConnectionTestError(f"Failed to list tables: {str(e)}")
+
+
+@api_v1_bp.route("/connections/<connection_id>/tables/<table_name>/columns", methods=["GET"])
+@jwt_required()
+@require_tenant_context
+def get_table_columns(connection_id: str, table_name: str):
+    """
+    Get column details for a specific table.
+    
+    Args:
+        connection_id: Connection UUID
+        table_name: Table name
+    
+    Query Parameters:
+        - schema_name: Schema name (optional)
+    
+    Returns:
+        List of column definitions with names and data types
+    """
+    identity = get_jwt_identity()
+    tenant_id = identity.get("tenant_id")
+    
+    schema_name = request.args.get("schema_name")
+    
+    connection_service = ConnectionService(tenant_id)
+    
+    # Get connection
+    connection = connection_service.get_connection(connection_id)
+    if not connection:
+        raise NotFoundError("Connection not found")
+    
+    try:
+        # Get schema information with column details
+        schema_info = connection_service.get_schema(
+            connection_id=connection_id,
+            schema_name=schema_name,
+            include_columns=True
+        )
+        
+        if schema_info is None:
+            raise ConnectionTestError("Failed to retrieve schema information")
+        
+        # Find the requested table
+        tables = schema_info.get("tables", {})
+        if isinstance(tables, list):
+            # If tables is a list of names, we need to fetch columns separately
+            # For now, return an error asking to use the schema endpoint
+            raise ValidationError("Table column details not available. Please use the schema endpoint with include_columns=true")
+        
+        if table_name not in tables:
+            raise NotFoundError(f"Table '{table_name}' not found in schema")
+        
+        table_info = tables[table_name]
+        columns = table_info.get("columns", [])
+        
+        return jsonify({
+            "connection_id": connection_id,
+            "table_name": table_name,
+            "schema_name": schema_name or connection.schema_name,
+            "columns": columns,
+            "count": len(columns)
+        })
+        
+    except NotFoundError:
+        raise
+    except ValidationError:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting columns for table {table_name}: {str(e)}")
+        raise ConnectionTestError(f"Failed to get table columns: {str(e)}")
+
+
+@api_v1_bp.route("/connections/<connection_id>/query/validate", methods=["POST"])
+@jwt_required()
+@require_tenant_context
+def validate_sql_query(connection_id: str):
+    """
+    Validate a SQL query without executing it.
+    
+    Args:
+        connection_id: Connection UUID
+    
+    Request Body:
+        - query: SQL query to validate
+    
+    Returns:
+        Validation result with syntax check and estimated column schema
+    """
+    identity = get_jwt_identity()
+    tenant_id = identity.get("tenant_id")
+    data = request.get_json()
+    
+    if not data or not data.get("query"):
+        raise ValidationError("SQL query is required")
+    
+    query = data["query"]
+    
+    connection_service = ConnectionService(tenant_id)
+    
+    # Get connection
+    connection = connection_service.get_connection(connection_id)
+    if not connection:
+        raise NotFoundError("Connection not found")
+    
+    try:
+        # Validate query syntax by using EXPLAIN or a similar approach
+        # For now, we'll do a simple syntax check
+        # TODO: Implement proper query validation using database-specific methods
+        
+        # Basic validation
+        query_lower = query.lower().strip()
+        
+        # Check for dangerous operations
+        dangerous_keywords = ['drop', 'delete', 'truncate', 'insert', 'update', 'alter', 'create']
+        for keyword in dangerous_keywords:
+            if keyword in query_lower.split():
+                raise ValidationError(f"Query contains potentially dangerous keyword: {keyword}")
+        
+        # Check if it's a SELECT query
+        if not query_lower.startswith('select'):
+            raise ValidationError("Only SELECT queries are allowed")
+        
+        return jsonify({
+            "valid": True,
+            "message": "Query syntax appears valid",
+            "query": query
+        })
+        
+    except ValidationError:
+        raise
+    except Exception as e:
+        logger.error(f"Error validating query: {str(e)}")
+        return jsonify({
+            "valid": False,
+            "message": f"Query validation failed: {str(e)}",
+            "query": query
+        }), 400
