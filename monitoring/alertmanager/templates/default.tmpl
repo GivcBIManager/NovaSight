@@ -1,0 +1,76 @@
+{{ define "slack.title" }}
+[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "slack.text" }}
+{{ range .Alerts }}
+*Alert:* {{ .Labels.alertname }} - `{{ .Labels.severity }}`
+*Component:* {{ .Labels.component }}
+*Summary:* {{ .Annotations.summary }}
+*Description:* {{ .Annotations.description }}
+{{ if .Labels.pod }}*Pod:* {{ .Labels.pod }}{{ end }}
+{{ if .Labels.namespace }}*Namespace:* {{ .Labels.namespace }}{{ end }}
+*Started:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ if .EndsAt }}*Ended:* {{ .EndsAt.Format "2006-01-02 15:04:05 UTC" }}{{ end }}
+---
+{{ end }}
+{{ end }}
+
+{{ define "pagerduty.description" }}
+{{ .GroupLabels.alertname }}: {{ (index .Alerts 0).Annotations.summary }}
+{{ end }}
+
+{{ define "pagerduty.firing" }}
+{{ range .Alerts.Firing }}
+- {{ .Labels.alertname }}: {{ .Annotations.description }}
+{{ end }}
+{{ end }}
+
+{{ define "grafana.url" }}
+https://grafana.novasight.io/d/novasight-overview?orgId=1&from=now-1h&to=now
+{{ end }}
+
+{{ define "email.subject" }}
+{{ .Status | toUpper }}: {{ .GroupLabels.alertname }} ({{ .Alerts | len }} alerts)
+{{ end }}
+
+{{ define "email.html" }}
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+    .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; }
+    .header { padding: 10px; border-radius: 4px; margin-bottom: 20px; }
+    .header.firing { background-color: #dc3545; color: white; }
+    .header.resolved { background-color: #28a745; color: white; }
+    .alert { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 4px; }
+    .alert-critical { border-left: 4px solid #dc3545; }
+    .alert-warning { border-left: 4px solid #ffc107; }
+    .label { display: inline-block; padding: 2px 8px; border-radius: 4px; background-color: #e9ecef; margin-right: 5px; font-size: 12px; }
+    h1 { margin: 0; font-size: 18px; }
+    h2 { margin: 0 0 10px 0; font-size: 16px; }
+    p { margin: 5px 0; }
+    .meta { color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header {{ .Status }}">
+      <h1>{{ .Status | toUpper }}: {{ .GroupLabels.alertname }}</h1>
+    </div>
+    
+    {{ range .Alerts }}
+    <div class="alert alert-{{ .Labels.severity }}">
+      <h2>{{ .Labels.alertname }}</h2>
+      <p><span class="label">{{ .Labels.severity }}</span><span class="label">{{ .Labels.component }}</span></p>
+      <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+      <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+      <p class="meta">Started: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}</p>
+      {{ if .Annotations.runbook_url }}<p><a href="{{ .Annotations.runbook_url }}">View Runbook</a></p>{{ end }}
+    </div>
+    {{ end }}
+  </div>
+</body>
+</html>
+{{ end }}

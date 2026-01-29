@@ -1,0 +1,268 @@
+# Infrastructure Alert Rules
+# ==========================
+# Alerts for Kubernetes and infrastructure components
+
+groups:
+  - name: infrastructure.kubernetes
+    interval: 30s
+    rules:
+      # =======================================================================
+      # Pod Health Alerts
+      # =======================================================================
+      
+      # Backend pods unhealthy
+      - alert: BackendPodDown
+        expr: |
+          kube_deployment_status_replicas_available{deployment="backend", namespace="novasight"} /
+          kube_deployment_spec_replicas{deployment="backend", namespace="novasight"} < 0.5
+        for: 5m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: "Backend pods unhealthy"
+          description: "Only {{ $value | humanizePercentage }} of backend pods available"
+
+      # Frontend pods unhealthy
+      - alert: FrontendPodDown
+        expr: |
+          kube_deployment_status_replicas_available{deployment="frontend", namespace="novasight"} /
+          kube_deployment_spec_replicas{deployment="frontend", namespace="novasight"} < 0.5
+        for: 5m
+        labels:
+          severity: critical
+          component: frontend
+        annotations:
+          summary: "Frontend pods unhealthy"
+          description: "Only {{ $value | humanizePercentage }} of frontend pods available"
+
+      # Pod restart loop
+      - alert: PodRestartLoop
+        expr: |
+          increase(kube_pod_container_status_restarts_total{namespace="novasight"}[1h]) > 5
+        for: 10m
+        labels:
+          severity: warning
+          component: kubernetes
+        annotations:
+          summary: "Pod restart loop detected"
+          description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last hour"
+
+      # Pod crash loop backoff
+      - alert: PodCrashLoopBackOff
+        expr: |
+          kube_pod_container_status_waiting_reason{namespace="novasight", reason="CrashLoopBackOff"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          component: kubernetes
+        annotations:
+          summary: "Pod in CrashLoopBackOff"
+          description: "Pod {{ $labels.pod }} container {{ $labels.container }} is in CrashLoopBackOff"
+
+      # Pod pending too long
+      - alert: PodPendingTooLong
+        expr: |
+          kube_pod_status_phase{namespace="novasight", phase="Pending"} == 1
+        for: 15m
+        labels:
+          severity: warning
+          component: kubernetes
+        annotations:
+          summary: "Pod pending for too long"
+          description: "Pod {{ $labels.pod }} has been pending for more than 15 minutes"
+
+      # =======================================================================
+      # Resource Utilization Alerts
+      # =======================================================================
+      
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total{namespace="novasight", container!=""}[5m])) by (pod) /
+          sum(kube_pod_container_resource_requests{namespace="novasight", resource="cpu"}) by (pod) > 0.90
+        for: 15m
+        labels:
+          severity: warning
+          component: resources
+        annotations:
+          summary: "High CPU usage"
+          description: "Pod {{ $labels.pod }} is using {{ $value | humanizePercentage }} of CPU request"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          sum(container_memory_working_set_bytes{namespace="novasight", container!=""}) by (pod) /
+          sum(kube_pod_container_resource_requests{namespace="novasight", resource="memory"}) by (pod) > 0.90
+        for: 15m
+        labels:
+          severity: warning
+          component: resources
+        annotations:
+          summary: "High memory usage"
+          description: "Pod {{ $labels.pod }} is using {{ $value | humanizePercentage }} of memory request"
+
+      # OOM killed
+      - alert: ContainerOOMKilled
+        expr: |
+          increase(kube_pod_container_status_terminated_reason{namespace="novasight", reason="OOMKilled"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          component: resources
+        annotations:
+          summary: "Container OOM killed"
+          description: "Container {{ $labels.container }} in pod {{ $labels.pod }} was OOM killed"
+
+      # PVC storage almost full
+      - alert: PVCStorageAlmostFull
+        expr: |
+          kubelet_volume_stats_used_bytes{namespace="novasight"} /
+          kubelet_volume_stats_capacity_bytes{namespace="novasight"} > 0.85
+        for: 15m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: "PVC storage almost full"
+          description: "PVC {{ $labels.persistentvolumeclaim }} is {{ $value | humanizePercentage }} full"
+
+      # =======================================================================
+      # HPA Alerts
+      # =======================================================================
+      
+      # HPA at max replicas
+      - alert: HPAAtMaxReplicas
+        expr: |
+          kube_horizontalpodautoscaler_status_current_replicas{namespace="novasight"} ==
+          kube_horizontalpodautoscaler_spec_max_replicas{namespace="novasight"}
+        for: 30m
+        labels:
+          severity: warning
+          component: hpa
+        annotations:
+          summary: "HPA at maximum replicas"
+          description: "HPA {{ $labels.horizontalpodautoscaler }} is at max replicas ({{ $value }})"
+
+      # HPA unable to scale
+      - alert: HPAUnableToScale
+        expr: |
+          kube_horizontalpodautoscaler_status_condition{namespace="novasight", condition="ScalingLimited", status="true"} == 1
+        for: 15m
+        labels:
+          severity: warning
+          component: hpa
+        annotations:
+          summary: "HPA unable to scale"
+          description: "HPA {{ $labels.horizontalpodautoscaler }} is unable to scale"
+
+  - name: infrastructure.networking
+    interval: 30s
+    rules:
+      # =======================================================================
+      # Network Alerts
+      # =======================================================================
+      
+      # Ingress high error rate
+      - alert: IngressHighErrorRate
+        expr: |
+          sum(rate(nginx_ingress_controller_requests{status=~"5.."}[5m])) by (ingress) /
+          sum(rate(nginx_ingress_controller_requests[5m])) by (ingress) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: ingress
+        annotations:
+          summary: "Ingress high error rate"
+          description: "Ingress {{ $labels.ingress }} has {{ $value | humanizePercentage }} error rate"
+
+      # Certificate expiring soon
+      - alert: CertificateExpiringSoon
+        expr: |
+          (certmanager_certificate_expiration_timestamp_seconds - time()) / 86400 < 14
+        for: 1h
+        labels:
+          severity: warning
+          component: certificates
+        annotations:
+          summary: "Certificate expiring soon"
+          description: "Certificate {{ $labels.name }} expires in {{ $value | humanize }} days"
+
+      # Certificate expired
+      - alert: CertificateExpired
+        expr: |
+          (certmanager_certificate_expiration_timestamp_seconds - time()) < 0
+        for: 0m
+        labels:
+          severity: critical
+          component: certificates
+        annotations:
+          summary: "Certificate expired"
+          description: "Certificate {{ $labels.name }} has expired"
+
+  - name: infrastructure.nodes
+    interval: 60s
+    rules:
+      # =======================================================================
+      # Node Alerts
+      # =======================================================================
+      
+      # Node not ready
+      - alert: NodeNotReady
+        expr: |
+          kube_node_status_condition{condition="Ready", status="true"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: node
+        annotations:
+          summary: "Node not ready"
+          description: "Node {{ $labels.node }} is not ready"
+
+      # Node high CPU
+      - alert: NodeHighCPU
+        expr: |
+          100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 15m
+        labels:
+          severity: warning
+          component: node
+        annotations:
+          summary: "Node high CPU utilization"
+          description: "Node {{ $labels.instance }} CPU is at {{ $value | humanize }}%"
+
+      # Node high memory
+      - alert: NodeHighMemory
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 15m
+        labels:
+          severity: warning
+          component: node
+        annotations:
+          summary: "Node high memory utilization"
+          description: "Node {{ $labels.instance }} memory is at {{ $value | humanize }}%"
+
+      # Node disk almost full
+      - alert: NodeDiskAlmostFull
+        expr: |
+          (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 85
+        for: 15m
+        labels:
+          severity: warning
+          component: node
+        annotations:
+          summary: "Node disk almost full"
+          description: "Node {{ $labels.instance }} root disk is {{ $value | humanize }}% full"
+
+      # Node disk will fill soon
+      - alert: NodeDiskWillFillIn24h
+        expr: |
+          predict_linear(node_filesystem_avail_bytes{mountpoint="/"}[6h], 24*60*60) < 0
+        for: 1h
+        labels:
+          severity: warning
+          component: node
+        annotations:
+          summary: "Node disk will fill within 24h"
+          description: "Node {{ $labels.instance }} disk is predicted to fill within 24 hours"

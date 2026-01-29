@@ -60,7 +60,7 @@ services:
         soft: 262144
         hard: 262144
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8123/ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -109,7 +109,7 @@ services:
       - novasight-network
 
   airflow-init:
-    image: apache/airflow:latest-python3.11
+    image: apache/airflow:2.10.4-python3.11
     container_name: novasight-airflow-init
     depends_on:
       airflow-postgres:
@@ -141,7 +141,7 @@ services:
       - novasight-network
 
   airflow-webserver:
-    image: apache/airflow:latest-python3.11
+    image: apache/airflow:2.10.4-python3.11
     container_name: novasight-airflow-webserver
     restart: unless-stopped
     depends_on:
@@ -171,7 +171,7 @@ services:
       - novasight-network
 
   airflow-scheduler:
-    image: apache/airflow:latest-python3.11
+    image: apache/airflow:2.10.4-python3.11
     container_name: novasight-airflow-scheduler
     restart: unless-stopped
     depends_on:
@@ -200,22 +200,18 @@ services:
   # Apache Spark - Distributed Processing
   # ============================================
   spark-master:
-    image: bitnami/spark:3.5
+    image: apache/spark:3.5.4
     container_name: novasight-spark-master
     restart: unless-stopped
     ports:
       - "8081:8080"   # Spark Master Web UI
       - "7077:7077"   # Spark Master port
     environment:
-      SPARK_MODE: master
-      SPARK_MASTER_HOST: spark-master
-      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
-      SPARK_RPC_ENCRYPTION_ENABLED: "no"
-      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: "no"
-      SPARK_SSL_ENABLED: "no"
+      SPARK_NO_DAEMONIZE: "true"
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     volumes:
-      - spark_data:/bitnami/spark
-      - ./infrastructure/spark/jars:/opt/bitnami/spark/jars/custom
+      - spark_data:/opt/spark/work
+      - ./infrastructure/spark/jars:/opt/spark/jars/custom
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080"]
       interval: 30s
@@ -225,42 +221,34 @@ services:
       - novasight-network
 
   spark-worker-1:
-    image: bitnami/spark:3.5
+    image: apache/spark:3.5.4
     container_name: novasight-spark-worker-1
     restart: unless-stopped
     depends_on:
       - spark-master
     environment:
-      SPARK_MODE: worker
-      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_NO_DAEMONIZE: "true"
       SPARK_WORKER_MEMORY: 2G
       SPARK_WORKER_CORES: 2
-      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
-      SPARK_RPC_ENCRYPTION_ENABLED: "no"
-      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: "no"
-      SPARK_SSL_ENABLED: "no"
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     volumes:
-      - ./infrastructure/spark/jars:/opt/bitnami/spark/jars/custom
+      - ./infrastructure/spark/jars:/opt/spark/jars/custom
     networks:
       - novasight-network
 
   spark-worker-2:
-    image: bitnami/spark:3.5
+    image: apache/spark:3.5.4
     container_name: novasight-spark-worker-2
     restart: unless-stopped
     depends_on:
       - spark-master
     environment:
-      SPARK_MODE: worker
-      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_NO_DAEMONIZE: "true"
       SPARK_WORKER_MEMORY: 2G
       SPARK_WORKER_CORES: 2
-      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
-      SPARK_RPC_ENCRYPTION_ENABLED: "no"
-      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: "no"
-      SPARK_SSL_ENABLED: "no"
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     volumes:
-      - ./infrastructure/spark/jars:/opt/bitnami/spark/jars/custom
+      - ./infrastructure/spark/jars:/opt/spark/jars/custom
     networks:
       - novasight-network
 

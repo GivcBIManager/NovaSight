@@ -1,0 +1,301 @@
+# Database Alert Rules
+# ====================
+# Alerts for PostgreSQL, ClickHouse, and Redis
+
+groups:
+  - name: database.postgresql
+    interval: 30s
+    rules:
+      # =======================================================================
+      # PostgreSQL Alerts
+      # =======================================================================
+      
+      # PostgreSQL down
+      - alert: PostgreSQLDown
+        expr: |
+          pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL instance {{ $labels.instance }} is down"
+
+      # High connection usage
+      - alert: PostgreSQLHighConnections
+        expr: |
+          pg_stat_activity_count / pg_settings_max_connections > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL high connection usage"
+          description: "PostgreSQL using {{ $value | humanizePercentage }} of max connections"
+
+      # Connection pool exhausted
+      - alert: PostgreSQLConnectionPoolExhausted
+        expr: |
+          pg_stat_activity_count / pg_settings_max_connections > 0.95
+        for: 5m
+        labels:
+          severity: critical
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL connection pool nearly exhausted"
+          description: "PostgreSQL using {{ $value | humanizePercentage }} of max connections"
+
+      # Slow queries
+      - alert: PostgreSQLSlowQueries
+        expr: |
+          rate(pg_stat_statements_seconds_total{query!~".*pg_.*"}[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL slow queries detected"
+          description: "Query execution rate above threshold"
+
+      # High replication lag
+      - alert: PostgreSQLReplicationLag
+        expr: |
+          pg_replication_lag > 30
+        for: 5m
+        labels:
+          severity: warning
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL replication lag"
+          description: "Replication lag is {{ $value | humanizeDuration }}"
+
+      # Dead tuples ratio high
+      - alert: PostgreSQLDeadTuplesHigh
+        expr: |
+          pg_stat_user_tables_n_dead_tup / (pg_stat_user_tables_n_live_tup + pg_stat_user_tables_n_dead_tup) > 0.20
+        for: 1h
+        labels:
+          severity: warning
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL dead tuples ratio high"
+          description: "Table {{ $labels.relname }} has {{ $value | humanizePercentage }} dead tuples"
+
+      # Database bloat
+      - alert: PostgreSQLDatabaseBloat
+        expr: |
+          pg_database_size_bytes{datname="novasight"} > 100 * 1024 * 1024 * 1024
+        for: 1h
+        labels:
+          severity: warning
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL database size growing"
+          description: "Database size is {{ $value | humanize1024 }}B"
+
+      # App connection pool metrics
+      - alert: AppConnectionPoolLow
+        expr: |
+          novasight_db_pool_checked_out / novasight_db_pool_size > 0.90
+        for: 10m
+        labels:
+          severity: warning
+          component: postgresql
+        annotations:
+          summary: "Application DB pool nearly exhausted"
+          description: "{{ $value | humanizePercentage }} of pool connections in use"
+
+  - name: database.clickhouse
+    interval: 30s
+    rules:
+      # =======================================================================
+      # ClickHouse Alerts
+      # =======================================================================
+      
+      # ClickHouse down
+      - alert: ClickHouseDown
+        expr: |
+          up{job="clickhouse"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: clickhouse
+        annotations:
+          summary: "ClickHouse is down"
+          description: "ClickHouse instance {{ $labels.instance }} is down"
+
+      # High query count
+      - alert: ClickHouseHighQueryCount
+        expr: |
+          rate(ClickHouseProfileEvents_Query[5m]) > 100
+        for: 15m
+        labels:
+          severity: warning
+          component: clickhouse
+        annotations:
+          summary: "ClickHouse high query rate"
+          description: "Query rate is {{ $value | humanize }}/s"
+
+      # Memory usage high
+      - alert: ClickHouseHighMemory
+        expr: |
+          ClickHouseMetrics_MemoryTracking / ClickHouseAsyncMetrics_OSMemoryTotal > 0.80
+        for: 15m
+        labels:
+          severity: warning
+          component: clickhouse
+        annotations:
+          summary: "ClickHouse high memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      # Replication lag
+      - alert: ClickHouseReplicationLag
+        expr: |
+          ClickHouseMetrics_ReplicasMaxAbsoluteDelay > 60
+        for: 10m
+        labels:
+          severity: warning
+          component: clickhouse
+        annotations:
+          summary: "ClickHouse replication lag"
+          description: "Replication delay is {{ $value | humanizeDuration }}"
+
+      # Parts count high (indicates merge issues)
+      - alert: ClickHouseHighPartsCount
+        expr: |
+          ClickHouseMetrics_MaxPartCountForPartition > 300
+        for: 30m
+        labels:
+          severity: warning
+          component: clickhouse
+        annotations:
+          summary: "ClickHouse high parts count"
+          description: "Max parts count is {{ $value }}, indicates merge backlog"
+
+      # Insert failures
+      - alert: ClickHouseInsertFailures
+        expr: |
+          increase(ClickHouseProfileEvents_FailedInsertQuery[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: clickhouse
+        annotations:
+          summary: "ClickHouse insert failures"
+          description: "{{ $value }} insert failures in last 5 minutes"
+
+      # Slow inserts
+      - alert: ClickHouseSlowInserts
+        expr: |
+          rate(ClickHouseProfileEvents_InsertedBytes[5m]) < 1000000
+        for: 15m
+        labels:
+          severity: warning
+          component: clickhouse
+        annotations:
+          summary: "ClickHouse slow insert rate"
+          description: "Insert rate is {{ $value | humanize }}B/s"
+
+  - name: database.redis
+    interval: 30s
+    rules:
+      # =======================================================================
+      # Redis Alerts
+      # =======================================================================
+      
+      # Redis down
+      - alert: RedisDown
+        expr: |
+          redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis instance {{ $labels.instance }} is down"
+
+      # High memory usage
+      - alert: RedisHighMemory
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.90
+        for: 10m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis using {{ $value | humanizePercentage }} of max memory"
+
+      # Memory fragmentation
+      - alert: RedisMemoryFragmentation
+        expr: |
+          redis_memory_fragmentation_ratio > 2
+        for: 30m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis memory fragmentation"
+          description: "Memory fragmentation ratio is {{ $value }}"
+
+      # High connection count
+      - alert: RedisHighConnections
+        expr: |
+          redis_connected_clients > 1000
+        for: 10m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis high connection count"
+          description: "{{ $value }} clients connected"
+
+      # Rejected connections
+      - alert: RedisRejectedConnections
+        expr: |
+          increase(redis_rejected_connections_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis rejecting connections"
+          description: "{{ $value }} connections rejected in last 5 minutes"
+
+      # Evicted keys (cache pressure)
+      - alert: RedisKeyEviction
+        expr: |
+          increase(redis_evicted_keys_total[5m]) > 100
+        for: 10m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis key eviction"
+          description: "{{ $value }} keys evicted in last 5 minutes"
+
+      # Blocked clients
+      - alert: RedisBlockedClients
+        expr: |
+          redis_blocked_clients > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis blocked clients"
+          description: "{{ $value }} clients blocked"
+
+      # Slow log entries
+      - alert: RedisSlowLogEntries
+        expr: |
+          increase(redis_slowlog_length[5m]) > 10
+        for: 10m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis slow commands detected"
+          description: "{{ $value }} slow commands in last 5 minutes"

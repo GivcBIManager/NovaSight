@@ -1,0 +1,111 @@
+# PostgreSQL WAL Archiver for Point-in-Time Recovery
+# Archives Write-Ahead Logs to S3 for PITR capability
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-wal-config
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+    database: postgresql
+data:
+  # PostgreSQL configuration for WAL archiving
+  wal-config.sql: |
+    -- Enable WAL archiving
+    ALTER SYSTEM SET wal_level = 'replica';
+    ALTER SYSTEM SET archive_mode = 'on';
+    ALTER SYSTEM SET archive_command = '/scripts/archive-wal.sh %p %f';
+    ALTER SYSTEM SET archive_timeout = '300';  -- Archive every 5 minutes even if not full
+    ALTER SYSTEM SET max_wal_senders = '5';
+    ALTER SYSTEM SET wal_keep_size = '1GB';
+    
+  archive-wal.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    
+    WAL_PATH="$1"
+    WAL_FILE="$2"
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    
+    # Compress and upload WAL file
+    gzip -c "${WAL_PATH}" | aws s3 cp - \
+      "s3://${S3_BUCKET}/postgresql/wal/${WAL_FILE}.gz" \
+      --sse aws:kms \
+      --sse-kms-key-id "${KMS_KEY_ID}"
+    
+    echo "[$(date -Iseconds)] Archived WAL: ${WAL_FILE}"
+    
+  restore-wal.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    
+    WAL_FILE="$1"
+    TARGET_PATH="$2"
+    
+    # Download and decompress WAL file
+    aws s3 cp "s3://${S3_BUCKET}/postgresql/wal/${WAL_FILE}.gz" - | gunzip > "${TARGET_PATH}"
+    
+    echo "[$(date -Iseconds)] Restored WAL: ${WAL_FILE}"
+
+---
+# CronJob for WAL cleanup - keeps 7 days of WAL files
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgresql-wal-cleanup
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+    database: postgresql
+spec:
+  schedule: "0 4 * * *"  # Daily at 4 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: backup-sa
+          containers:
+            - name: cleanup
+              image: amazon/aws-cli:2.13.0
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+                  
+                  echo "[$(date -Iseconds)] Starting WAL cleanup..."
+                  
+                  # Calculate cutoff date (7 days ago)
+                  CUTOFF_DATE=$(date -d '7 days ago' +%Y-%m-%dT%H:%M:%S)
+                  
+                  # Delete WAL files older than 7 days
+                  aws s3api list-objects-v2 \
+                    --bucket "${S3_BUCKET}" \
+                    --prefix "postgresql/wal/" \
+                    --query "Contents[?LastModified<\`${CUTOFF_DATE}\`].Key" \
+                    --output text | \
+                  while read -r key; do
+                    if [[ -n "$key" && "$key" != "None" ]]; then
+                      echo "[$(date -Iseconds)] Deleting old WAL: ${key}"
+                      aws s3 rm "s3://${S3_BUCKET}/${key}"
+                    fi
+                  done
+                  
+                  echo "[$(date -Iseconds)] WAL cleanup completed"
+              env:
+                - name: S3_BUCKET
+                  valueFrom:
+                    configMapKeyRef:
+                      name: backup-config
+                      key: s3-bucket
+                - name: AWS_REGION
+                  valueFrom:
+                    configMapKeyRef:
+                      name: backup-config
+                      key: aws-region
+          restartPolicy: OnFailure

@@ -21,6 +21,20 @@ from app.utils.tenant_utils import (
     validate_tenant_access,
     TenantSchemaContext,
 )
+from app.utils.logger import (
+    get_logger,
+    setup_logging,
+    ContextLogger,
+    JSONFormatter,
+    BoundLogger,
+    api_logger,
+    db_logger,
+    auth_logger,
+    query_logger,
+    template_logger,
+    pipeline_logger,
+    datasource_logger,
+)
 
 __all__ = [
     # Encryption
@@ -44,4 +58,17 @@ __all__ = [
     "get_current_tenant_schema",
     "validate_tenant_access",
     "TenantSchemaContext",
+    # Logging
+    "get_logger",
+    "setup_logging",
+    "ContextLogger",
+    "JSONFormatter",
+    "BoundLogger",
+    "api_logger",
+    "db_logger",
+    "auth_logger",
+    "query_logger",
+    "template_logger",
+    "pipeline_logger",
+    "datasource_logger",
 ]

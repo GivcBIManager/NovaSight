@@ -8,7 +8,7 @@ Implements strict validation to prevent injection attacks.
 
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, ClassVar, Dict, List, Literal, Optional, Set, Union
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
@@ -67,7 +67,7 @@ class ColumnDefinition(BaseModel):
     description: Optional[str] = Field(default=None, max_length=500)
     
     # Allowed base types for PostgreSQL
-    ALLOWED_TYPES = {
+    ALLOWED_TYPES: ClassVar[Set[str]] = {
         'UUID', 'VARCHAR', 'TEXT', 'INTEGER', 'BIGINT', 'SMALLINT',
         'BOOLEAN', 'TIMESTAMP', 'TIMESTAMPTZ', 'DATE', 'TIME',
         'JSONB', 'JSON', 'NUMERIC', 'DECIMAL', 'REAL', 'DOUBLE',
@@ -389,7 +389,7 @@ class ClickHouseColumnDefinition(BaseModel):
     codec: Optional[str] = Field(default=None, description="Compression codec")
     ttl: Optional[str] = Field(default=None, description="TTL expression")
     
-    ALLOWED_TYPES = {
+    ALLOWED_TYPES: ClassVar[Set[str]] = {
         'UInt8', 'UInt16', 'UInt32', 'UInt64', 'UInt128', 'UInt256',
         'Int8', 'Int16', 'Int32', 'Int64', 'Int128', 'Int256',
         'Float32', 'Float64', 'Decimal', 'Decimal32', 'Decimal64', 'Decimal128',
@@ -432,7 +432,7 @@ class ClickHouseTableDefinition(BaseModel):
     settings: Dict[str, str] = Field(default_factory=dict)
     tenant_aware: bool = Field(default=True)
     
-    ALLOWED_ENGINES = {
+    ALLOWED_ENGINES: ClassVar[Set[str]] = {
         'MergeTree', 'ReplacingMergeTree', 'SummingMergeTree', 'AggregatingMergeTree',
         'CollapsingMergeTree', 'VersionedCollapsingMergeTree', 'GraphiteMergeTree',
         'ReplicatedMergeTree', 'ReplicatedReplacingMergeTree', 'Log', 'TinyLog', 'StripeLog',

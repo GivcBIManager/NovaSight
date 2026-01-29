@@ -1,0 +1,39 @@
+# NovaSight Backend Development Dockerfile
+# =========================================
+# Simple single-stage build for development
+
+FROM python:3.11-slim
+
+# Set environment
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=app
+ENV FLASK_ENV=development
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    libpq-dev \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy dev dependencies if they exist
+COPY requirements-dev.txt* ./
+RUN if [ -f requirements-dev.txt ]; then pip install --no-cache-dir -r requirements-dev.txt; fi
+
+# Copy application code
+COPY . .
+
+# Expose port
+EXPOSE 5000
+
+# Run with hot reload
+CMD ["flask", "run", "--host=0.0.0.0", "--reload", "--debug"]

@@ -52,5 +52,3 @@ __all__ = [
     "sql_string_escape",
     "sql_value",
 ]
-    "sql_string_escape",
-]

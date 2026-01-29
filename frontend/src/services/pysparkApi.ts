@@ -4,7 +4,7 @@
  * API client for PySpark application management.
  */
 
-import { apiClient } from './api'
+import { apiClient } from './apiClient'
 import type {
   PySparkApp,
   PySparkAppWithCode,

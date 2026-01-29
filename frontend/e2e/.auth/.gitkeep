@@ -1,0 +1,5 @@
+# E2E Test Auth Directory
+# This directory is used to store authentication state for Playwright tests
+# It is gitignored to prevent committing sensitive data
+
+*.json

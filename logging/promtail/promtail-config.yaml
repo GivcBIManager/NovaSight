@@ -1,0 +1,124 @@
+# Promtail Configuration
+# ======================
+# Log collector for shipping logs to Loki
+# Configured for Kubernetes pod log collection
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    tenant_id: novasight
+    batchwait: 1s
+    batchsize: 1048576
+    timeout: 10s
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+
+scrape_configs:
+  # Kubernetes pod logs
+  - job_name: kubernetes-pods
+    kubernetes_sd_configs:
+      - role: pod
+    
+    pipeline_stages:
+      # Parse JSON logs from NovaSight services
+      - match:
+          selector: '{app="novasight"}'
+          stages:
+            - json:
+                expressions:
+                  timestamp: timestamp
+                  level: level
+                  message: message
+                  request_id: request_id
+                  tenant_id: tenant_id
+                  user_id: user_id
+                  logger: logger
+                  module: module
+                  function: function
+                  duration_ms: duration_ms
+                  status_code: status_code
+            - labels:
+                level:
+                tenant_id:
+                logger:
+                module:
+            - timestamp:
+                source: timestamp
+                format: RFC3339Nano
+      
+      # Drop debug logs in production (optional)
+      # - match:
+      #     selector: '{level="DEBUG"}'
+      #     action: drop
+      
+      # Parse standard container logs
+      - match:
+          selector: '{app!="novasight"}'
+          stages:
+            - docker: {}
+    
+    relabel_configs:
+      # Keep only NovaSight and related services
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: (novasight|logging|monitoring)
+      
+      # Set app label from pod label
+      - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+        target_label: app
+      
+      # Set component label
+      - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+        target_label: component
+      
+      # Set namespace label
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      
+      # Set pod name label
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      
+      # Set container name label
+      - source_labels: [__meta_kubernetes_pod_container_name]
+        target_label: container
+      
+      # Set node label
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        target_label: node
+      
+      # Use pod name as job
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: job
+      
+      # Set log path
+      - replacement: /var/log/pods/*$1/*.log
+        separator: /
+        source_labels:
+          - __meta_kubernetes_pod_uid
+          - __meta_kubernetes_pod_container_name
+        target_label: __path__
+
+  # System logs (optional)
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/*.log
+
+# Limits configuration
+limits_config:
+  readline_rate_enabled: true
+  readline_rate: 100
+  readline_burst: 1000

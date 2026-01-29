@@ -1,7 +1,8 @@
 ---
 name: "NovaSight Orchestrator Agent"
 description: "Master orchestrator that coordinates all specialized agents"
-tools: ['vscode/vscodeAPI', 'vscode/extensions', 'read', 'edit', 'search', 'web']
+tools: ['vscode/runCommand', 'vscode/vscodeAPI', 'vscode/extensions', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'pylance-mcp-server/*', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'todo']
+model: Claude Opus 4.5 (copilot)
 ---
 
 # NovaSight Orchestrator Agent

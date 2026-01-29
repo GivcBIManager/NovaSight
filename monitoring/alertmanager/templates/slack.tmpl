@@ -1,0 +1,117 @@
+{{ define "slack.novasight.title" }}
+{{ template "slack.icon" . }} [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "slack.novasight.text" }}
+*Grouped by:* {{ .GroupLabels.SortedPairs.Values | join ", " }}
+*Status:* {{ .Status | toUpper }}
+
+{{ if gt (len .Alerts.Firing) 0 }}
+*🔥 Firing Alerts ({{ .Alerts.Firing | len }}):*
+{{ range .Alerts.Firing }}
+> *{{ .Labels.alertname }}* - {{ .Labels.severity | toUpper }}
+> {{ .Annotations.summary }}
+> {{ if .Annotations.description }}{{ .Annotations.description }}{{ end }}
+> Started: {{ .StartsAt.Format "Jan 02 15:04:05 UTC" }}
+{{ end }}
+{{ end }}
+
+{{ if gt (len .Alerts.Resolved) 0 }}
+*✅ Resolved Alerts ({{ .Alerts.Resolved | len }}):*
+{{ range .Alerts.Resolved }}
+> *{{ .Labels.alertname }}*
+> Duration: {{ .EndsAt.Sub .StartsAt | humanizeDuration }}
+{{ end }}
+{{ end }}
+{{ end }}
+
+{{ define "slack.novasight.footer" }}
+{{ .ExternalURL }}
+{{ end }}
+
+{{ define "slack.novasight.fallback" }}
+[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }} - {{ (index .Alerts 0).Annotations.summary }}
+{{ end }}
+
+{{ define "slack.critical.title" }}
+🚨 CRITICAL: {{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "slack.critical.text" }}
+*Immediate attention required!*
+
+{{ range .Alerts.Firing }}
+*Alert:* {{ .Labels.alertname }}
+*Severity:* {{ .Labels.severity }}
+*Service:* {{ .Labels.service }}{{ if .Labels.component }} / {{ .Labels.component }}{{ end }}
+*Summary:* {{ .Annotations.summary }}
+*Description:* {{ .Annotations.description }}
+{{ if .Labels.cluster }}*Cluster:* {{ .Labels.cluster }}{{ end }}
+{{ if .Labels.namespace }}*Namespace:* {{ .Labels.namespace }}{{ end }}
+{{ if .Labels.pod }}*Pod:* {{ .Labels.pod }}{{ end }}
+*Started:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ if .Annotations.runbook_url }}*Runbook:* <{{ .Annotations.runbook_url }}|📖 View Runbook>{{ end }}
+---
+{{ end }}
+{{ end }}
+
+{{ define "slack.security.title" }}
+🔐 SECURITY ALERT: {{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "slack.security.text" }}
+*Security incident detected!*
+
+{{ range .Alerts.Firing }}
+*Alert:* {{ .Labels.alertname }}
+*Category:* {{ .Labels.category }}
+*Summary:* {{ .Annotations.summary }}
+*Description:* {{ .Annotations.description }}
+{{ if .Labels.remote_addr }}*Source IP:* {{ .Labels.remote_addr }}{{ end }}
+{{ if .Labels.user_id }}*User ID:* {{ .Labels.user_id }}{{ end }}
+{{ if .Labels.tenant_id }}*Tenant:* {{ .Labels.tenant_id }}{{ end }}
+*Started:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ if .Annotations.runbook_url }}*Runbook:* <{{ .Annotations.runbook_url }}|📖 View Security Runbook>{{ end }}
+---
+{{ end }}
+
+*Actions:*
+• Review security logs immediately
+• Check for related alerts
+• Consider incident escalation if pattern continues
+{{ end }}
+
+{{ define "slack.database.title" }}
+🗄️ DATABASE: {{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "slack.database.text" }}
+{{ range .Alerts }}
+*Database:* {{ .Labels.service }}{{ if .Labels.instance }} ({{ .Labels.instance }}){{ end }}
+*Alert:* {{ .Annotations.summary }}
+*Description:* {{ .Annotations.description }}
+*Severity:* {{ .Labels.severity }}
+{{ if .Labels.datname }}*Database:* {{ .Labels.datname }}{{ end }}
+{{ if .Labels.relname }}*Table:* {{ .Labels.relname }}{{ end }}
+*Started:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ if eq .Status "resolved" }}*Resolved:* {{ .EndsAt.Format "2006-01-02 15:04:05 UTC" }}{{ end }}
+---
+{{ end }}
+{{ end }}
+
+{{ define "slack.warning.title" }}
+⚠️ WARNING: {{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "slack.warning.text" }}
+{{ range .Alerts }}
+*Alert:* {{ .Labels.alertname }}
+*Service:* {{ .Labels.service }}{{ if .Labels.component }} / {{ .Labels.component }}{{ end }}
+*Summary:* {{ .Annotations.summary }}
+{{ if .Annotations.description }}*Details:* {{ .Annotations.description }}{{ end }}
+{{ if .Labels.tenant_id }}*Tenant:* {{ .Labels.tenant_id }}{{ end }}
+*Started:* {{ .StartsAt.Format "Jan 02 15:04 UTC" }}
+{{ if eq .Status "resolved" }}*Resolved:* {{ .EndsAt.Format "Jan 02 15:04 UTC" }} (Duration: {{ .EndsAt.Sub .StartsAt | humanizeDuration }}){{ end }}
+---
+{{ end }}
+{{ end }}

@@ -20,3 +20,12 @@ from app.api.v1 import dbt
 from app.api.v1 import semantic
 from app.api.v1 import assistant
 from app.api.v1 import dashboards
+from app.api.v1 import audit
+
+# Register admin sub-blueprint
+from app.api.v1.admin import admin_bp
+api_v1_bp.register_blueprint(admin_bp)
+
+# Register backup API (admin-only endpoints)
+from app.api.backup import bp as backup_bp
+api_v1_bp.register_blueprint(backup_bp)

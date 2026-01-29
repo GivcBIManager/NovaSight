@@ -1,0 +1,263 @@
+# On-Call Schedule Configuration
+# ================================
+# Integration configuration for PagerDuty and Grafana OnCall
+
+# PagerDuty Integration
+# ---------------------
+pagerduty:
+  # Service configurations
+  services:
+    - name: novasight-production
+      id: P_SERVICE_1
+      description: "NovaSight Production Alerts"
+      urgency: high
+      
+    - name: novasight-staging
+      id: P_SERVICE_2
+      description: "NovaSight Staging Alerts"
+      urgency: low
+      
+    - name: novasight-security
+      id: P_SERVICE_3
+      description: "NovaSight Security Incidents"
+      urgency: high
+
+  # Schedule references
+  schedules:
+    - name: primary-oncall
+      id: SCHEDULE_PRIMARY
+      description: "Primary on-call rotation"
+      timezone: "America/New_York"
+      rotation: weekly
+      
+    - name: secondary-oncall
+      id: SCHEDULE_SECONDARY
+      description: "Secondary/backup on-call"
+      timezone: "America/New_York"
+      rotation: weekly
+      
+    - name: security-oncall
+      id: SCHEDULE_SECURITY
+      description: "Security team on-call"
+      timezone: "UTC"
+      rotation: weekly
+
+  # Escalation policies
+  escalation_policies:
+    - name: default
+      id: EP_DEFAULT
+      description: "Default escalation for production alerts"
+      rules:
+        - escalation_delay_in_minutes: 5
+          target:
+            type: schedule_reference
+            id: SCHEDULE_PRIMARY
+        - escalation_delay_in_minutes: 15
+          target:
+            type: schedule_reference
+            id: SCHEDULE_SECONDARY
+        - escalation_delay_in_minutes: 30
+          target:
+            type: user_reference
+            id: USER_ENGINEERING_MANAGER
+        - escalation_delay_in_minutes: 60
+          target:
+            type: user_reference
+            id: USER_VP_ENGINEERING
+            
+    - name: critical
+      id: EP_CRITICAL
+      description: "Critical alert escalation - faster response"
+      rules:
+        - escalation_delay_in_minutes: 2
+          target:
+            type: schedule_reference
+            id: SCHEDULE_PRIMARY
+        - escalation_delay_in_minutes: 5
+          target:
+            type: schedule_reference
+            id: SCHEDULE_SECONDARY
+        - escalation_delay_in_minutes: 10
+          target:
+            type: user_reference
+            id: USER_ENGINEERING_MANAGER
+        - escalation_delay_in_minutes: 15
+          target:
+            type: user_reference
+            id: USER_VP_ENGINEERING
+        - escalation_delay_in_minutes: 20
+          target:
+            type: user_reference
+            id: USER_CTO
+            
+    - name: security
+      id: EP_SECURITY
+      description: "Security incident escalation"
+      rules:
+        - escalation_delay_in_minutes: 0
+          target:
+            type: schedule_reference
+            id: SCHEDULE_SECURITY
+        - escalation_delay_in_minutes: 5
+          target:
+            type: user_reference
+            id: USER_SECURITY_LEAD
+        - escalation_delay_in_minutes: 15
+          target:
+            type: user_reference
+            id: USER_CISO
+        - escalation_delay_in_minutes: 30
+          target:
+            type: user_reference
+            id: USER_CTO
+
+# Grafana OnCall Integration (Alternative)
+# ----------------------------------------
+grafana_oncall:
+  enabled: false  # Set to true if using Grafana OnCall instead of PagerDuty
+  api_url: "https://oncall.novasight.io"
+  
+  # Teams
+  teams:
+    - name: platform
+      id: TEAM_PLATFORM
+      
+    - name: security
+      id: TEAM_SECURITY
+      
+    - name: data
+      id: TEAM_DATA
+
+  # Schedules
+  schedules:
+    - name: platform-oncall
+      team: platform
+      rotation:
+        type: weekly
+        start_day: monday
+        start_time: "09:00"
+        timezone: "America/New_York"
+        
+    - name: security-oncall
+      team: security
+      rotation:
+        type: weekly
+        start_day: monday
+        start_time: "00:00"
+        timezone: "UTC"
+
+  # Escalation chains
+  escalation_chains:
+    - name: default-escalation
+      team: platform
+      steps:
+        - type: notify_on_call
+          wait_minutes: 5
+        - type: notify_user
+          user: engineering-manager
+          wait_minutes: 10
+        - type: notify_user
+          user: vp-engineering
+          wait_minutes: 15
+          
+    - name: security-escalation
+      team: security
+      steps:
+        - type: notify_on_call
+          important: true
+          wait_minutes: 0
+        - type: notify_user
+          user: security-lead
+          wait_minutes: 5
+        - type: notify_user
+          user: ciso
+          wait_minutes: 10
+
+# Response SLAs
+# -------------
+response_slas:
+  critical:
+    acknowledge: 5m
+    resolve: 1h
+    description: "Critical issues affecting production"
+    
+  high:
+    acknowledge: 15m
+    resolve: 4h
+    description: "High priority issues impacting users"
+    
+  medium:
+    acknowledge: 30m
+    resolve: 8h
+    description: "Medium priority issues"
+    
+  low:
+    acknowledge: 1h
+    resolve: 24h
+    description: "Low priority issues"
+
+# Contact Methods
+# ---------------
+notification_methods:
+  critical:
+    - type: push_notification
+    - type: phone_call
+    - type: sms
+    
+  high:
+    - type: push_notification
+    - type: sms
+    
+  medium:
+    - type: push_notification
+    - type: email
+    
+  low:
+    - type: email
+
+# Maintenance Windows
+# -------------------
+maintenance_windows:
+  regular:
+    # Weekly maintenance window
+    - name: weekly-maintenance
+      schedule: "0 2 * * SUN"  # 2 AM every Sunday
+      duration: 4h
+      suppress_alerts:
+        - severity: warning
+        - severity: info
+        
+  planned:
+    # For scheduled deployments
+    - name: deployment-window
+      enabled: false
+      start_time: null
+      end_time: null
+      suppress_alerts:
+        - severity: warning
+        - component: kubernetes
+
+# Handoff Procedures
+# ------------------
+handoff:
+  checklist:
+    - "Review active incidents"
+    - "Check pending alerts in Slack"
+    - "Review recent deployments"
+    - "Verify monitoring dashboards"
+    - "Check resource utilization trends"
+    - "Review scheduled maintenance"
+    
+  communication:
+    channel: "#oncall-handoff"
+    template: |
+      🔄 *On-Call Handoff*
+      
+      *Outgoing:* {outgoing_engineer}
+      *Incoming:* {incoming_engineer}
+      
+      *Active Incidents:* {active_count}
+      *Open Alerts:* {alert_count}
+      
+      *Notes:*
+      {notes}

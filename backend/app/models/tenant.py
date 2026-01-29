@@ -38,23 +38,22 @@ class Tenant(db.Model):
     """
     
     __tablename__ = "tenants"
-    __table_args__ = {"schema": "public"}
     
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = db.Column(String(255), nullable=False)
     slug = db.Column(String(100), unique=True, nullable=False, index=True)
     
-    # Subscription
+    # Subscription (stored as string to match DB schema)
     plan = db.Column(
-        SQLEnum(SubscriptionPlan),
-        default=SubscriptionPlan.BASIC,
+        String(50),
+        default="basic",
         nullable=False
     )
     
-    # Status
+    # Status (stored as string to match DB schema)
     status = db.Column(
-        SQLEnum(TenantStatus),
-        default=TenantStatus.ACTIVE,
+        String(50),
+        default="active",
         nullable=False
     )
     

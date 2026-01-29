@@ -12,6 +12,7 @@ import {
   Sparkles,
   Boxes,
   MessageSquare,
+  Book,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'PySpark Apps', href: '/pyspark', icon: Sparkles },
   { name: 'Semantic Layer', href: '/semantic', icon: Boxes },
   { name: 'Dashboards', href: '/dashboards', icon: BarChart3 },
+  { name: 'Documentation', href: '/docs', icon: Book },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 

@@ -1,0 +1,35 @@
+# Ingress patches for staging environment
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: novasight
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+spec:
+  tls:
+    - hosts:
+        - staging.novasight.io
+        - api.staging.novasight.io
+      secretName: novasight-staging-tls
+  rules:
+    - host: staging.novasight.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: staging-frontend
+                port:
+                  number: 80
+    - host: api.staging.novasight.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: staging-backend
+                port:
+                  number: 80

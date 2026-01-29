@@ -1,0 +1,131 @@
+# PostgreSQL Backup CronJob
+# Runs every 6 hours to create full database backups
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgresql-backup
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+    database: postgresql
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600  # 1 hour timeout
+      template:
+        metadata:
+          labels:
+            app: novasight
+            component: backup
+            database: postgresql
+        spec:
+          serviceAccountName: backup-sa
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            fsGroup: 999
+          containers:
+            - name: backup
+              image: postgres:15-alpine
+              imagePullPolicy: IfNotPresent
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "1Gi"
+                  cpu: "500m"
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+                  
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_FILE="postgresql_${TIMESTAMP}.sql.gz"
+                  CHECKSUM_FILE="postgresql_${TIMESTAMP}.sha256"
+                  
+                  echo "[$(date -Iseconds)] Starting PostgreSQL backup..."
+                  
+                  # Create backup with pg_dumpall
+                  echo "[$(date -Iseconds)] Dumping all databases..."
+                  pg_dumpall -h "${PGHOST}" -U "${PGUSER}" -c --if-exists | gzip > "/backup/${BACKUP_FILE}"
+                  
+                  # Calculate checksum
+                  echo "[$(date -Iseconds)] Calculating checksum..."
+                  sha256sum "/backup/${BACKUP_FILE}" > "/backup/${CHECKSUM_FILE}"
+                  
+                  # Get backup size
+                  BACKUP_SIZE=$(du -h "/backup/${BACKUP_FILE}" | cut -f1)
+                  echo "[$(date -Iseconds)] Backup size: ${BACKUP_SIZE}"
+                  
+                  # Upload to S3
+                  echo "[$(date -Iseconds)] Uploading to S3..."
+                  aws s3 cp "/backup/${BACKUP_FILE}" "s3://${S3_BUCKET}/postgresql/${BACKUP_FILE}" \
+                    --storage-class STANDARD_IA \
+                    --sse aws:kms \
+                    --sse-kms-key-id "${KMS_KEY_ID}"
+                  
+                  aws s3 cp "/backup/${CHECKSUM_FILE}" "s3://${S3_BUCKET}/postgresql/${CHECKSUM_FILE}"
+                  
+                  # Cleanup local files
+                  echo "[$(date -Iseconds)] Cleaning up local files..."
+                  rm -f "/backup/${BACKUP_FILE}" "/backup/${CHECKSUM_FILE}"
+                  
+                  # Apply retention policy - keep last 30 days
+                  echo "[$(date -Iseconds)] Applying retention policy..."
+                  CUTOFF_DATE=$(date -d '30 days ago' +%Y%m%d)
+                  aws s3 ls "s3://${S3_BUCKET}/postgresql/" | while read -r line; do
+                    FILE_DATE=$(echo "$line" | awk '{print $4}' | grep -oP 'postgresql_\K[0-9]{8}' || echo "")
+                    if [[ -n "$FILE_DATE" && "$FILE_DATE" < "$CUTOFF_DATE" ]]; then
+                      FILE_NAME=$(echo "$line" | awk '{print $4}')
+                      echo "[$(date -Iseconds)] Deleting old backup: ${FILE_NAME}"
+                      aws s3 rm "s3://${S3_BUCKET}/postgresql/${FILE_NAME}"
+                    fi
+                  done
+                  
+                  echo "[$(date -Iseconds)] Backup completed successfully: ${BACKUP_FILE}"
+              env:
+                - name: PGHOST
+                  value: postgresql-service
+                - name: PGPORT
+                  value: "5432"
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgresql-credentials
+                      key: username
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgresql-credentials
+                      key: password
+                - name: S3_BUCKET
+                  valueFrom:
+                    configMapKeyRef:
+                      name: backup-config
+                      key: s3-bucket
+                - name: KMS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: backup-encryption
+                      key: kms-key-id
+                - name: AWS_REGION
+                  valueFrom:
+                    configMapKeyRef:
+                      name: backup-config
+                      key: aws-region
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: /backup
+          volumes:
+            - name: backup-volume
+              emptyDir:
+                sizeLimit: 10Gi
+          restartPolicy: OnFailure

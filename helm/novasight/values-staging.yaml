@@ -1,0 +1,244 @@
+# NovaSight Helm Chart - Staging Environment Values
+# Usage: helm install novasight ./helm/novasight -f values-staging.yaml
+
+# Global settings
+global:
+  imageRegistry: ghcr.io/novasight
+
+# Backend - reduced resources for staging
+backend:
+  replicaCount: 2
+  
+  image:
+    tag: develop
+    pullPolicy: Always
+  
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  autoscaling:
+    enabled: false
+  
+  env:
+    FLASK_ENV: staging
+    LOG_LEVEL: DEBUG
+    WORKERS: "2"
+    THREADS: "2"
+  
+  podDisruptionBudget:
+    enabled: false
+
+# Frontend - minimal for staging
+frontend:
+  replicaCount: 1
+  
+  image:
+    tag: develop
+    pullPolicy: Always
+  
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+  
+  autoscaling:
+    enabled: false
+
+# Ingress - staging domain
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: staging.novasight.io
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /api
+          pathType: Prefix
+          service: backend
+    - host: api.staging.novasight.io
+      paths:
+        - path: /
+          pathType: Prefix
+          service: backend
+  tls:
+    - secretName: novasight-staging-tls
+      hosts:
+        - staging.novasight.io
+        - api.staging.novasight.io
+
+# Airflow - reduced for staging
+airflow:
+  enabled: true
+  executor: LocalExecutor  # Simpler executor for staging
+  
+  webserver:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+  
+  scheduler:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+  
+  workers:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+
+# Ollama - optional for staging
+ollama:
+  enabled: true
+  replicaCount: 1
+  
+  resources:
+    requests:
+      cpu: 1
+      memory: 4Gi
+    limits:
+      cpu: 2
+      memory: 8Gi
+  
+  model: codellama:7b  # Smaller model for staging
+  
+  persistence:
+    enabled: true
+    size: 20Gi
+
+# Spark - reduced for staging
+spark:
+  enabled: true
+  
+  master:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+  
+  workers:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+
+# PostgreSQL - smaller for staging
+postgresql:
+  enabled: true
+  
+  primary:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    persistence:
+      size: 20Gi
+  
+  metrics:
+    enabled: false
+
+# Redis - smaller for staging
+redis:
+  enabled: true
+  
+  master:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    persistence:
+      size: 5Gi
+  
+  replica:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  
+  metrics:
+    enabled: false
+
+# ClickHouse - minimal for staging
+clickhouse:
+  enabled: true
+  
+  shards: 1
+  replicaCount: 1
+  
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 8Gi
+  
+  persistence:
+    size: 50Gi
+  
+  zookeeper:
+    enabled: true
+    replicaCount: 1
+  
+  metrics:
+    enabled: false
+
+# Monitoring - basic for staging
+monitoring:
+  enabled: true
+  
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+  
+  grafana:
+    enabled: false  # Use shared Grafana in staging
+
+# Network Policies - relaxed for staging
+networkPolicy:
+  enabled: false

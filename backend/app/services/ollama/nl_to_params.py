@@ -10,7 +10,7 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -31,7 +31,7 @@ class FilterCondition(BaseModel):
     operator: str = Field(...)
     value: Any = Field(...)
     
-    VALID_OPERATORS = {
+    VALID_OPERATORS: ClassVar[Set[str]] = {
         '=', '!=', '>', '<', '>=', '<=',
         'LIKE', 'NOT LIKE', 'IN', 'NOT IN',
         'BETWEEN', 'IS NULL', 'IS NOT NULL'

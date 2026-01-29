@@ -1,0 +1,77 @@
+# ClickHouse Backup Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clickhouse-backup-config
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+    database: clickhouse
+data:
+  config.yml: |
+    general:
+      remote_storage: s3
+      max_file_size: 1099511627776  # 1TB
+      disable_progress_bar: true
+      backups_to_keep_local: 0
+      backups_to_keep_remote: 30
+      log_level: info
+      allow_empty_backups: false
+      download_concurrency: 4
+      upload_concurrency: 4
+      restore_schema_on_cluster: ""
+      upload_by_part: true
+      download_by_part: true
+    
+    clickhouse:
+      host: clickhouse-service
+      port: 9000
+      username: default
+      password_file: /etc/secrets/clickhouse-password
+      timeout: 5m
+      freeze_by_part: true
+      freeze_by_part_where: ""
+      skip_tables:
+        - system.*
+        - INFORMATION_SCHEMA.*
+        - information_schema.*
+      skip_table_engines: []
+      check_parts_columns: true
+    
+    s3:
+      access_key: ""  # Uses IAM role/IRSA
+      secret_key: ""  # Uses IAM role/IRSA
+      bucket: "${S3_BUCKET}"
+      path: clickhouse
+      region: "${AWS_REGION}"
+      acl: private
+      assume_role_arn: ""
+      endpoint: ""
+      force_path_style: false
+      compression_level: 1
+      compression_format: gzip
+      sse: aws:kms
+      sse_kms_key_id: "${KMS_KEY_ID}"
+      storage_class: STANDARD_IA
+      concurrency: 4
+      part_size: 536870912  # 512MB
+      disable_ssl: false
+      custom_storage_class_map: {}
+      object_labels: {}
+      debug: false
+
+---
+# Secret for ClickHouse credentials (template - actual values from external secret)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: clickhouse-credentials-template
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+    database: clickhouse
+type: Opaque
+stringData:
+  password: "${CLICKHOUSE_PASSWORD}"  # Replaced by external secret management

@@ -9,7 +9,13 @@ from app.models.tenant import Tenant, TenantStatus
 from app.models.user import User, Role, UserRole, UserStatus
 from app.models.connection import DataConnection
 from app.models.dag import DagConfig, DagVersion, TaskConfig
-from app.models.audit import AuditLog
+from app.models.audit import AuditLog, AuditSeverity
+from app.models.rbac import (
+    Permission,
+    ResourcePermission,
+    RoleHierarchy,
+    role_permissions,
+)
 from app.models.pyspark_app import (
     PySparkApp,
     PySparkAppStatus,
@@ -40,6 +46,11 @@ from app.models.dashboard import (
     Widget,
     WidgetType,
 )
+from app.models.infrastructure_config import (
+    InfrastructureConfig,
+    InfrastructureType,
+    DEFAULT_INFRASTRUCTURE_CONFIGS,
+)
 from app.models.mixins import (
     TenantMixin,
     TimestampMixin,
@@ -60,6 +71,12 @@ __all__ = [
     "DagVersion",
     "TaskConfig",
     "AuditLog",
+    "AuditSeverity",
+    # RBAC models
+    "Permission",
+    "ResourcePermission",
+    "RoleHierarchy",
+    "role_permissions",
     # PySpark models
     "PySparkApp",
     "PySparkAppStatus",
@@ -86,6 +103,10 @@ __all__ = [
     "Dashboard",
     "Widget",
     "WidgetType",
+    # Infrastructure config models
+    "InfrastructureConfig",
+    "InfrastructureType",
+    "DEFAULT_INFRASTRUCTURE_CONFIGS",
     # Mixins
     "TenantMixin",
     "TimestampMixin",

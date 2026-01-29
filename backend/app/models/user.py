@@ -56,6 +56,9 @@ class Role(db.Model):
     # Is this a system role (cannot be deleted/modified)
     is_system = db.Column(Boolean, default=False, nullable=False)
     
+    # Is this the default role for new users in the tenant
+    is_default = db.Column(Boolean, default=False, nullable=False)
+    
     # Tenant scope (null = global role like super_admin)
     tenant_id = db.Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=True)
     
@@ -77,6 +80,8 @@ class Role(db.Model):
             "description": self.description,
             "permissions": self.permissions,
             "is_system": self.is_system,
+            "is_default": self.is_default,
+            "tenant_id": str(self.tenant_id) if self.tenant_id else None,
         }
 
 
@@ -122,19 +127,16 @@ class User(db.Model):
     name = db.Column(String(255), nullable=False)
     avatar_url = db.Column(String(500), nullable=True)
     
-    # Status
+    # Status (stored as string to match DB schema)
     status = db.Column(
-        SQLEnum(UserStatus),
-        default=UserStatus.ACTIVE,
+        String(50),
+        default="active",
         nullable=False
     )
     
     # SSO integration
     sso_provider = db.Column(String(50), nullable=True)
     sso_subject = db.Column(String(255), nullable=True)
-    
-    # Email verification
-    email_verified = db.Column(Boolean, default=False, nullable=False)
     
     # Preferences and settings
     preferences = db.Column(JSONB, default=dict, nullable=False)

@@ -1,0 +1,85 @@
+@echo off
+REM ============================================
+REM NovaSight Health Check Script (Windows)
+REM ============================================
+REM Comprehensive health check for all NovaSight services
+REM
+REM Usage: scripts\health-check.bat
+
+setlocal enabledelayedexpansion
+
+echo.
+echo NovaSight Health Check
+echo ========================================
+echo.
+
+set "HEALTHY=0"
+set "UNHEALTHY=0"
+
+REM Check Backend
+curl -s -o nul -w "" --connect-timeout 2 http://localhost:5000/health 2>nul
+if %errorlevel%==0 (
+    echo   [OK] Backend API is healthy
+    set /a HEALTHY+=1
+) else (
+    echo   [FAIL] Backend API is not responding
+    set /a UNHEALTHY+=1
+)
+
+REM Check Frontend
+curl -s -o nul -w "" --connect-timeout 2 http://localhost:5173 2>nul
+if %errorlevel%==0 (
+    echo   [OK] Frontend is healthy
+    set /a HEALTHY+=1
+) else (
+    echo   [FAIL] Frontend is not responding
+    set /a UNHEALTHY+=1
+)
+
+REM Check ClickHouse
+curl -s -o nul -w "" --connect-timeout 2 http://localhost:8123/ping 2>nul
+if %errorlevel%==0 (
+    echo   [OK] ClickHouse is healthy
+    set /a HEALTHY+=1
+) else (
+    echo   [FAIL] ClickHouse is not responding
+    set /a UNHEALTHY+=1
+)
+
+REM Check Airflow
+curl -s -o nul -w "" --connect-timeout 2 http://localhost:8080/health 2>nul
+if %errorlevel%==0 (
+    echo   [OK] Airflow is healthy
+    set /a HEALTHY+=1
+) else (
+    echo   [WARN] Airflow is not responding (may be disabled)
+    set /a UNHEALTHY+=1
+)
+
+REM Check Spark
+curl -s -o nul -w "" --connect-timeout 2 http://localhost:8081 2>nul
+if %errorlevel%==0 (
+    echo   [OK] Spark Master is healthy
+    set /a HEALTHY+=1
+) else (
+    echo   [WARN] Spark Master is not responding (may be disabled)
+    set /a UNHEALTHY+=1
+)
+
+REM Check Ollama
+curl -s -o nul -w "" --connect-timeout 2 http://localhost:11434/api/tags 2>nul
+if %errorlevel%==0 (
+    echo   [OK] Ollama is healthy
+    set /a HEALTHY+=1
+) else (
+    echo   [WARN] Ollama is not responding (may be disabled)
+    set /a UNHEALTHY+=1
+)
+
+echo.
+echo ========================================
+echo Summary: !HEALTHY! healthy, !UNHEALTHY! unhealthy
+echo.
+
+if !UNHEALTHY! GTR 0 exit /b 1
+exit /b 0

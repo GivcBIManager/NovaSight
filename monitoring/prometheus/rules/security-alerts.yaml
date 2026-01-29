@@ -1,0 +1,360 @@
+# Security Alert Rules
+# ====================
+# Alerts for security-related events and potential threats
+
+groups:
+  - name: security.authentication
+    interval: 30s
+    rules:
+      # =======================================================================
+      # Authentication Attacks
+      # =======================================================================
+      
+      # High rate of failed login attempts
+      - alert: HighFailedLoginRate
+        expr: |
+          sum(rate(novasight_auth_login_failed_total[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+          service: authentication
+        annotations:
+          summary: "High rate of failed login attempts"
+          description: "{{ $value | humanize }} failed logins per second detected"
+          runbook_url: "https://docs.novasight.io/runbooks/security/failed-logins"
+          grafana_url: "https://grafana.novasight.io/d/security-overview?orgId=1&from=now-1h&to=now"
+
+      # Brute force attack detection
+      - alert: BruteForceAttackDetected
+        expr: |
+          sum(rate(novasight_auth_login_failed_total{reason="invalid_credentials"}[5m])) by (username) > 5
+        for: 2m
+        labels:
+          severity: critical
+          category: security
+          service: authentication
+        annotations:
+          summary: "Potential brute force attack on user {{ $labels.username }}"
+          description: "{{ $value | humanize }} failed attempts per second for user {{ $labels.username }}"
+          runbook_url: "https://docs.novasight.io/runbooks/security/brute-force"
+
+      # Credential stuffing detection (multiple users, same IP)
+      - alert: CredentialStuffingAttempt
+        expr: |
+          count(increase(novasight_auth_login_failed_total{reason="invalid_credentials"}[5m]) > 0) by (remote_addr) > 10
+        for: 5m
+        labels:
+          severity: critical
+          category: security
+          service: authentication
+        annotations:
+          summary: "Potential credential stuffing from {{ $labels.remote_addr }}"
+          description: "Multiple failed login attempts for different users from single IP"
+          runbook_url: "https://docs.novasight.io/runbooks/security/credential-stuffing"
+
+      # Account lockout spike
+      - alert: AccountLockoutSpike
+        expr: |
+          increase(novasight_auth_account_locked_total[15m]) > 10
+        for: 0m
+        labels:
+          severity: warning
+          category: security
+          service: authentication
+        annotations:
+          summary: "Unusual account lockout activity"
+          description: "{{ $value }} accounts locked in the last 15 minutes"
+
+  - name: security.authorization
+    interval: 30s
+    rules:
+      # =======================================================================
+      # Authorization Violations
+      # =======================================================================
+      
+      # High rate of 403 responses from single IP
+      - alert: SuspiciousAPIActivity
+        expr: |
+          sum(rate(novasight_http_requests_total{status="403"}[5m])) by (remote_addr) > 50
+        for: 2m
+        labels:
+          severity: critical
+          category: security
+          service: api
+        annotations:
+          summary: "Potential attack from {{ $labels.remote_addr }}"
+          description: "High rate of 403 responses ({{ $value | humanize }}/s) from single IP"
+          runbook_url: "https://docs.novasight.io/runbooks/security/403-flood"
+
+      # Privilege escalation attempt
+      - alert: PrivilegeEscalationAttempt
+        expr: |
+          increase(novasight_auth_privilege_escalation_attempts_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          category: security
+          service: authorization
+        annotations:
+          summary: "Privilege escalation attempt detected"
+          description: "User {{ $labels.user_id }} attempted unauthorized privilege escalation"
+          runbook_url: "https://docs.novasight.io/runbooks/security/privilege-escalation"
+
+      # Cross-tenant access attempt
+      - alert: CrossTenantAccessAttempt
+        expr: |
+          increase(novasight_auth_cross_tenant_access_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          category: security
+          service: authorization
+        annotations:
+          summary: "Cross-tenant access attempt"
+          description: "User {{ $labels.user_id }} from tenant {{ $labels.source_tenant }} attempted to access tenant {{ $labels.target_tenant }}"
+          runbook_url: "https://docs.novasight.io/runbooks/security/cross-tenant"
+
+      # Admin API abuse
+      - alert: AdminAPIAbuse
+        expr: |
+          sum(rate(novasight_http_requests_total{path=~"/api/v1/admin/.*", status!="200"}[5m])) by (user_id) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+          service: admin
+        annotations:
+          summary: "Unusual admin API activity"
+          description: "High error rate on admin APIs from user {{ $labels.user_id }}"
+
+  - name: security.data
+    interval: 30s
+    rules:
+      # =======================================================================
+      # Data Security
+      # =======================================================================
+      
+      # Unusual data export activity
+      - alert: UnusualDataExport
+        expr: |
+          sum(rate(novasight_data_export_bytes_total[1h])) by (tenant_id, user_id) > 100 * 1024 * 1024
+        for: 15m
+        labels:
+          severity: warning
+          category: security
+          service: data
+        annotations:
+          summary: "Unusual data export activity"
+          description: "User {{ $labels.user_id }} in tenant {{ $labels.tenant_id }} exporting {{ $value | humanize1024 }}B/hour"
+
+      # Bulk data access
+      - alert: BulkDataAccess
+        expr: |
+          sum(rate(novasight_query_result_rows_total[15m])) by (user_id, tenant_id) > 10000
+        for: 30m
+        labels:
+          severity: warning
+          category: security
+          service: query
+        annotations:
+          summary: "Bulk data access detected"
+          description: "User {{ $labels.user_id }} querying {{ $value | humanize }} rows per second"
+
+      # Sensitive data access outside business hours
+      - alert: AfterHoursSensitiveDataAccess
+        expr: |
+          (
+            increase(novasight_sensitive_data_access_total[5m]) > 0
+          ) and on() (
+            hour() < 6 or hour() > 22
+          )
+        for: 0m
+        labels:
+          severity: warning
+          category: security
+          service: data
+        annotations:
+          summary: "Sensitive data accessed outside business hours"
+          description: "Sensitive data access detected during non-business hours"
+
+  - name: security.infrastructure
+    interval: 30s
+    rules:
+      # =======================================================================
+      # Infrastructure Security
+      # =======================================================================
+      
+      # Audit log integrity violation
+      - alert: AuditLogIntegrityViolation
+        expr: |
+          novasight_audit_log_integrity_issues > 0
+        for: 0m
+        labels:
+          severity: critical
+          category: security
+          service: audit
+        annotations:
+          summary: "Audit log integrity violation detected"
+          description: "Possible tampering detected in audit logs"
+          runbook_url: "https://docs.novasight.io/runbooks/security/audit-tampering"
+
+      # SSL certificate expiring soon
+      - alert: SSLCertificateExpiringSoon
+        expr: |
+          (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          category: security
+          service: infrastructure
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "Certificate for {{ $labels.instance }} expires in {{ $value | humanize }} days"
+          runbook_url: "https://docs.novasight.io/runbooks/security/ssl-renewal"
+
+      # SSL certificate expired
+      - alert: SSLCertificateExpired
+        expr: |
+          (probe_ssl_earliest_cert_expiry - time()) < 0
+        for: 0m
+        labels:
+          severity: critical
+          category: security
+          service: infrastructure
+        annotations:
+          summary: "SSL certificate has expired"
+          description: "Certificate for {{ $labels.instance }} has expired"
+
+      # Suspicious container activity
+      - alert: SuspiciousContainerActivity
+        expr: |
+          increase(container_fs_writes_bytes_total{container=~"backend|frontend", mountpoint="/"}[5m]) > 100 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+          service: container
+        annotations:
+          summary: "Suspicious container write activity"
+          description: "Container {{ $labels.container }} writing {{ $value | humanize1024 }}B to root filesystem"
+
+      # Unauthorized port access attempts
+      - alert: UnauthorizedPortAccess
+        expr: |
+          increase(novasight_firewall_blocked_connections_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+          service: network
+        annotations:
+          summary: "High rate of blocked connections"
+          description: "{{ $value }} blocked connection attempts in the last 5 minutes"
+
+  - name: security.api
+    interval: 30s
+    rules:
+      # =======================================================================
+      # API Security
+      # =======================================================================
+      
+      # API rate limit exceeded
+      - alert: APIRateLimitExceeded
+        expr: |
+          sum(rate(novasight_http_requests_total{status="429"}[5m])) by (remote_addr) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+          service: api
+        annotations:
+          summary: "API rate limit exceeded"
+          description: "IP {{ $labels.remote_addr }} hitting rate limits"
+
+      # Possible API enumeration
+      - alert: APIEnumerationAttempt
+        expr: |
+          sum(rate(novasight_http_requests_total{status="404"}[5m])) by (remote_addr) > 20
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+          service: api
+        annotations:
+          summary: "Possible API enumeration attempt"
+          description: "High 404 rate from {{ $labels.remote_addr }}: {{ $value | humanize }}/s"
+
+      # SQL injection attempt detected
+      - alert: SQLInjectionAttemptDetected
+        expr: |
+          increase(novasight_waf_sql_injection_blocked_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          category: security
+          service: waf
+        annotations:
+          summary: "SQL injection attempt blocked"
+          description: "WAF blocked {{ $value }} SQL injection attempts from {{ $labels.remote_addr }}"
+          runbook_url: "https://docs.novasight.io/runbooks/security/sql-injection"
+
+      # XSS attempt detected
+      - alert: XSSAttemptDetected
+        expr: |
+          increase(novasight_waf_xss_blocked_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          category: security
+          service: waf
+        annotations:
+          summary: "XSS attempt blocked"
+          description: "WAF blocked {{ $value }} XSS attempts from {{ $labels.remote_addr }}"
+
+  - name: security.session
+    interval: 60s
+    rules:
+      # =======================================================================
+      # Session Security
+      # =======================================================================
+      
+      # Session hijacking attempt (concurrent sessions from different IPs)
+      - alert: PossibleSessionHijacking
+        expr: |
+          count(novasight_active_sessions) by (session_id) > 1
+        for: 5m
+        labels:
+          severity: critical
+          category: security
+          service: session
+        annotations:
+          summary: "Possible session hijacking detected"
+          description: "Session {{ $labels.session_id }} active from multiple IPs"
+          runbook_url: "https://docs.novasight.io/runbooks/security/session-hijacking"
+
+      # Unusual session duration
+      - alert: UnusualSessionDuration
+        expr: |
+          novasight_session_duration_seconds > 86400
+        for: 1h
+        labels:
+          severity: info
+          category: security
+          service: session
+        annotations:
+          summary: "Unusually long session"
+          description: "Session for user {{ $labels.user_id }} has been active for {{ $value | humanizeDuration }}"
+
+      # Session token reuse after logout
+      - alert: SessionTokenReuseAfterLogout
+        expr: |
+          increase(novasight_auth_invalid_token_reuse_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          category: security
+          service: session
+        annotations:
+          summary: "Session token reuse after logout"
+          description: "Attempted use of invalidated session token"

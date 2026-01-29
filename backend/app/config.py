@@ -46,6 +46,14 @@ class BaseConfig:
     CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
     CLICKHOUSE_DATABASE = os.getenv("CLICKHOUSE_DATABASE", "novasight")
     
+    # Spark Configuration
+    SPARK_MASTER_HOST = os.getenv("SPARK_MASTER_HOST", "localhost")
+    SPARK_MASTER_PORT = int(os.getenv("SPARK_MASTER_PORT", "7077"))
+    SPARK_MASTER_URL = os.getenv("SPARK_MASTER_URL", "spark://localhost:7077")
+    SPARK_DRIVER_MEMORY = os.getenv("SPARK_DRIVER_MEMORY", "2g")
+    SPARK_EXECUTOR_MEMORY = os.getenv("SPARK_EXECUTOR_MEMORY", "2g")
+    SPARK_EXECUTOR_CORES = int(os.getenv("SPARK_EXECUTOR_CORES", "2"))
+    
     # Airflow Configuration
     AIRFLOW_BASE_URL = os.getenv("AIRFLOW_BASE_URL", "http://localhost:8080")
     AIRFLOW_USERNAME = os.getenv("AIRFLOW_USERNAME", "airflow")
@@ -64,9 +72,25 @@ class BaseConfig:
     
     # Logging
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    JSON_LOGS = os.getenv("JSON_LOGS", "true").lower() in ("true", "1", "yes")
     
-    # Security
-    CREDENTIAL_ENCRYPTION_KEY = os.getenv("CREDENTIAL_ENCRYPTION_KEY", None)
+    # Metrics
+    ENABLE_METRICS = os.getenv("ENABLE_METRICS", "true").lower() in ("true", "1", "yes")
+    
+    # Security & Encryption
+    # ENCRYPTION_MASTER_KEY is the preferred key for AES-256 encryption
+    # CREDENTIAL_ENCRYPTION_KEY is supported for backward compatibility
+    ENCRYPTION_MASTER_KEY = os.getenv("ENCRYPTION_MASTER_KEY", None)
+    CREDENTIAL_ENCRYPTION_KEY = os.getenv(
+        "CREDENTIAL_ENCRYPTION_KEY",
+        os.getenv("ENCRYPTION_MASTER_KEY", None)
+    )
+    
+    # Backup & Recovery Configuration
+    BACKUP_S3_BUCKET = os.getenv("BACKUP_S3_BUCKET", "novasight-backups")
+    BACKUP_KMS_KEY_ID = os.getenv("BACKUP_KMS_KEY_ID", "")
+    AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+    KUBERNETES_NAMESPACE = os.getenv("KUBERNETES_NAMESPACE", "novasight")
     
     # Pagination Defaults
     DEFAULT_PAGE_SIZE = 20
@@ -78,6 +102,7 @@ class DevelopmentConfig(BaseConfig):
     
     DEBUG = True
     LOG_LEVEL = "DEBUG"
+    JSON_LOGS = False  # Human-readable logs in development
     
     # Allow more permissive CORS in development
     CORS_ORIGINS = ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"]
@@ -88,6 +113,7 @@ class TestingConfig(BaseConfig):
     
     TESTING = True
     DEBUG = True
+    JSON_LOGS = False  # Human-readable logs in tests
     
     # Use in-memory SQLite for faster tests
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"

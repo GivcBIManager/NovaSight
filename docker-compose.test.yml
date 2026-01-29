@@ -1,0 +1,176 @@
+# NovaSight Test Environment
+# ===========================
+# Docker Compose configuration for CI/CD integration testing
+# 
+# Usage:
+#   docker compose -f docker-compose.test.yml up -d
+#   docker compose -f docker-compose.test.yml down -v
+
+version: '3.8'
+
+services:
+  # ============================================
+  # PostgreSQL - Test Database
+  # ============================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: novasight-test-postgres
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: novasight_test
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./docker/postgres/tenant-schema.sql:/docker-entrypoint-initdb.d/02-tenant-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d novasight_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - test-network
+
+  # ============================================
+  # ClickHouse - Test Data Warehouse
+  # ============================================
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8-alpine
+    container_name: novasight-test-clickhouse
+    environment:
+      CLICKHOUSE_DB: novasight_test
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - ./docker/clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - test-network
+
+  # ============================================
+  # Redis - Test Cache
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: novasight-test-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly no --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - test-network
+
+  # ============================================
+  # Backend - Flask API
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: novasight-test-backend
+    environment:
+      FLASK_ENV: testing
+      TESTING: "true"
+      SECRET_KEY: test-secret-key-for-ci-pipeline-testing
+      ENCRYPTION_MASTER_KEY: test-encryption-key-32-bytes-long
+      DATABASE_URL: postgresql://test:test@postgres:5432/novasight_test
+      REDIS_URL: redis://redis:6379
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+      CLICKHOUSE_DATABASE: novasight_test
+      LOG_LEVEL: DEBUG
+      CORS_ORIGINS: "*"
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - test-network
+
+  # ============================================
+  # Frontend - React App (for E2E testing)
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+      args:
+        VITE_API_URL: http://backend:5000
+    container_name: novasight-test-frontend
+    environment:
+      VITE_API_URL: http://localhost:5000
+      NODE_ENV: test
+    ports:
+      - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - test-network
+
+  # ============================================
+  # Test Runner (Optional - for containerized tests)
+  # ============================================
+  test-runner:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: novasight-test-runner
+    environment:
+      FLASK_ENV: testing
+      TESTING: "true"
+      SECRET_KEY: test-secret-key-for-ci-pipeline-testing
+      ENCRYPTION_MASTER_KEY: test-encryption-key-32-bytes-long
+      DATABASE_URL: postgresql://test:test@postgres:5432/novasight_test
+      REDIS_URL: redis://redis:6379
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+    depends_on:
+      backend:
+        condition: service_healthy
+    command: ["pytest", "tests/", "-v", "--tb=short"]
+    profiles:
+      - testing
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
+
+# No volumes defined - tests should be stateless

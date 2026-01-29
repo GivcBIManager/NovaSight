@@ -1,0 +1,56 @@
+{{ define "slack.title" }}
+[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.alertname }}
+{{ end }}
+
+{{ define "slack.text" }}
+{{ range .Alerts }}
+*Alert:* {{ .Annotations.summary }}
+*Description:* {{ .Annotations.description }}
+*Severity:* {{ .Labels.severity }}
+*Service:* {{ .Labels.service }}{{ if .Labels.component }} / {{ .Labels.component }}{{ end }}
+{{ if .Labels.tenant_id }}*Tenant:* {{ .Labels.tenant_id }}{{ end }}
+{{ if .Labels.cluster }}*Cluster:* {{ .Labels.cluster }}{{ end }}
+{{ if .Labels.namespace }}*Namespace:* {{ .Labels.namespace }}{{ end }}
+{{ if .Labels.pod }}*Pod:* {{ .Labels.pod }}{{ end }}
+*Started:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ if eq .Status "resolved" }}*Resolved:* {{ .EndsAt.Format "2006-01-02 15:04:05 UTC" }}{{ end }}
+{{ if .Annotations.runbook_url }}*Runbook:* <{{ .Annotations.runbook_url }}|View Runbook>{{ end }}
+---
+{{ end }}
+{{ end }}
+
+{{ define "pagerduty.description" }}
+{{ (index .Alerts 0).Annotations.summary }}
+{{ end }}
+
+{{ define "pagerduty.firing" }}
+{{ range .Alerts }}
+- {{ .Annotations.summary }}: {{ .Annotations.description }}
+{{ end }}
+{{ end }}
+
+{{ define "silence.url" }}
+{{ .ExternalURL }}/#/silences/new?filter=%7B{{ range .CommonLabels.SortedPairs }}{{ .Name }}%3D%22{{ .Value }}%22%2C{{ end }}%7D
+{{ end }}
+
+{{ define "grafana.url" }}
+{{ if (index .Alerts 0).Annotations.grafana_url }}
+{{ (index .Alerts 0).Annotations.grafana_url }}
+{{ else }}
+https://grafana.novasight.io/d/novasight-overview?orgId=1&from=now-1h&to=now
+{{ end }}
+{{ end }}
+
+{{ define "slack.color" }}
+{{ if eq .Status "firing" }}
+{{ if eq (index .Alerts 0).Labels.severity "critical" }}danger{{ else if eq (index .Alerts 0).Labels.severity "warning" }}warning{{ else }}#439FE0{{ end }}
+{{ else }}good{{ end }}
+{{ end }}
+
+{{ define "slack.icon" }}
+{{ if eq (index .Alerts 0).Labels.severity "critical" }}🚨{{ else if eq (index .Alerts 0).Labels.severity "warning" }}⚠️{{ else if eq (index .Alerts 0).Labels.category "security" }}🔐{{ else }}ℹ️{{ end }}
+{{ end }}
+
+{{ define "alert.link" }}
+{{ .ExternalURL }}/#/alerts?filter=%7Balertname%3D%22{{ .GroupLabels.alertname }}%22%7D
+{{ end }}

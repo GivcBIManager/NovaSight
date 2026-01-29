@@ -1,0 +1,18 @@
+{{- if .Values.frontend.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "novasight.frontend.fullname" . }}-config
+  labels:
+    {{- include "novasight.frontend.labels" . | nindent 4 }}
+data:
+  # API URL for the frontend to connect to backend
+  VITE_API_URL: {{ .Values.frontend.env.VITE_API_URL | default "/api" | quote }}
+  
+  # Additional frontend configuration
+  {{- range $key, $value := .Values.frontend.env }}
+  {{- if ne $key "VITE_API_URL" }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}

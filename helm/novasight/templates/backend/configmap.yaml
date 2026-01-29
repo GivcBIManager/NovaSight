@@ -1,0 +1,46 @@
+{{- if .Values.backend.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "novasight.backend.fullname" . }}-config
+  labels:
+    {{- include "novasight.backend.labels" . | nindent 4 }}
+data:
+  # Flask configuration
+  FLASK_ENV: {{ .Values.backend.env.FLASK_ENV | default "production" | quote }}
+  LOG_LEVEL: {{ .Values.backend.env.LOG_LEVEL | default "INFO" | quote }}
+  
+  # Gunicorn configuration
+  WORKERS: {{ .Values.backend.env.WORKERS | default "4" | quote }}
+  THREADS: {{ .Values.backend.env.THREADS | default "2" | quote }}
+  
+  # Database hosts (constructed from dependencies)
+  POSTGRES_HOST: {{ include "novasight.postgresql.host" . | quote }}
+  POSTGRES_PORT: {{ include "novasight.postgresql.port" . | quote }}
+  POSTGRES_DB: {{ .Values.postgresql.auth.database | default "novasight" | quote }}
+  
+  # Redis configuration
+  REDIS_HOST: {{ include "novasight.redis.host" . | quote }}
+  REDIS_PORT: {{ include "novasight.redis.port" . | quote }}
+  
+  # ClickHouse configuration
+  CLICKHOUSE_HOST: {{ include "novasight.clickhouse.host" . | quote }}
+  CLICKHOUSE_PORT: "8123"
+  
+  {{- if .Values.ollama.enabled }}
+  # Ollama configuration
+  OLLAMA_HOST: {{ printf "%s-ollama" (include "novasight.fullname" .) | quote }}
+  OLLAMA_PORT: {{ .Values.ollama.service.port | default "11434" | quote }}
+  OLLAMA_MODEL: {{ .Values.ollama.model | default "codellama:13b" | quote }}
+  {{- end }}
+  
+  # Metrics
+  PROMETHEUS_METRICS_PORT: "9090"
+  
+  # Application-specific settings
+  {{- range $key, $value := .Values.backend.env }}
+  {{- if not (has $key (list "FLASK_ENV" "LOG_LEVEL" "WORKERS" "THREADS")) }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}

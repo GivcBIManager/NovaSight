@@ -12,8 +12,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-      target: development
+      dockerfile: Dockerfile.dev
     environment:
       FLASK_ENV: development
       FLASK_DEBUG: "1"
@@ -21,7 +20,6 @@ services:
       PYTHONUNBUFFERED: "1"
     volumes:
       - ./backend:/app
-      - backend_venv:/app/.venv
     command: flask run --host=0.0.0.0 --reload --debug
 
   # ============================================
@@ -63,7 +61,3 @@ services:
     environment:
       SPARK_WORKER_MEMORY: 1G
       SPARK_WORKER_CORES: 1
-
-volumes:
-  backend_venv:
-    name: novasight-backend-venv

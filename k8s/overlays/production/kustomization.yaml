@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: novasight-prod
+
+resources:
+  - ../../base
+
+commonLabels:
+  environment: production
+
+commonAnnotations:
+  novasight.io/environment: production
+
+patches:
+  - path: backend-patch.yaml
+  - path: frontend-patch.yaml
+  - path: hpa-patch.yaml
+
+images:
+  - name: ghcr.io/novasight/backend
+    newTag: v1.0.0
+  - name: ghcr.io/novasight/frontend
+    newTag: v1.0.0
+
+replicas:
+  - name: backend
+    count: 5
+  - name: frontend
+    count: 3
+
+configMapGenerator:
+  - name: backend-config
+    behavior: merge
+    literals:
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+      - ENABLE_PROFILING=false
+      - WORKERS=8
+      - THREADS=4
+
+  - name: frontend-config
+    behavior: merge
+    literals:
+      - VITE_API_URL=https://api.novasight.io
+      - VITE_ENABLE_ANALYTICS=true

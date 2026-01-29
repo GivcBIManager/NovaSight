@@ -22,6 +22,8 @@ import {
 import { SemanticModelsPage, ModelDetailPage } from '@/features/semantic'
 import { DashboardsListPage, DashboardBuilderPage } from '@/features/dashboards'
 import { QueryPage } from '@/features/query'
+import { DocumentationPage } from '@/pages/documentation'
+import { InfrastructureConfigPage } from '@/pages/admin'
 
 function App() {
   return (
@@ -75,6 +77,12 @@ function App() {
             
             {/* AI Query Interface */}
             <Route path="query" element={<QueryPage />} />
+            
+            {/* Admin Pages */}
+            <Route path="admin/infrastructure" element={<InfrastructureConfigPage />} />
+            
+            {/* Documentation */}
+            <Route path="docs" element={<DocumentationPage />} />
           </Route>
 
           {/* Catch all */}

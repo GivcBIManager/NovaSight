@@ -1,0 +1,305 @@
+name: Performance Tests
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of performance test to run'
+        required: true
+        default: 'load'
+        type: choice
+        options:
+          - load
+          - stress
+          - spike
+          - database
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  API_URL: ${{ secrets.STAGING_API_URL || 'http://localhost:5000' }}
+  TEST_USER: ${{ secrets.PERF_TEST_USER }}
+  TEST_PASSWORD: ${{ secrets.PERF_TEST_PASSWORD }}
+  TENANT_SLUG: 'perf-test'
+
+jobs:
+  # Setup performance test environment
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      test_id: ${{ steps.test-id.outputs.id }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate test ID
+        id: test-id
+        run: echo "id=$(date +%Y%m%d-%H%M%S)-${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+  # Run load test (default daily test)
+  load-test:
+    needs: setup
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'schedule' || github.event.inputs.test_type == 'load' }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Start services
+        run: |
+          docker compose up -d
+          echo "Waiting for services to be ready..."
+          sleep 60
+      
+      - name: Verify API is accessible
+        run: |
+          max_attempts=30
+          attempt=0
+          until curl -sf http://localhost:5000/api/v1/health > /dev/null; do
+            attempt=$((attempt + 1))
+            if [ $attempt -ge $max_attempts ]; then
+              echo "API failed to become ready"
+              exit 1
+            fi
+            echo "Waiting for API... (attempt $attempt/$max_attempts)"
+            sleep 10
+          done
+          echo "API is ready!"
+      
+      - name: Run k6 load test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: performance/k6/api-load-test.js
+          flags: --out json=load-test-results.json
+        env:
+          API_URL: http://localhost:5000
+          ENVIRONMENT: ci
+      
+      - name: Parse test results
+        id: parse-results
+        run: |
+          # Extract key metrics from k6 output
+          if [ -f load-test-results.json ]; then
+            echo "results_available=true" >> $GITHUB_OUTPUT
+          else
+            echo "results_available=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-results-${{ needs.setup.outputs.test_id }}
+          path: |
+            load-test-results.json
+            summary.json
+          retention-days: 30
+      
+      - name: Stop services
+        if: always()
+        run: docker compose down -v
+
+  # Run stress test (on-demand)
+  stress-test:
+    needs: setup
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'stress' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Start services
+        run: |
+          docker compose up -d
+          sleep 60
+      
+      - name: Verify API is accessible
+        run: |
+          until curl -sf http://localhost:5000/api/v1/health > /dev/null; do
+            sleep 10
+          done
+      
+      - name: Run k6 stress test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: performance/k6/stress-test.js
+          flags: --out json=stress-test-results.json
+        env:
+          API_URL: http://localhost:5000
+          ENVIRONMENT: ci
+      
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-test-results-${{ needs.setup.outputs.test_id }}
+          path: |
+            stress-test-results.json
+            stress-test-results.json
+          retention-days: 30
+      
+      - name: Stop services
+        if: always()
+        run: docker compose down -v
+
+  # Run spike test (on-demand)
+  spike-test:
+    needs: setup
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'spike' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Start services
+        run: |
+          docker compose up -d
+          sleep 60
+      
+      - name: Verify API is accessible
+        run: |
+          until curl -sf http://localhost:5000/api/v1/health > /dev/null; do
+            sleep 10
+          done
+      
+      - name: Run k6 spike test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: performance/k6/spike-test.js
+          flags: --out json=spike-test-results.json
+        env:
+          API_URL: http://localhost:5000
+          ENVIRONMENT: ci
+      
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: spike-test-results-${{ needs.setup.outputs.test_id }}
+          path: |
+            spike-test-results.json
+          retention-days: 30
+      
+      - name: Stop services
+        if: always()
+        run: docker compose down -v
+
+  # Run database performance test (on-demand)
+  database-test:
+    needs: setup
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'database' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Start services
+        run: |
+          docker compose up -d
+          sleep 60
+      
+      - name: Verify API is accessible
+        run: |
+          until curl -sf http://localhost:5000/api/v1/health > /dev/null; do
+            sleep 10
+          done
+      
+      - name: Run k6 database test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: performance/k6/database-test.js
+          flags: --out json=database-test-results.json
+        env:
+          API_URL: http://localhost:5000
+          ENVIRONMENT: ci
+      
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-test-results-${{ needs.setup.outputs.test_id }}
+          path: |
+            database-test-results.json
+          retention-days: 30
+      
+      - name: Stop services
+        if: always()
+        run: docker compose down -v
+
+  # Analyze results and create report
+  analyze-results:
+    needs: [setup, load-test, stress-test, spike-test, database-test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: test-results
+      
+      - name: Generate performance report
+        run: |
+          echo "# Performance Test Report" > performance-report.md
+          echo "" >> performance-report.md
+          echo "**Test ID:** ${{ needs.setup.outputs.test_id }}" >> performance-report.md
+          echo "**Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> performance-report.md
+          echo "" >> performance-report.md
+          
+          # Process each result file
+          for result_dir in test-results/*; do
+            if [ -d "$result_dir" ]; then
+              test_name=$(basename "$result_dir" | sed 's/-results-.*//')
+              echo "## $test_name Results" >> performance-report.md
+              
+              for json_file in "$result_dir"/*.json; do
+                if [ -f "$json_file" ]; then
+                  echo "\`\`\`json" >> performance-report.md
+                  head -100 "$json_file" >> performance-report.md
+                  echo "\`\`\`" >> performance-report.md
+                fi
+              done
+              echo "" >> performance-report.md
+            fi
+          done
+      
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-report-${{ needs.setup.outputs.test_id }}
+          path: performance-report.md
+          retention-days: 90
+      
+      - name: Post summary to PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('performance-report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+  # Send notification on failure
+  notify-on-failure:
+    needs: [load-test, stress-test, spike-test, database-test]
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Send Slack notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: "Performance test failed! Check the results."
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: env.SLACK_WEBHOOK_URL != ''

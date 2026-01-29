@@ -1,0 +1,17 @@
+# Grafana Dashboard Provisioning
+# ===============================
+# Auto-provision NovaSight log dashboards
+
+apiVersion: 1
+
+providers:
+  - name: 'NovaSight Logs'
+    orgId: 1
+    folder: 'NovaSight'
+    folderUid: 'novasight'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

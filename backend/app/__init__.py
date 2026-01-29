@@ -54,6 +54,9 @@ def create_app(config_name: str = None) -> Flask:
     # Configure logging
     _configure_logging(app)
     
+    # Register CLI commands
+    _register_commands(app)
+    
     logger.info(f"NovaSight API initialized in {config_name} mode")
     
     return app
@@ -87,6 +90,10 @@ def _register_blueprints(app: Flask) -> None:
     
     app.register_blueprint(health_bp)
     app.register_blueprint(api_v1_bp, url_prefix="/api/v1")
+    
+    # Register Flask-RESTX API documentation (Swagger UI at /api/v1/docs)
+    from app.api.swagger import init_api_docs
+    init_api_docs(app)
 
 
 def _register_error_handlers(app: Flask) -> None:
@@ -96,17 +103,28 @@ def _register_error_handlers(app: Flask) -> None:
 
 
 def _configure_logging(app: Flask) -> None:
-    """Configure application logging."""
-    log_level = app.config.get("LOG_LEVEL", "INFO")
-    logging.basicConfig(
-        level=getattr(logging, log_level),
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    """Configure application logging with structured JSON output."""
+    from app.utils.logger import setup_logging
+    setup_logging(app)
 
 
 def _register_middleware(app: Flask) -> None:
     """Register request/response middleware."""
-    from app.middleware import TenantContextMiddleware
+    from app.middleware import TenantContextMiddleware, setup_metrics
+    from app.middleware.request_logging import setup_request_logging
+    
+    # Initialize request logging middleware
+    setup_request_logging(app)
     
     # Initialize tenant context middleware
     TenantContextMiddleware(app)
+    
+    # Initialize metrics middleware (exposes /metrics endpoint)
+    if app.config.get("ENABLE_METRICS", True):
+        setup_metrics(app)
+
+
+def _register_commands(app: Flask) -> None:
+    """Register Flask CLI commands."""
+    from app.commands import register_commands
+    register_commands(app)

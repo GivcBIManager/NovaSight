@@ -1,0 +1,151 @@
+# Prometheus Alerting Rules for Backup Monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: backup-alerts
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+    prometheus: monitoring
+spec:
+  groups:
+    - name: backup.rules
+      interval: 1m
+      rules:
+        # PostgreSQL Backup Alerts
+        - alert: PostgreSQLBackupFailed
+          expr: |
+            kube_job_status_failed{job_name=~"postgresql-backup.*", namespace="novasight"} > 0
+          for: 5m
+          labels:
+            severity: critical
+            service: postgresql
+            component: backup
+          annotations:
+            summary: "PostgreSQL backup job failed"
+            description: "PostgreSQL backup job {{ $labels.job_name }} has failed. Last successful backup may be outdated."
+            runbook_url: "https://docs.novasight.io/runbooks/backup-failed"
+
+        - alert: PostgreSQLBackupMissing
+          expr: |
+            time() - max(kube_job_status_completion_time{job_name=~"postgresql-backup.*", namespace="novasight"}) > 28800
+          for: 10m
+          labels:
+            severity: warning
+            service: postgresql
+            component: backup
+          annotations:
+            summary: "No PostgreSQL backup in last 8 hours"
+            description: "No successful PostgreSQL backup has been recorded in the last 8 hours. Expected every 6 hours."
+            runbook_url: "https://docs.novasight.io/runbooks/backup-missing"
+
+        # ClickHouse Backup Alerts
+        - alert: ClickHouseBackupFailed
+          expr: |
+            kube_job_status_failed{job_name=~"clickhouse-backup.*", namespace="novasight"} > 0
+          for: 5m
+          labels:
+            severity: critical
+            service: clickhouse
+            component: backup
+          annotations:
+            summary: "ClickHouse backup job failed"
+            description: "ClickHouse backup job {{ $labels.job_name }} has failed."
+            runbook_url: "https://docs.novasight.io/runbooks/backup-failed"
+
+        - alert: ClickHouseBackupMissing
+          expr: |
+            time() - max(kube_job_status_completion_time{job_name=~"clickhouse-backup.*", namespace="novasight"}) > 90000
+          for: 10m
+          labels:
+            severity: warning
+            service: clickhouse
+            component: backup
+          annotations:
+            summary: "No ClickHouse backup in last 25 hours"
+            description: "No successful ClickHouse backup has been recorded in the last 25 hours. Expected daily."
+            runbook_url: "https://docs.novasight.io/runbooks/backup-missing"
+
+        # Redis Backup Alerts
+        - alert: RedisBackupFailed
+          expr: |
+            kube_job_status_failed{job_name=~"redis-backup.*", namespace="novasight"} > 0
+          for: 5m
+          labels:
+            severity: warning
+            service: redis
+            component: backup
+          annotations:
+            summary: "Redis backup job failed"
+            description: "Redis backup job {{ $labels.job_name }} has failed."
+            runbook_url: "https://docs.novasight.io/runbooks/backup-failed"
+
+        - alert: RedisBackupMissing
+          expr: |
+            time() - max(kube_job_status_completion_time{job_name=~"redis-backup.*", namespace="novasight"}) > 7200
+          for: 10m
+          labels:
+            severity: warning
+            service: redis
+            component: backup
+          annotations:
+            summary: "No Redis backup in last 2 hours"
+            description: "No successful Redis backup has been recorded in the last 2 hours. Expected hourly."
+            runbook_url: "https://docs.novasight.io/runbooks/backup-missing"
+
+        # S3 Storage Alerts
+        - alert: BackupStorageHigh
+          expr: |
+            aws_s3_bucket_size_bytes{bucket="novasight-backups"} > 1099511627776
+          for: 1h
+          labels:
+            severity: warning
+            component: backup
+          annotations:
+            summary: "Backup storage exceeds 1TB"
+            description: "Backup S3 bucket size is {{ $value | humanize1024 }}. Consider reviewing retention policies."
+            runbook_url: "https://docs.novasight.io/runbooks/backup-storage"
+
+        # WAL Archiving Alerts
+        - alert: WALArchivingBehind
+          expr: |
+            pg_stat_archiver_archived_count{namespace="novasight"} 
+            - pg_stat_archiver_archived_count{namespace="novasight"} offset 5m < 0
+            and pg_stat_archiver_failed_count{namespace="novasight"} > 0
+          for: 10m
+          labels:
+            severity: warning
+            service: postgresql
+            component: backup
+          annotations:
+            summary: "PostgreSQL WAL archiving is failing"
+            description: "WAL archiving has failed {{ $value }} times. PITR may be compromised."
+            runbook_url: "https://docs.novasight.io/runbooks/wal-archiving"
+
+    - name: backup.recording.rules
+      rules:
+        # Recording rules for backup metrics
+        - record: novasight:backup:last_success_time:postgresql
+          expr: |
+            max(kube_job_status_completion_time{job_name=~"postgresql-backup.*", namespace="novasight"})
+
+        - record: novasight:backup:last_success_time:clickhouse
+          expr: |
+            max(kube_job_status_completion_time{job_name=~"clickhouse-backup.*", namespace="novasight"})
+
+        - record: novasight:backup:last_success_time:redis
+          expr: |
+            max(kube_job_status_completion_time{job_name=~"redis-backup.*", namespace="novasight"})
+
+        - record: novasight:backup:age_seconds:postgresql
+          expr: |
+            time() - novasight:backup:last_success_time:postgresql
+
+        - record: novasight:backup:age_seconds:clickhouse
+          expr: |
+            time() - novasight:backup:last_success_time:clickhouse
+
+        - record: novasight:backup:age_seconds:redis
+          expr: |
+            time() - novasight:backup:last_success_time:redis

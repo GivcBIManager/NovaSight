@@ -21,6 +21,45 @@ COPY requirements.txt .
 RUN pip wheel --no-cache-dir --wheel-dir /build/wheels -r requirements.txt
 
 
+# Development stage
+FROM python:3.11-slim as development
+
+# Set environment
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=app
+ENV FLASK_ENV=development
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /app
+
+# Install runtime and dev dependencies with retry logic
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libpq5 \
+        curl \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy wheels from builder
+COPY --from=builder /build/wheels /wheels
+RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
+
+# Install dev dependencies
+COPY requirements-dev.txt* ./
+RUN if [ -f requirements-dev.txt ]; then pip install --no-cache-dir -r requirements-dev.txt; fi
+
+# Copy application code
+COPY . .
+
+# Expose port
+EXPOSE 5000
+
+# Run with hot reload
+CMD ["flask", "run", "--host=0.0.0.0", "--reload", "--debug"]
+
+
 # Production stage
 FROM python:3.11-slim
 

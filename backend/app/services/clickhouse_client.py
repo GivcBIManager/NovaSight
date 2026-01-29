@@ -87,6 +87,8 @@ class ClickHouseClient:
         secure: bool = False,
         connect_timeout: int = 10,
         send_receive_timeout: int = 300,
+        tenant_id: Optional[str] = None,
+        use_infrastructure_config: bool = True,
     ):
         """
         Initialize ClickHouse client.
@@ -100,8 +102,31 @@ class ClickHouseClient:
             secure: Use TLS connection
             connect_timeout: Connection timeout in seconds
             send_receive_timeout: Query timeout in seconds
+            tenant_id: Optional tenant ID for tenant-specific config
+            use_infrastructure_config: Whether to use infrastructure config service
         """
-        # Try to get config from Flask app, fall back to parameters or defaults
+        # Try to get config from infrastructure config service first
+        if use_infrastructure_config and not all([host, port, user]):
+            try:
+                from app.services.infrastructure_config_service import InfrastructureConfigService
+                config_service = InfrastructureConfigService()
+                settings = config_service.get_effective_settings('clickhouse', tenant_id)
+                
+                self.host = host or settings.get('host', 'localhost')
+                self.port = port or settings.get('port', 9000)
+                self.user = user or settings.get('user', 'default')
+                self.password = password or settings.get('password', '')
+                self.secure = secure or settings.get('secure', False)
+                self.database = database or settings.get('database', 'default')
+                self.connect_timeout = settings.get('connect_timeout', connect_timeout)
+                self.send_receive_timeout = settings.get('send_receive_timeout', send_receive_timeout)
+                
+                self._client = None
+                return
+            except Exception as e:
+                logger.debug(f"Could not load infrastructure config: {e}")
+        
+        # Fall back to Flask config, then to parameters or defaults
         try:
             config = current_app.config
             self.host = host or config.get('CLICKHOUSE_HOST', 'localhost')

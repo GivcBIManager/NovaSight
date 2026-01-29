@@ -24,6 +24,33 @@ from app.middleware.permissions import (
     require_any_role,
     check_permission,
     check_role,
+    require_resource_permission,
+    require_owner,
+    check_resource_permission,
+)
+from app.middleware.audit import (
+    audited,
+    audited_with_changes,
+    audit_data_access,
+    audit_security_event,
+    AuditContext,
+)
+from app.middleware.metrics import (
+    MetricsMiddleware,
+    setup_metrics,
+    track_query_execution,
+    track_template_generation,
+    track_pipeline_execution,
+    update_tenant_metrics,
+    update_quota_usage,
+    timed_operation,
+    collect_tenant_metrics,
+    collect_db_pool_metrics,
+)
+from app.middleware.request_logging import (
+    RequestLoggingMiddleware,
+    setup_request_logging,
+    log_slow_request,
 )
 
 __all__ = [
@@ -47,4 +74,29 @@ __all__ = [
     "require_any_role",
     "check_permission",
     "check_role",
+    # Resource permission decorators
+    "require_resource_permission",
+    "require_owner",
+    "check_resource_permission",
+    # Audit decorators
+    "audited",
+    "audited_with_changes",
+    "audit_data_access",
+    "audit_security_event",
+    "AuditContext",
+    # Metrics
+    "MetricsMiddleware",
+    "setup_metrics",
+    "track_query_execution",
+    "track_template_generation",
+    "track_pipeline_execution",
+    "update_tenant_metrics",
+    "update_quota_usage",
+    "timed_operation",
+    "collect_tenant_metrics",
+    "collect_db_pool_metrics",
+    # Request logging
+    "RequestLoggingMiddleware",
+    "setup_request_logging",
+    "log_slow_request",
 ]

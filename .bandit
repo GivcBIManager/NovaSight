@@ -1,0 +1,36 @@
+# NovaSight Bandit Configuration
+# ===============================
+# Static Application Security Testing (SAST) for Python
+
+[bandit]
+# Exclude directories from scanning
+exclude_dirs = tests,venv,migrations,__pycache__,.git,.venv,node_modules
+
+# Skip specific test IDs
+# B101: assert_used - OK in tests, we exclude test dirs
+# B601: paramiko_calls - Not applicable, we don't use paramiko
+skips = B101,B601
+
+# Aggregate output by vulnerability type
+aggregate = vuln
+
+# Number of lines of context to show
+context_lines = 3
+
+# Output format
+format = json
+
+# Severity level threshold (low, medium, high)
+severity = medium
+
+# Confidence level threshold (low, medium, high)
+confidence = medium
+
+# Custom plugin paths (if any)
+# plugin_path = /path/to/custom/plugins
+
+# Recursive scanning
+recursive = true
+
+# Show progress bar
+progress = true

@@ -1,0 +1,106 @@
+# Grafana Data Source Provisioning
+# =================================
+# Automatically configure data sources
+
+apiVersion: 1
+
+datasources:
+  # Prometheus - primary metrics source
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: "2.45.0"
+      cacheLevel: 'High'
+      disableRecordingRules: false
+      incrementalQuerying: true
+      incrementalQueryOverlapWindow: 10m
+    version: 1
+
+  # PostgreSQL - metadata store
+  - name: PostgreSQL
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: novasight
+    user: grafana_readonly
+    secureJsonData:
+      password: ${POSTGRES_GRAFANA_PASSWORD}
+    jsonData:
+      sslmode: require
+      maxOpenConns: 5
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+      postgresVersion: 1500
+      timescaledb: false
+    editable: false
+    version: 1
+
+  # ClickHouse - analytics store
+  - name: ClickHouse
+    type: grafana-clickhouse-datasource
+    access: proxy
+    url: http://clickhouse:8123
+    jsonData:
+      defaultDatabase: novasight
+      port: 9000
+      server: clickhouse
+      username: grafana_readonly
+      tlsSkipVerify: false
+    secureJsonData:
+      password: ${CLICKHOUSE_GRAFANA_PASSWORD}
+    editable: false
+    version: 1
+
+  # Alertmanager - for alert management
+  - name: Alertmanager
+    type: alertmanager
+    access: proxy
+    url: http://alertmanager:9093
+    jsonData:
+      implementation: prometheus
+      handleGrafanaManagedAlerts: false
+    editable: false
+    version: 1
+
+  # Loki - for logs (optional)
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: "trace_id=(\\w+)"
+          name: TraceID
+          url: "$${__value.raw}"
+    editable: false
+    version: 1
+
+  # Tempo - for traces (optional)
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      httpMethod: GET
+      tracesToLogs:
+        datasourceUid: loki
+        filterByTraceID: true
+        filterBySpanID: true
+        mapTagNamesEnabled: true
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: loki
+    editable: false
+    version: 1

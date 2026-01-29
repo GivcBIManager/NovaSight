@@ -1,0 +1,280 @@
+# Alertmanager Configuration
+# ==========================
+# Routes and receivers for NovaSight alerts
+# Updated: 2026-01-29 - Enhanced with security routing and on-call integration
+
+global:
+  # SMTP configuration for email alerts
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alerts@novasight.io'
+  smtp_auth_username: 'alerts@novasight.io'
+  smtp_auth_password_file: '/etc/alertmanager/secrets/smtp_password'
+  smtp_require_tls: true
+
+  # Slack configuration
+  slack_api_url_file: '/etc/alertmanager/secrets/slack_webhook'
+
+  # PagerDuty configuration
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+  # Default resolve timeout
+  resolve_timeout: 5m
+
+# Inhibition rules to prevent alert storms
+inhibit_rules:
+  # If critical alert fires, suppress warnings for same alertname/cluster/service
+  - source_matchers:
+      - severity = critical
+    target_matchers:
+      - severity = warning
+    equal: [alertname, cluster, service]
+
+  # If critical alert fires, suppress warnings for same component (legacy)
+  - source_matchers:
+      - severity = critical
+    target_matchers:
+      - severity = warning
+    equal: [component]
+
+  # If node is down, suppress all pod alerts for that node
+  - source_matchers:
+      - alertname = NodeDown
+    target_matchers:
+      - alertname =~ "Pod.*"
+    equal: [node]
+
+  # If node is not ready, suppress all alerts for pods on that node
+  - source_matchers:
+      - alertname = NodeNotReady
+    target_matchers:
+      - severity =~ "warning|critical"
+    equal: [node]
+
+  # If database is down, suppress all dependent alerts
+  - source_matchers:
+      - alertname =~ "PostgreSQLDown|ClickHouseDown|RedisDown"
+    target_matchers:
+      - component =~ "backend|query-engine|pipeline"
+
+  # If ingestion pipeline is stalled, suppress data freshness alerts
+  - source_matchers:
+      - alertname = IngestionPipelineStalled
+    target_matchers:
+      - alertname = DataFreshnessIssue
+
+# Routing tree
+route:
+  # Default receiver
+  receiver: 'default-receiver'
+  
+  # Group alerts by these labels
+  group_by: ['alertname', 'cluster', 'service']
+  
+  # Wait before sending first notification
+  group_wait: 30s
+  
+  # Wait before sending updated notification
+  group_interval: 5m
+  
+  # Wait before re-sending notification
+  repeat_interval: 4h
+
+  # Child routes
+  routes:
+    # Critical alerts - immediate notification
+    - matchers:
+        - severity = critical
+      receiver: 'pagerduty-critical'
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 1h
+      continue: true
+
+    # Security alerts - dedicated handling (category-based)
+    - matchers:
+        - category = security
+      receiver: 'security-team'
+      group_wait: 0s
+      repeat_interval: 30m
+
+    # Security alerts - component-based (legacy support)
+    - matchers:
+        - component = security
+      receiver: 'security-team'
+      group_wait: 10s
+      repeat_interval: 30m
+
+    # SLO alerts
+    - matchers:
+        - component = slo
+      receiver: 'slo-alerts'
+      group_wait: 1m
+      repeat_interval: 2h
+
+    # Database alerts
+    - matchers:
+        - service = database
+      receiver: 'database-team'
+      group_wait: 30s
+      repeat_interval: 2h
+
+    # Database alerts (component-based - legacy)
+    - matchers:
+        - component =~ "postgresql|clickhouse|redis"
+      receiver: 'database-team'
+      group_wait: 30s
+      repeat_interval: 2h
+
+    # Warning alerts - Slack only
+    - matchers:
+        - severity = warning
+      receiver: 'slack-warnings'
+      group_wait: 1m
+      repeat_interval: 4h
+
+    # Infrastructure alerts
+    - matchers:
+        - component =~ "kubernetes|node|hpa|resources"
+      receiver: 'infrastructure-alerts'
+      group_wait: 1m
+      repeat_interval: 4h
+
+    # Tenant alerts - lower priority
+    - matchers:
+        - component = tenant
+      receiver: 'tenant-alerts'
+      group_wait: 5m
+      repeat_interval: 24h
+
+    # Info severity - email only
+    - matchers:
+        - severity = info
+      receiver: 'email-notifications'
+      group_wait: 5m
+      repeat_interval: 24h
+
+# Receivers
+receivers:
+  # Default receiver - Slack channel
+  - name: 'default-receiver'
+    slack_configs:
+      - channel: '#novasight-alerts'
+        send_resolved: true
+        title: '{{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "grafana.url" . }}'
+          - type: button
+            text: 'Silence'
+            url: '{{ template "silence.url" . }}'
+          - type: button
+            text: 'View Runbook'
+            url: '{{ (index .Alerts 0).Annotations.runbook_url }}'
+
+  # Critical alerts - PagerDuty + Slack
+  - name: 'pagerduty-critical'
+    pagerduty_configs:
+      - service_key_file: '/etc/alertmanager/secrets/pagerduty_key'
+        severity: critical
+        description: '{{ template "pagerduty.description" . }}'
+        details:
+          firing: '{{ template "pagerduty.firing" . }}'
+          num_firing: '{{ .Alerts.Firing | len }}'
+          num_resolved: '{{ .Alerts.Resolved | len }}'
+          service: '{{ (index .Alerts 0).Labels.service }}'
+          cluster: '{{ (index .Alerts 0).Labels.cluster }}'
+    slack_configs:
+      - channel: '#novasight-critical'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        title: '🚨 CRITICAL: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "grafana.url" . }}'
+          - type: button
+            text: 'Acknowledge'
+            url: '{{ template "silence.url" . }}'
+
+  # Security alerts - PagerDuty + Slack + Email
+  - name: 'security-team'
+    pagerduty_configs:
+      - service_key_file: '/etc/alertmanager/secrets/pagerduty_security_key'
+        severity: critical
+        description: '{{ template "pagerduty.description" . }}'
+        details:
+          firing: '{{ template "pagerduty.firing" . }}'
+          category: 'security'
+    slack_configs:
+      - channel: '#security-incidents'
+        send_resolved: true
+        color: 'danger'
+        title: '🔐 SECURITY: {{ template "slack.title" . }}'
+        text: '{{ template "slack.security.text" . }}'
+    email_configs:
+      - to: 'security@novasight.io'
+        send_resolved: false
+        html: '{{ template "email.html" . }}'
+        headers:
+          Subject: '[SECURITY] {{ template "email.subject" . }}'
+
+  # SLO alerts
+  - name: 'slo-alerts'
+    slack_configs:
+      - channel: '#novasight-slo'
+        send_resolved: true
+        title: '📊 SLO: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+
+  # Database alerts
+  - name: 'database-team'
+    slack_configs:
+      - channel: '#database-ops'
+        send_resolved: true
+        title: '🗄️ DATABASE: {{ template "slack.title" . }}'
+        text: '{{ template "slack.database.text" . }}'
+    email_configs:
+      - to: 'database-team@novasight.io'
+        send_resolved: true
+
+  # Warning alerts - Slack only
+  - name: 'slack-warnings'
+    slack_configs:
+      - channel: '#novasight-warnings'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+        title: '{{ template "slack.warning.title" . }}'
+        text: '{{ template "slack.warning.text" . }}'
+
+  # Infrastructure alerts
+  - name: 'infrastructure-alerts'
+    slack_configs:
+      - channel: '#novasight-infrastructure'
+        send_resolved: true
+        title: '🏗️ INFRA: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+
+  # Tenant alerts
+  - name: 'tenant-alerts'
+    slack_configs:
+      - channel: '#novasight-tenants'
+        send_resolved: true
+        title: '👥 TENANT: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+
+  # Email notifications (for info severity)
+  - name: 'email-notifications'
+    email_configs:
+      - to: 'ops@novasight.io'
+        send_resolved: true
+        html: '{{ template "email.html" . }}'
+
+  # Null receiver for suppressed alerts
+  - name: 'null'
+
+# Templates
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'

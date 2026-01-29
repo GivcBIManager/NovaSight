@@ -1,0 +1,9 @@
+# Security scan reports - generated files
+*.json
+*.html
+*.sarif
+*.xml
+*.md
+
+# Keep the .gitkeep file
+!.gitkeep

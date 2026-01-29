@@ -58,6 +58,14 @@ class RelationshipType(str, Enum):
     ONE_TO_ONE = "one_to_one"
     ONE_TO_MANY = "one_to_many"
     MANY_TO_ONE = "many_to_one"
+
+
+class JoinType(str, Enum):
+    """Types of joins for relationships."""
+    INNER = "inner"
+    LEFT = "left"
+    RIGHT = "right"
+    FULL = "full"
     MANY_TO_MANY = "many_to_many"
 
 

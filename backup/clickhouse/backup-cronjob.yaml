@@ -1,0 +1,101 @@
+# ClickHouse Backup CronJob
+# Daily backups using clickhouse-backup tool
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: clickhouse-backup
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+    database: clickhouse
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 7200  # 2 hour timeout
+      template:
+        metadata:
+          labels:
+            app: novasight
+            component: backup
+            database: clickhouse
+        spec:
+          serviceAccountName: backup-sa
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+          containers:
+            - name: backup
+              image: altinity/clickhouse-backup:2.4.0
+              imagePullPolicy: IfNotPresent
+              resources:
+                requests:
+                  memory: "512Mi"
+                  cpu: "200m"
+                limits:
+                  memory: "2Gi"
+                  cpu: "1000m"
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+                  
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_NAME="backup_${TIMESTAMP}"
+                  
+                  echo "[$(date -Iseconds)] Starting ClickHouse backup: ${BACKUP_NAME}"
+                  
+                  # Create local backup
+                  echo "[$(date -Iseconds)] Creating local backup..."
+                  clickhouse-backup create "${BACKUP_NAME}"
+                  
+                  # Upload to S3
+                  echo "[$(date -Iseconds)] Uploading to S3..."
+                  clickhouse-backup upload "${BACKUP_NAME}"
+                  
+                  # Clean up local backup
+                  echo "[$(date -Iseconds)] Cleaning up local backup..."
+                  clickhouse-backup delete local "${BACKUP_NAME}"
+                  
+                  # Apply retention policy - keep last 30 days (30 backups)
+                  echo "[$(date -Iseconds)] Applying retention policy..."
+                  BACKUP_COUNT=0
+                  clickhouse-backup list remote | while read -r backup_entry; do
+                    BACKUP_COUNT=$((BACKUP_COUNT + 1))
+                    if [[ $BACKUP_COUNT -gt 30 ]]; then
+                      BACKUP_TO_DELETE=$(echo "$backup_entry" | awk '{print $1}')
+                      echo "[$(date -Iseconds)] Deleting old backup: ${BACKUP_TO_DELETE}"
+                      clickhouse-backup delete remote "${BACKUP_TO_DELETE}"
+                    fi
+                  done
+                  
+                  # List current backups
+                  echo "[$(date -Iseconds)] Current remote backups:"
+                  clickhouse-backup list remote
+                  
+                  echo "[$(date -Iseconds)] Backup completed successfully: ${BACKUP_NAME}"
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/clickhouse-backup/config.yml
+                  subPath: config.yml
+                - name: clickhouse-password
+                  mountPath: /etc/secrets
+                  readOnly: true
+          volumes:
+            - name: config
+              configMap:
+                name: clickhouse-backup-config
+            - name: clickhouse-password
+              secret:
+                secretName: clickhouse-credentials
+                items:
+                  - key: password
+                    path: clickhouse-password
+          restartPolicy: OnFailure

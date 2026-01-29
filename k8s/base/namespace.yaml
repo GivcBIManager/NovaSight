@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: novasight
+  labels:
+    app.kubernetes.io/name: novasight
+    app.kubernetes.io/part-of: novasight
+    app.kubernetes.io/managed-by: kustomize

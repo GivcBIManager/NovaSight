@@ -1,0 +1,221 @@
+site_name: NovaSight Documentation
+site_description: Comprehensive user documentation for the NovaSight BI platform
+site_author: NovaSight Team
+site_url: https://docs.novasight.io
+
+repo_name: novasight/novasight
+repo_url: https://github.com/novasight/novasight
+
+theme:
+  name: material
+  language: en
+  
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  
+  font:
+    text: Inter
+    code: JetBrains Mono
+  
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.tabs.link
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+  
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/chart-box
+
+extra:
+  version:
+    provider: mike
+    default: stable
+  
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/novasight
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/novasight
+    - icon: fontawesome/brands/linkedin
+      link: https://linkedin.com/company/novasight
+  
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX
+  
+  consent:
+    title: Cookie consent
+    description: >- 
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation and whether users
+      find what they're searching for.
+
+extra_css:
+  - stylesheets/custom.css
+
+extra_javascript:
+  - javascripts/custom.js
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: novasight
+      repo: novasight
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+  - print-site:
+      add_to_navigation: true
+      print_page_title: 'Print Site'
+      add_print_site_banner: true
+      enabled: true
+
+nav:
+  - Home: index.md
+  
+  - Getting Started:
+    - getting-started/README.md
+    - Quick Start: getting-started/quick-start.md
+    - Core Concepts: getting-started/concepts.md
+    - Your First Dashboard: getting-started/first-dashboard.md
+  
+  - Guides:
+    - Data Sources:
+      - Connecting PostgreSQL: guides/data-sources/connecting-postgresql.md
+      - Connecting MySQL: guides/data-sources/connecting-mysql.md
+      - Connecting S3: guides/data-sources/connecting-s3.md
+      - Sync Configuration: guides/data-sources/sync-configuration.md
+    
+    - Semantic Layer:
+      - Dimensions & Measures: guides/semantic-layer/dimensions-measures.md
+      - Relationships: guides/semantic-layer/relationships.md
+      - Calculated Fields: guides/semantic-layer/calculated-fields.md
+    
+    - Dashboards:
+      - Building Dashboards: guides/dashboards/building-dashboards.md
+      - Widget Types: guides/dashboards/widget-types.md
+      - Filters & Interactions: guides/dashboards/filters-interactions.md
+      - Sharing & Permissions: guides/dashboards/sharing-permissions.md
+    
+    - Natural Language:
+      - How It Works: guides/natural-language/how-it-works.md
+      - Writing Queries: guides/natural-language/writing-queries.md
+      - Tips & Tricks: guides/natural-language/tips-tricks.md
+    
+    - Administration:
+      - User Management: guides/administration/user-management.md
+      - Tenant Settings: guides/administration/tenant-settings.md
+      - Security & Audit: guides/administration/security-audit.md
+  
+  - Reference:
+    - API Reference: reference/api/index.md
+    - SQL Reference: reference/sql-reference.md
+    - Keyboard Shortcuts: reference/keyboard-shortcuts.md
+  
+  - Developer Guide:
+    - developer/README.md
+    - Architecture: developer/architecture.md
+    - Local Setup: developer/setup.md
+    - Contributing: developer/contributing.md
+    - Coding Standards: developer/coding-standards.md
+    - Testing: developer/testing-guide.md
+    - Architecture Decisions:
+      - developer/adr/README.md
+      - ADR-001 Metadata Store: developer/adr/001-metadata-store.md
+      - ADR-002 Template Engine: developer/adr/002-template-engine.md
+      - ADR-003 Multi-Tenancy: developer/adr/003-multi-tenancy.md
+      - ADR-004 AI Integration: developer/adr/004-ai-integration.md
+      - ADR-005 Template Catalog: developer/adr/005-template-catalog.md
+    - Deployment:
+      - developer/deployment/README.md
+      - Kubernetes: developer/deployment/kubernetes.md
+      - Helm: developer/deployment/helm.md
+      - Monitoring: developer/deployment/monitoring.md
+  
+  - Troubleshooting:
+    - Common Issues: troubleshooting/common-issues.md
+    - Performance: troubleshooting/performance.md
+    - FAQ: troubleshooting/faq.md
+  
+  - Operations:
+    - Deployment Runbook: operations/deployment-runbook.md
+    - Scaling Guide: operations/scaling-guide.md
+    - Incident Response: operations/incident-response.md
+    - Maintenance Procedures: operations/maintenance-procedures.md
+    - Disaster Recovery: operations/disaster-recovery.md
+    - Checklists:
+      - Overview: operations/checklists/README.md
+      - Pre-Deployment: operations/checklists/pre-deployment.md
+      - Production Release: operations/checklists/production-release.md
+      - Incident Response: operations/checklists/incident-response.md
+      - Maintenance Window: operations/checklists/maintenance-window.md
+      - Security Incident: operations/checklists/security-incident.md
+
+copyright: Copyright &copy; 2024-2026 NovaSight, Inc. All rights reserved.

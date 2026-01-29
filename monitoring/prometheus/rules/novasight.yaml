@@ -1,0 +1,324 @@
+# NovaSight Application Alert Rules
+# ==================================
+# Alerts for the NovaSight BI platform core functionality
+
+groups:
+  - name: novasight.application
+    interval: 30s
+    rules:
+      # =======================================================================
+      # HTTP Request Alerts
+      # =======================================================================
+      
+      # High error rate (5xx errors)
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(novasight_http_requests_total{status=~"5.."}[5m])) /
+          sum(rate(novasight_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: "High HTTP error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+          runbook_url: "https://docs.novasight.io/runbooks/high-error-rate"
+
+      # High client error rate (4xx errors)
+      - alert: HighClientErrorRate
+        expr: |
+          sum(rate(novasight_http_requests_total{status=~"4.."}[5m])) /
+          sum(rate(novasight_http_requests_total[5m])) > 0.20
+        for: 10m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: "High client error rate"
+          description: "4xx error rate is {{ $value | humanizePercentage }}"
+
+      # High latency (P95)
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(novasight_http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: "High API latency (P95)"
+          description: "P95 latency is {{ $value | humanizeDuration }}"
+
+      # Critical latency (P99)
+      - alert: CriticalLatencyP99
+        expr: |
+          histogram_quantile(0.99, 
+            sum(rate(novasight_http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 5
+        for: 5m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: "Critical API latency (P99)"
+          description: "P99 latency is {{ $value | humanizeDuration }}"
+
+      # Low request throughput (potential outage indicator)
+      - alert: LowRequestThroughput
+        expr: |
+          sum(rate(novasight_http_requests_total[5m])) < 1
+        for: 10m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: "Low request throughput"
+          description: "Request rate is {{ $value | humanize }} req/s"
+
+      # =======================================================================
+      # Query Performance Alerts
+      # =======================================================================
+      
+      # Slow queries
+      - alert: SlowQueries
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(novasight_query_execution_seconds_bucket[5m])) by (le, datasource_type)
+          ) > 30
+        for: 10m
+        labels:
+          severity: warning
+          component: query-engine
+        annotations:
+          summary: "Slow query performance"
+          description: "P95 query time for {{ $labels.datasource_type }} is {{ $value | humanizeDuration }}"
+
+      # Query execution errors
+      - alert: HighQueryErrorRate
+        expr: |
+          sum(rate(novasight_query_errors_total[5m])) by (datasource_type) /
+          sum(rate(novasight_queries_total[5m])) by (datasource_type) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+          component: query-engine
+        annotations:
+          summary: "High query error rate"
+          description: "Query error rate for {{ $labels.datasource_type }} is {{ $value | humanizePercentage }}"
+
+      # Large result sets
+      - alert: LargeQueryResults
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(novasight_query_result_rows_bucket[15m])) by (le, query_type)
+          ) > 100000
+        for: 30m
+        labels:
+          severity: info
+          component: query-engine
+        annotations:
+          summary: "Large query results detected"
+          description: "P99 result size for {{ $labels.query_type }} is {{ $value | humanize }} rows"
+
+      # =======================================================================
+      # Template Engine Alerts
+      # =======================================================================
+      
+      # Template validation errors increasing
+      - alert: TemplateValidationErrors
+        expr: |
+          increase(novasight_template_validation_errors_total[1h]) > 10
+        for: 15m
+        labels:
+          severity: warning
+          component: template-engine
+        annotations:
+          summary: "Template validation errors increasing"
+          description: "{{ $value }} validation errors in last hour for {{ $labels.template_type }}"
+
+      # Template generation failures
+      - alert: TemplateGenerationFailures
+        expr: |
+          sum(rate(novasight_template_generations_total{status="failure"}[15m])) by (template_type) /
+          sum(rate(novasight_template_generations_total[15m])) by (template_type) > 0.05
+        for: 15m
+        labels:
+          severity: warning
+          component: template-engine
+        annotations:
+          summary: "Template generation failures"
+          description: "{{ $value | humanizePercentage }} of {{ $labels.template_type }} generations failing"
+
+      # Slow template generation
+      - alert: SlowTemplateGeneration
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(novasight_template_generation_seconds_bucket[5m])) by (le, template_type)
+          ) > 10
+        for: 10m
+        labels:
+          severity: warning
+          component: template-engine
+        annotations:
+          summary: "Slow template generation"
+          description: "P95 generation time for {{ $labels.template_type }} is {{ $value | humanizeDuration }}"
+
+      # =======================================================================
+      # Pipeline Alerts
+      # =======================================================================
+      
+      # Pipeline failures
+      - alert: PipelineFailures
+        expr: |
+          sum(rate(novasight_pipeline_runs_total{status="failure"}[1h])) by (pipeline_type) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: pipeline
+        annotations:
+          summary: "Pipeline failures detected"
+          description: "{{ $labels.pipeline_type }} pipelines are failing"
+
+      # Pipeline execution timeout
+      - alert: PipelineTimeout
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(novasight_pipeline_execution_seconds_bucket[1h])) by (le, pipeline_type)
+          ) > 3600
+        for: 30m
+        labels:
+          severity: warning
+          component: pipeline
+        annotations:
+          summary: "Long-running pipelines"
+          description: "P95 execution time for {{ $labels.pipeline_type }} is {{ $value | humanizeDuration }}"
+
+      # =======================================================================
+      # Authentication Alerts
+      # =======================================================================
+      
+      # High authentication failure rate
+      - alert: HighAuthFailureRate
+        expr: |
+          sum(rate(novasight_auth_failures_total[5m])) /
+          sum(rate(novasight_auth_attempts_total[5m])) > 0.30
+        for: 10m
+        labels:
+          severity: warning
+          component: auth
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value | humanizePercentage }} of authentication attempts failing"
+
+      # Brute force detection
+      - alert: PotentialBruteForce
+        expr: |
+          sum(rate(novasight_auth_failures_total{reason="invalid_credentials"}[5m])) > 10
+        for: 5m
+        labels:
+          severity: critical
+          component: security
+        annotations:
+          summary: "Potential brute force attack"
+          description: "{{ $value | humanize }} failed login attempts per second"
+
+  - name: novasight.tenants
+    interval: 60s
+    rules:
+      # =======================================================================
+      # Tenant Alerts
+      # =======================================================================
+      
+      # Tenant approaching quota limit
+      - alert: TenantQuotaNearLimit
+        expr: |
+          novasight_tenant_quota_usage_ratio > 0.90
+        for: 1h
+        labels:
+          severity: warning
+          component: tenant
+        annotations:
+          summary: "Tenant approaching quota limit"
+          description: "Tenant {{ $labels.tenant_id }} is at {{ $value | humanizePercentage }} of {{ $labels.quota_type }} quota"
+
+      # Tenant quota exceeded
+      - alert: TenantQuotaExceeded
+        expr: |
+          novasight_tenant_quota_usage_ratio >= 1.0
+        for: 15m
+        labels:
+          severity: warning
+          component: tenant
+        annotations:
+          summary: "Tenant quota exceeded"
+          description: "Tenant {{ $labels.tenant_id }} has exceeded {{ $labels.quota_type }} quota"
+
+      # Inactive tenant with high resource usage
+      - alert: InactiveTenantHighUsage
+        expr: |
+          sum(rate(novasight_tenant_requests_total[1h])) by (tenant_id) == 0 and
+          novasight_users_per_tenant > 10
+        for: 24h
+        labels:
+          severity: info
+          component: tenant
+        annotations:
+          summary: "Inactive tenant with users"
+          description: "Tenant {{ $labels.tenant_id }} has {{ $value }} users but no activity in 24h"
+
+  - name: novasight.slo
+    interval: 30s
+    rules:
+      # =======================================================================
+      # SLO Recording Rules
+      # =======================================================================
+      
+      # Error budget burn rate
+      - record: novasight:error_budget_burn_rate:1h
+        expr: |
+          1 - (
+            sum(rate(novasight_http_requests_total{status!~"5.."}[1h])) /
+            sum(rate(novasight_http_requests_total[1h]))
+          )
+
+      # Availability SLI
+      - record: novasight:availability:5m
+        expr: |
+          sum(rate(novasight_http_requests_total{status!~"5.."}[5m])) /
+          sum(rate(novasight_http_requests_total[5m]))
+
+      # Latency SLI (requests under 500ms)
+      - record: novasight:latency_sli:5m
+        expr: |
+          sum(rate(novasight_http_request_duration_seconds_bucket{le="0.5"}[5m])) /
+          sum(rate(novasight_http_request_duration_seconds_count[5m]))
+
+      # =======================================================================
+      # SLO Alerts
+      # =======================================================================
+      
+      # Fast burn - 14.4x burn rate for 1h
+      - alert: SLOFastBurn
+        expr: |
+          novasight:error_budget_burn_rate:1h > 0.02
+        for: 5m
+        labels:
+          severity: critical
+          component: slo
+        annotations:
+          summary: "SLO fast burn rate exceeded"
+          description: "Error budget burn rate is {{ $value | humanizePercentage }} (fast burn)"
+
+      # Slow burn - 6x burn rate for 6h
+      - alert: SLOSlowBurn
+        expr: |
+          avg_over_time(novasight:error_budget_burn_rate:1h[6h]) > 0.01
+        for: 30m
+        labels:
+          severity: warning
+          component: slo
+        annotations:
+          summary: "SLO slow burn rate exceeded"
+          description: "Average error budget burn rate is {{ $value | humanizePercentage }} (slow burn)"

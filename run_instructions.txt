@@ -1,0 +1,15 @@
+# Quick start (minimal services)
+./scripts/quick-start.sh          # Linux/Mac
+scripts\quick-start.bat           # Windows
+
+# Full development environment
+./scripts/deploy.sh dev --build
+
+# Run integration tests
+./scripts/deploy.sh test
+
+# Deploy to staging
+./scripts/deploy.sh staging --version=v1.0.0
+
+# Health check
+./scripts/health-check.sh --wait

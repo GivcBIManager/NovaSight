@@ -1,0 +1,84 @@
+# Shared Backup Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-config
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+data:
+  s3-bucket: "novasight-backups"
+  aws-region: "us-east-1"
+  retention-days-postgresql: "30"
+  retention-days-clickhouse: "30"
+  retention-days-redis: "7"
+  retention-days-wal: "7"
+
+---
+# Service Account for backup jobs
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backup-sa
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+  annotations:
+    # For AWS IRSA (IAM Roles for Service Accounts)
+    eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT_ID:role/novasight-backup-role"
+
+---
+# Role for backup service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: backup-role
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get"]
+
+---
+# RoleBinding for backup service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backup-rolebinding
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+subjects:
+  - kind: ServiceAccount
+    name: backup-sa
+    namespace: novasight
+roleRef:
+  kind: Role
+  name: backup-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Backup Encryption Secret (template - managed by external secret management)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backup-encryption-template
+  namespace: novasight
+  labels:
+    app: novasight
+    component: backup
+type: Opaque
+stringData:
+  kms-key-id: "${KMS_KEY_ID}"  # Replaced by external secret management

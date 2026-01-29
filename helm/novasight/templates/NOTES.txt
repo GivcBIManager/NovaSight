@@ -1,0 +1,135 @@
+========================================================================
+   _   _                    ____  _       _     _   
+  | \ | | _____   ____ _   / ___|(_) __ _| |__ | |_ 
+  |  \| |/ _ \ \ / / _` |  \___ \| |/ _` | '_ \| __|
+  | |\  | (_) \ V / (_| |   ___) | | (_| | | | | |_ 
+  |_| \_|\___/ \_/ \__,_|  |____/|_|\__, |_| |_|\__|
+                                    |___/           
+  
+  Self-Service BI Platform - v{{ .Chart.AppVersion }}
+========================================================================
+
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+{{ if .Values.ingress.enabled }}
+ACCESS YOUR APPLICATION:
+------------------------
+{{- range $host := .Values.ingress.hosts }}
+{{- range .paths }}
+  - {{ if $.Values.ingress.tls }}https{{ else }}http{{ end }}://{{ $host.host }}{{ .path }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.ingress.tls }}
+TLS is enabled. Certificates will be provisioned by cert-manager.
+{{- end }}
+
+{{ else }}
+ACCESS YOUR APPLICATION:
+------------------------
+The application is not exposed externally. To access it:
+
+1. Port-forward the frontend:
+   kubectl port-forward svc/{{ include "novasight.frontend.fullname" . }} 8080:{{ .Values.frontend.service.port }} -n {{ .Release.Namespace }}
+   
+2. Port-forward the backend:
+   kubectl port-forward svc/{{ include "novasight.backend.fullname" . }} 5000:{{ .Values.backend.service.port }} -n {{ .Release.Namespace }}
+
+Then access the application at http://localhost:8080
+{{ end }}
+
+SERVICES DEPLOYED:
+------------------
+{{- if .Values.backend.enabled }}
+✓ Backend API (Flask)
+  - Replicas: {{ .Values.backend.replicaCount }}
+  {{- if .Values.backend.autoscaling.enabled }}
+  - Autoscaling: {{ .Values.backend.autoscaling.minReplicas }}-{{ .Values.backend.autoscaling.maxReplicas }} replicas
+  {{- end }}
+{{- end }}
+
+{{- if .Values.frontend.enabled }}
+✓ Frontend (React/Nginx)
+  - Replicas: {{ .Values.frontend.replicaCount }}
+  {{- if .Values.frontend.autoscaling.enabled }}
+  - Autoscaling: {{ .Values.frontend.autoscaling.minReplicas }}-{{ .Values.frontend.autoscaling.maxReplicas }} replicas
+  {{- end }}
+{{- end }}
+
+{{- if .Values.airflow.enabled }}
+✓ Apache Airflow
+  - Executor: {{ .Values.airflow.executor }}
+  - Workers: {{ .Values.airflow.workers.replicas }}
+{{- end }}
+
+{{- if .Values.ollama.enabled }}
+✓ Ollama (LLM for NL-to-SQL)
+  - Model: {{ .Values.ollama.model }}
+{{- end }}
+
+{{- if .Values.spark.enabled }}
+✓ Apache Spark
+  - Workers: {{ .Values.spark.workers.replicas }}
+{{- end }}
+
+DEPENDENCIES:
+-------------
+{{- if .Values.postgresql.enabled }}
+✓ PostgreSQL (Metadata Store)
+  - Database: {{ .Values.postgresql.auth.database }}
+{{- end }}
+
+{{- if .Values.redis.enabled }}
+✓ Redis (Caching & Celery Broker)
+{{- end }}
+
+{{- if .Values.clickhouse.enabled }}
+✓ ClickHouse (Analytics Database)
+  - Shards: {{ .Values.clickhouse.shards }}
+  - Replicas: {{ .Values.clickhouse.replicaCount }}
+{{- end }}
+
+{{- if .Values.monitoring.enabled }}
+
+MONITORING:
+-----------
+{{- if .Values.monitoring.prometheus.enabled }}
+✓ Prometheus ServiceMonitors enabled
+{{- end }}
+{{- if .Values.monitoring.grafana.enabled }}
+✓ Grafana dashboards enabled
+{{- end }}
+{{- end }}
+
+IMPORTANT NEXT STEPS:
+---------------------
+1. Verify all pods are running:
+   kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+2. Check the backend logs:
+   kubectl logs -l app.kubernetes.io/component=backend -n {{ .Release.Namespace }}
+
+3. View application health:
+   kubectl exec -it $(kubectl get pod -l app.kubernetes.io/component=backend -n {{ .Release.Namespace }} -o jsonpath='{.items[0].metadata.name}') -n {{ .Release.Namespace }} -- curl -s localhost:5000/api/v1/health
+
+{{- if not .Values.backend.secrets.databaseUrl }}
+
+⚠️  WARNING: Database URL secret is not set!
+    Please configure secrets via external-secrets or sealed-secrets:
+    
+    kubectl create secret generic {{ include "novasight.fullname" . }}-backend-secrets \
+      --from-literal=DATABASE_URL="postgresql://..." \
+      --from-literal=SECRET_KEY="..." \
+      --from-literal=JWT_SECRET_KEY="..." \
+      -n {{ .Release.Namespace }}
+{{- end }}
+
+SUPPORT:
+--------
+Documentation: https://docs.novasight.io
+Issues: https://github.com/novasight/novasight/issues
+
+========================================================================

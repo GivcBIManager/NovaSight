@@ -21,7 +21,8 @@ import json
 import re
 from jinja2 import Environment, PackageLoader, select_autoescape
 from app.models.dag import DagConfig, TaskConfig, ScheduleType
-from app.models.connection import DataSource, DataSourceTable
+from app.models.connection import DataConnection as DataSource
+from app.models.data_source import DataSourceTable
 from app.models.pyspark_app import PySparkApp
 from app.services.airflow_client import AirflowClient
 from app.services.pyspark_app_service import PySparkAppService

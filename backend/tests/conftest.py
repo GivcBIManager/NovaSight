@@ -118,6 +118,181 @@ def admin_role(db_session) -> Role:
     return role
 
 
+# =============================================================================
+# External Service Mocks
+# =============================================================================
+
+@pytest.fixture
+def mock_clickhouse(mocker):
+    """
+    Mock ClickHouse client for testing.
+    
+    Usage:
+        def test_query(mock_clickhouse):
+            mock_clickhouse.return_value.execute.return_value = [{"id": 1}]
+    """
+    mock = mocker.patch('app.services.clickhouse_client.ClickHouseClient')
+    mock_instance = mock.return_value
+    mock_instance.execute.return_value = []
+    mock_instance.query.return_value = {"data": [], "rows": 0}
+    mock_instance.ping.return_value = True
+    return mock
+
+
+@pytest.fixture
+def mock_ollama(mocker):
+    """
+    Mock Ollama client for AI service testing.
+    
+    Usage:
+        def test_ai_query(mock_ollama):
+            mock_ollama.return_value.generate.return_value = "AI response"
+    """
+    mock = mocker.patch('app.services.ollama.client.OllamaClient')
+    mock_instance = mock.return_value
+    mock_instance.generate.return_value = '{"dimensions": [], "measures": []}'
+    mock_instance.is_available.return_value = True
+    mock_instance.list_models.return_value = ["llama3.1", "codellama"]
+    return mock
+
+
+@pytest.fixture
+def mock_airflow(mocker):
+    """
+    Mock Airflow client for DAG testing.
+    
+    Usage:
+        def test_dag_trigger(mock_airflow):
+            mock_airflow.return_value.trigger_dag.return_value = {"run_id": "123"}
+    """
+    mock = mocker.patch('app.services.airflow_client.AirflowClient')
+    mock_instance = mock.return_value
+    mock_instance.trigger_dag.return_value = {"run_id": "test-run-123"}
+    mock_instance.get_dag_status.return_value = {"state": "success"}
+    mock_instance.list_dags.return_value = []
+    return mock
+
+
+@pytest.fixture
+def mock_postgresql_connector(mocker):
+    """Mock PostgreSQL connector for connection testing."""
+    mock = mocker.patch('app.connectors.postgresql.PostgreSQLConnector')
+    mock_instance = mock.return_value
+    mock_instance.test_connection.return_value = True
+    mock_instance.get_schemas.return_value = ["public", "analytics"]
+    mock_instance.__enter__ = lambda self: mock_instance
+    mock_instance.__exit__ = lambda self, *args: None
+    return mock
+
+
+@pytest.fixture
+def mock_encryption_service(mocker):
+    """Mock encryption service for credential testing."""
+    mock = mocker.patch('app.services.encryption_service.EncryptionService')
+    mock_instance = mock.return_value
+    mock_instance.encrypt.side_effect = lambda x: f"encrypted:{x}"
+    mock_instance.decrypt.side_effect = lambda x: x.replace("encrypted:", "") if x.startswith("encrypted:") else x
+    return mock
+
+
+# =============================================================================
+# Model Fixtures
+# =============================================================================
+
+@pytest.fixture
+def sample_connection(db_session, sample_tenant, sample_user):
+    """Create a sample data connection for testing."""
+    from app.models.connection import DataConnection, DatabaseType, ConnectionStatus
+    
+    connection = DataConnection(
+        tenant_id=sample_tenant.id,
+        name="Test PostgreSQL",
+        db_type=DatabaseType.POSTGRESQL,
+        host="localhost",
+        port=5432,
+        database="testdb",
+        username="testuser",
+        password_encrypted="encrypted:testpassword",
+        status=ConnectionStatus.ACTIVE,
+        created_by=sample_user.id,
+    )
+    db_session.add(connection)
+    db_session.commit()
+    return connection
+
+
+@pytest.fixture
+def sample_semantic_model(db_session, sample_tenant, sample_user):
+    """Create a sample semantic model for testing."""
+    from app.models.semantic import SemanticModel, ModelType
+    
+    model = SemanticModel(
+        tenant_id=sample_tenant.id,
+        name="sales_orders",
+        dbt_model="mart_sales_orders",
+        label="Sales Orders",
+        model_type=ModelType.FACT,
+        is_active=True,
+        created_by=sample_user.id,
+    )
+    db_session.add(model)
+    db_session.commit()
+    return model
+
+
+@pytest.fixture
+def sample_dashboard(db_session, sample_tenant, sample_user):
+    """Create a sample dashboard for testing."""
+    from app.models.dashboard import Dashboard
+    
+    dashboard = Dashboard(
+        tenant_id=sample_tenant.id,
+        name="Test Dashboard",
+        description="A test dashboard",
+        is_public=False,
+        created_by=sample_user.id,
+        layout=[],
+        settings={},
+    )
+    db_session.add(dashboard)
+    db_session.commit()
+    return dashboard
+
+
+# =============================================================================
+# JWT Token Fixtures
+# =============================================================================
+
+@pytest.fixture
+def jwt_access_token(app, sample_user, sample_tenant):
+    """Generate a valid JWT access token for testing."""
+    from flask_jwt_extended import create_access_token
+    
+    with app.app_context():
+        token = create_access_token(
+            identity=str(sample_user.id),
+            additional_claims={
+                'tenant_id': str(sample_tenant.id),
+                'roles': ['tenant_admin'],
+                'permissions': ['*'],
+            }
+        )
+        return token
+
+
+@pytest.fixture
+def api_headers(jwt_access_token):
+    """Create headers for authenticated API requests."""
+    return {
+        'Authorization': f'Bearer {jwt_access_token}',
+        'Content-Type': 'application/json',
+    }
+
+
+# =============================================================================
+# Test Helpers
+# =============================================================================
+
 class TestConfig:
     """Test configuration helpers."""
     
@@ -133,3 +308,51 @@ class TestConfig:
                 "bytes_read": 1024
             }
         }
+    
+    @staticmethod
+    def mock_query_result(columns: list, rows: list):
+        """Create a mock QueryResult for semantic queries."""
+        from app.services.clickhouse_client import QueryResult
+        return QueryResult(
+            columns=columns,
+            data=rows,
+            row_count=len(rows),
+            execution_time_ms=10,
+            query=""
+        )
+    
+    @staticmethod
+    def generate_uuid():
+        """Generate a random UUID string."""
+        import uuid
+        return str(uuid.uuid4())
+
+
+class APITestHelper:
+    """Helper class for API testing."""
+    
+    @staticmethod
+    def assert_success_response(response, expected_status=200):
+        """Assert API response is successful."""
+        assert response.status_code == expected_status
+        data = response.get_json()
+        assert 'error' not in data or data.get('error') is None
+        return data
+    
+    @staticmethod
+    def assert_error_response(response, expected_status=400, error_contains=None):
+        """Assert API response is an error."""
+        assert response.status_code == expected_status
+        data = response.get_json()
+        if error_contains:
+            assert error_contains.lower() in str(data).lower()
+        return data
+    
+    @staticmethod
+    def assert_validation_error(response, field_name=None):
+        """Assert API response is a validation error."""
+        assert response.status_code == 400 or response.status_code == 422
+        data = response.get_json()
+        if field_name:
+            assert field_name in str(data)
+        return data

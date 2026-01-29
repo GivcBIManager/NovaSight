@@ -1,0 +1,179 @@
+# NovaSight ZAP DAST Configuration
+# ==================================
+# OWASP ZAP Dynamic Application Security Testing configuration
+
+env:
+  contexts:
+    - name: "NovaSight API"
+      urls:
+        - "http://localhost:5000"
+      includePaths:
+        - "http://localhost:5000/api/.*"
+      excludePaths:
+        - "http://localhost:5000/api/v1/health"
+        - "http://localhost:5000/api/v1/metrics"
+        - "http://localhost:5000/static/.*"
+      authentication:
+        method: "json"
+        parameters:
+          loginPageUrl: "http://localhost:5000/api/v1/auth/login"
+          loginRequestData: '{"email":"security-test@novasight.dev","password":"SecureTestPass123!","tenant_slug":"security-test"}'
+          tokenExtractPattern: '"access_token":"([^"]+)"'
+        verification:
+          method: "response"
+          loggedInIndicator: "user_id"
+          loggedOutIndicator: "Invalid token"
+      sessionManagement:
+        method: "headers"
+        parameters:
+          headerName: "Authorization"
+          headerValue: "Bearer {%token%}"
+      users:
+        - name: "test-user"
+          credentials:
+            email: "security-test@novasight.dev"
+            password: "SecureTestPass123!"
+
+jobs:
+  # Spider the API endpoints
+  - type: spider
+    parameters:
+      context: "NovaSight API"
+      user: "test-user"
+      maxDuration: 5
+      maxDepth: 10
+      maxChildren: 20
+      acceptCookies: true
+      handleODataParametersVisited: false
+      handleParameters: USE_ALL
+      parseComments: true
+      parseGit: false
+      parseSVN: false
+      parseRobotsTxt: true
+      parseSitemap: true
+
+  # AJAX Spider for dynamic content
+  - type: spiderAjax
+    parameters:
+      context: "NovaSight API"
+      user: "test-user"
+      maxDuration: 5
+      maxCrawlDepth: 10
+      numberOfBrowsers: 2
+      browserId: "htmlunit"
+      clickDefaultElems: true
+      clickElemsOnce: true
+      eventWait: 1000
+      reloadWait: 1000
+
+  # Configure passive scanning
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 10
+      scanOnlyInScope: true
+      maxBodySizeInBytesToScan: 10000
+
+  # Active scanning with API-focused policy
+  - type: activeScan
+    parameters:
+      context: "NovaSight API"
+      user: "test-user"
+      policy: "API-Scan"
+      maxScanDurationInMins: 30
+      maxRuleDurationInMins: 5
+      addQueryParam: false
+      defaultPolicy: "API-Scan"
+      delayInMs: 100
+      handleAntiCSRFTokens: false
+      injectPluginIdInHeader: false
+      scanHeadersAllRequests: true
+      threadPerHost: 5
+
+  # API Import for OpenAPI spec (if available)
+  - type: openapi
+    parameters:
+      apiUrl: "http://localhost:5000/api/v1/openapi.json"
+      targetUrl: "http://localhost:5000"
+      context: "NovaSight API"
+
+  # Generate reports
+  - type: report
+    parameters:
+      template: "traditional-html"
+      reportDir: "/zap/reports"
+      reportFile: "zap-report"
+      reportTitle: "NovaSight Security Scan Report"
+      reportDescription: "DAST scan results for NovaSight API"
+
+  - type: report
+    parameters:
+      template: "sarif-json"
+      reportDir: "/zap/reports"
+      reportFile: "zap-sarif"
+      reportTitle: "NovaSight Security Scan"
+
+  - type: report
+    parameters:
+      template: "risk-confidence-html"
+      reportDir: "/zap/reports"
+      reportFile: "zap-risk-report"
+
+# Scan Policy Configuration
+scanPolicy:
+  name: "API-Scan"
+  defaultStrength: "MEDIUM"
+  defaultThreshold: "MEDIUM"
+  rules:
+    # SQL Injection
+    - id: 40018
+      strength: "HIGH"
+      threshold: "LOW"
+    # Cross Site Scripting
+    - id: 40012
+      strength: "HIGH"
+      threshold: "LOW"
+    - id: 40014
+      strength: "HIGH"
+      threshold: "LOW"
+    # Command Injection
+    - id: 90020
+      strength: "HIGH"
+      threshold: "LOW"
+    # Path Traversal
+    - id: 6
+      strength: "HIGH"
+      threshold: "LOW"
+    # Remote File Inclusion
+    - id: 7
+      strength: "HIGH"
+      threshold: "LOW"
+    # Server Side Include
+    - id: 40009
+      strength: "MEDIUM"
+      threshold: "MEDIUM"
+    # LDAP Injection
+    - id: 40015
+      strength: "MEDIUM"
+      threshold: "MEDIUM"
+    # XML External Entity
+    - id: 90023
+      strength: "HIGH"
+      threshold: "LOW"
+    # CSRF
+    - id: 20012
+      strength: "MEDIUM"
+      threshold: "MEDIUM"
+    # Session Fixation
+    - id: 40013
+      strength: "HIGH"
+      threshold: "LOW"
+
+# Alert Filters
+alertFilters:
+  # Filter out known false positives
+  - ruleId: 10015  # Incomplete or No Cache-control and Pragma HTTP Header
+    newRisk: "Info"
+    context: "NovaSight API"
+    url: "http://localhost:5000/api/v1/health"
+    urlRegex: false
+    enabled: true

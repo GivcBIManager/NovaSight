@@ -1,0 +1,321 @@
+# Business Alert Rules
+# ====================
+# Alerts for business metrics and operational health
+
+groups:
+  - name: business.tenants
+    interval: 60s
+    rules:
+      # =======================================================================
+      # Tenant Quota Alerts
+      # =======================================================================
+      
+      # Tenant approaching storage quota
+      - alert: TenantStorageQuotaApproaching
+        expr: |
+          novasight_tenant_usage_bytes / novasight_tenant_quota_bytes > 0.80
+        for: 1h
+        labels:
+          severity: info
+          service: tenant
+        annotations:
+          summary: "Tenant {{ $labels.tenant_id }} at {{ $value | humanizePercentage }} of storage quota"
+          description: "Consider notifying tenant about quota usage"
+
+      # Tenant storage quota critical
+      - alert: TenantStorageQuotaCritical
+        expr: |
+          novasight_tenant_usage_bytes / novasight_tenant_quota_bytes > 0.90
+        for: 1h
+        labels:
+          severity: warning
+          service: tenant
+        annotations:
+          summary: "Tenant {{ $labels.tenant_id }} approaching storage quota limit"
+          description: "Tenant is at {{ $value | humanizePercentage }} of quota. Operations may fail soon."
+          runbook_url: "https://docs.novasight.io/runbooks/tenant-quota"
+
+      # Tenant quota exceeded
+      - alert: TenantQuotaExceeded
+        expr: |
+          novasight_tenant_usage_bytes / novasight_tenant_quota_bytes >= 1.0
+        for: 15m
+        labels:
+          severity: critical
+          service: tenant
+        annotations:
+          summary: "Tenant {{ $labels.tenant_id }} has exceeded storage quota"
+          description: "Tenant operations may be blocked until quota is increased or data is deleted"
+          runbook_url: "https://docs.novasight.io/runbooks/tenant-quota-exceeded"
+
+      # Tenant user limit approaching
+      - alert: TenantUserLimitApproaching
+        expr: |
+          novasight_tenant_users_count / novasight_tenant_users_limit > 0.90
+        for: 1h
+        labels:
+          severity: warning
+          service: tenant
+        annotations:
+          summary: "Tenant {{ $labels.tenant_id }} approaching user limit"
+          description: "{{ $value | humanizePercentage }} of user limit reached"
+
+  - name: business.usage
+    interval: 60s
+    rules:
+      # =======================================================================
+      # Usage Anomaly Alerts
+      # =======================================================================
+      
+      # No queries in extended period
+      - alert: NoQueriesInHour
+        expr: |
+          sum(increase(novasight_query_execution_seconds_count[1h])) == 0
+        for: 1h
+        labels:
+          severity: warning
+          service: query-engine
+        annotations:
+          summary: "No queries executed in the last hour"
+          description: "Possible system issue - no query activity detected"
+          runbook_url: "https://docs.novasight.io/runbooks/no-activity"
+
+      # No dashboard views
+      - alert: NoDashboardViews
+        expr: |
+          sum(increase(novasight_dashboard_views_total[2h])) == 0
+        for: 2h
+        labels:
+          severity: info
+          service: dashboard
+        annotations:
+          summary: "No dashboard views in 2 hours"
+          description: "Unusual - no users viewing dashboards"
+
+      # Sudden drop in active users
+      - alert: SuddenUserActivityDrop
+        expr: |
+          (
+            sum(novasight_active_users) 
+            / 
+            sum(avg_over_time(novasight_active_users[1d]))
+          ) < 0.3
+        for: 30m
+        labels:
+          severity: warning
+          service: application
+        annotations:
+          summary: "Sudden drop in user activity"
+          description: "Active users dropped to {{ $value | humanizePercentage }} of daily average"
+
+      # API usage anomaly
+      - alert: APIUsageAnomaly
+        expr: |
+          abs(
+            sum(rate(novasight_http_requests_total[1h])) 
+            - 
+            sum(rate(novasight_http_requests_total[1h] offset 1d))
+          ) / sum(rate(novasight_http_requests_total[1h] offset 1d)) > 0.5
+        for: 1h
+        labels:
+          severity: info
+          service: api
+        annotations:
+          summary: "Unusual API usage pattern"
+          description: "API request rate differs significantly from yesterday"
+
+  - name: business.pipeline
+    interval: 60s
+    rules:
+      # =======================================================================
+      # Data Pipeline Alerts
+      # =======================================================================
+      
+      # Ingestion pipeline stalled
+      - alert: IngestionPipelineStalled
+        expr: |
+          sum(rate(novasight_ingestion_records_total[15m])) == 0
+        for: 30m
+        labels:
+          severity: critical
+          service: ingestion
+        annotations:
+          summary: "Data ingestion pipeline stalled"
+          description: "No records ingested in 30 minutes"
+          runbook_url: "https://docs.novasight.io/runbooks/ingestion-stalled"
+
+      # Pipeline backlog growing
+      - alert: PipelineBacklogGrowing
+        expr: |
+          increase(novasight_pipeline_queue_size[15m]) > 1000
+        for: 30m
+        labels:
+          severity: warning
+          service: pipeline
+        annotations:
+          summary: "Pipeline backlog growing"
+          description: "Pipeline queue growing at {{ $value | humanize }} items per 15 minutes"
+
+      # ETL job failures
+      - alert: ETLJobFailures
+        expr: |
+          increase(novasight_etl_job_failures_total[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+          service: etl
+        annotations:
+          summary: "Multiple ETL job failures"
+          description: "{{ $value }} ETL jobs failed in the last hour"
+          runbook_url: "https://docs.novasight.io/runbooks/etl-failures"
+
+      # Scheduled job not running
+      - alert: ScheduledJobMissed
+        expr: |
+          time() - novasight_scheduled_job_last_run_timestamp > 7200
+        for: 15m
+        labels:
+          severity: warning
+          service: scheduler
+        annotations:
+          summary: "Scheduled job {{ $labels.job_name }} not running"
+          description: "Job hasn't run in {{ $value | humanizeDuration }}"
+
+  - name: business.data_quality
+    interval: 300s
+    rules:
+      # =======================================================================
+      # Data Quality Alerts
+      # =======================================================================
+      
+      # Data freshness issue
+      - alert: DataFreshnessIssue
+        expr: |
+          time() - novasight_data_last_update_timestamp > 3600
+        for: 30m
+        labels:
+          severity: warning
+          service: data
+        annotations:
+          summary: "Stale data detected for {{ $labels.dataset }}"
+          description: "Data hasn't been updated in {{ $value | humanizeDuration }}"
+
+      # High null ratio in key columns
+      - alert: HighNullRatio
+        expr: |
+          novasight_column_null_ratio > 0.20
+        for: 1h
+        labels:
+          severity: warning
+          service: data-quality
+        annotations:
+          summary: "High null ratio in {{ $labels.table }}.{{ $labels.column }}"
+          description: "{{ $value | humanizePercentage }} of values are null"
+
+      # Schema drift detected
+      - alert: SchemaDriftDetected
+        expr: |
+          increase(novasight_schema_changes_total[1h]) > 0
+        for: 0m
+        labels:
+          severity: info
+          service: data-quality
+        annotations:
+          summary: "Schema change detected in {{ $labels.datasource }}"
+          description: "Schema drift detected - verify data compatibility"
+
+  - name: business.revenue
+    interval: 300s
+    rules:
+      # =======================================================================
+      # Business Metrics Alerts
+      # =======================================================================
+      
+      # New trial signup spike
+      - alert: TrialSignupSpike
+        expr: |
+          increase(novasight_trial_signups_total[1h]) > 
+          3 * avg_over_time(increase(novasight_trial_signups_total[1h])[7d:1h])
+        for: 1h
+        labels:
+          severity: info
+          service: business
+        annotations:
+          summary: "Unusual spike in trial signups"
+          description: "{{ $value | humanize }} signups in the last hour (3x normal)"
+
+      # Trial conversion rate drop
+      - alert: TrialConversionDrop
+        expr: |
+          (
+            sum(increase(novasight_trial_conversions_total[7d])) /
+            sum(increase(novasight_trial_signups_total[7d] offset 14d))
+          ) < 0.10
+        for: 1d
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "Trial conversion rate dropped below 10%"
+          description: "Current conversion rate: {{ $value | humanizePercentage }}"
+
+      # Churn rate increase
+      - alert: ChurnRateIncrease
+        expr: |
+          novasight_monthly_churn_rate > 0.05
+        for: 1d
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "Monthly churn rate above 5%"
+          description: "Current churn rate: {{ $value | humanizePercentage }}"
+
+  - name: business.support
+    interval: 60s
+    rules:
+      # =======================================================================
+      # Support Metrics Alerts
+      # =======================================================================
+      
+      # High error page views
+      - alert: HighErrorPageViews
+        expr: |
+          sum(rate(novasight_error_page_views_total[15m])) > 10
+        for: 15m
+        labels:
+          severity: warning
+          service: frontend
+        annotations:
+          summary: "High rate of error page views"
+          description: "Users seeing {{ $value | humanize }}/s error pages"
+
+      # API errors affecting multiple tenants
+      - alert: MultiTenantAPIErrors
+        expr: |
+          count(
+            sum(rate(novasight_http_requests_total{status=~"5.."}[5m])) by (tenant_id) > 0.1
+          ) > 5
+        for: 10m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "API errors affecting multiple tenants"
+          description: "{{ $value }} tenants experiencing API errors"
+
+      # Feature usage drop
+      - alert: FeatureUsageDrop
+        expr: |
+          (
+            sum(rate(novasight_feature_usage_total[1d])) by (feature)
+            /
+            sum(rate(novasight_feature_usage_total[1d] offset 7d)) by (feature)
+          ) < 0.5
+        for: 1d
+        labels:
+          severity: info
+          service: product
+        annotations:
+          summary: "Feature {{ $labels.feature }} usage dropped significantly"
+          description: "Usage is {{ $value | humanizePercentage }} of last week"

@@ -3,6 +3,13 @@ NovaSight Encryption Utilities
 ==============================
 
 AES-256 encryption for sensitive data using Fernet.
+
+Note: For new code, prefer using the EncryptionService from
+app.services.encryption_service which provides additional features
+like version prefixing for key rotation and tenant isolation.
+
+This module provides backward-compatible functions that are used
+by legacy code in the application.
 """
 
 import os
@@ -13,6 +20,24 @@ from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# Re-export from new encryption service for convenience
+from app.services.encryption_service import (
+    EncryptionService,
+    KeyRotationService,
+    EncryptionError,
+    DecryptionError,
+    KeyNotConfiguredError,
+    get_encryption_service
+)
+
+# Re-export encrypted column types
+from app.utils.encrypted_types import (
+    EncryptedString,
+    EncryptedJSON,
+    EncryptedText
+)
 
 
 def get_encryption_key() -> bytes:

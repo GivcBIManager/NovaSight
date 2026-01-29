@@ -43,7 +43,9 @@ class AirflowClient:
         self,
         base_url: Optional[str] = None,
         username: Optional[str] = None,
-        password: Optional[str] = None
+        password: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        use_infrastructure_config: bool = True,
     ):
         """
         Initialize Airflow client.
@@ -52,24 +54,51 @@ class AirflowClient:
             base_url: Airflow webserver URL
             username: Airflow username
             password: Airflow password
+            tenant_id: Optional tenant ID for tenant-specific config
+            use_infrastructure_config: Whether to use infrastructure config service
         """
         self._base_url = base_url
         self._username = username
         self._password = password
+        self._tenant_id = tenant_id
+        self._use_infrastructure_config = use_infrastructure_config
         self._client = None
+        self._config_loaded = False
+        self._loaded_settings = {}
+    
+    def _load_infrastructure_config(self):
+        """Load settings from infrastructure config service."""
+        if self._config_loaded or not self._use_infrastructure_config:
+            return
+        
+        try:
+            from app.services.infrastructure_config_service import InfrastructureConfigService
+            config_service = InfrastructureConfigService()
+            self._loaded_settings = config_service.get_effective_settings('airflow', self._tenant_id)
+            self._config_loaded = True
+        except Exception as e:
+            logger.debug(f"Could not load infrastructure config: {e}")
+            self._config_loaded = True  # Don't retry
     
     @property
     def base_url(self) -> str:
         """Get Airflow base URL from config."""
         if self._base_url:
             return self._base_url.rstrip('/')
+        
+        self._load_infrastructure_config()
+        if self._loaded_settings.get('base_url'):
+            return self._loaded_settings['base_url'].rstrip('/')
+        
         return current_app.config.get("AIRFLOW_BASE_URL", "http://localhost:8080").rstrip('/')
     
     @property
     def auth(self) -> tuple:
         """Get authentication credentials."""
-        username = self._username or current_app.config.get("AIRFLOW_USERNAME", "airflow")
-        password = self._password or current_app.config.get("AIRFLOW_PASSWORD", "airflow")
+        self._load_infrastructure_config()
+        
+        username = self._username or self._loaded_settings.get('username') or current_app.config.get("AIRFLOW_USERNAME", "airflow")
+        password = self._password or self._loaded_settings.get('password') or current_app.config.get("AIRFLOW_PASSWORD", "airflow")
         return (username, password)
     
     @property

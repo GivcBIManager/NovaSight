@@ -69,15 +69,15 @@
 
     <!-- Users -->
     <users>
-        <!-- Default admin user -->
-        <default>
-            <!-- Password: novasight (SHA256) -->
-            <password_sha256_hex>a0b65939670bc2c010f4d5d6a0b3e4d2f5c6b7a8d9e0f1234567890abcdef123</password_sha256_hex>
+        <!-- Default user - use no_password to allow empty login (override base config) -->
+        <default replace="1">
+            <no_password>1</no_password>
             <networks>
                 <ip>::/0</ip>
             </networks>
             <profile>default</profile>
             <quota>default</quota>
+            <access_management>1</access_management>
         </default>
 
         <!-- NovaSight application user -->

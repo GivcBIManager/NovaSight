@@ -50,7 +50,7 @@ class AuthService:
             if not tenant:
                 return None, "Tenant not found"
             
-            if tenant.status != TenantStatus.ACTIVE:
+            if tenant.status != "active":
                 return None, "Tenant is not active"
             
             # Check if user already exists in this tenant
@@ -71,8 +71,7 @@ class AuthService:
                 password_hash=password_hash,
                 name=name.strip(),
                 tenant_id=tenant.id,
-                status=UserStatus.ACTIVE,
-                email_verified=False,
+                status="active",
             )
             
             db.session.add(user)
@@ -128,7 +127,7 @@ class AuthService:
                 login_tracker.record_attempt(identifier, success=False)
                 return None, "Invalid credentials"
             
-            if user.status != UserStatus.ACTIVE:
+            if user.status != "active":
                 logger.warning(f"Authentication failed: user {email} is not active")
                 login_tracker.record_attempt(identifier, success=False)
                 return None, "Account is not active"
@@ -140,7 +139,7 @@ class AuthService:
                 return None, "Invalid credentials"
             
             # Check tenant status
-            if user.tenant and user.tenant.status != TenantStatus.ACTIVE:
+            if user.tenant and user.tenant.status != "active":
                 logger.warning(f"Authentication failed: tenant {user.tenant.slug} is not active")
                 return None, "Tenant is not active"
             
@@ -185,7 +184,7 @@ class AuthService:
             User.tenant_id == tenant_id
         ).first()
         
-        if not user or user.status != UserStatus.ACTIVE:
+        if not user or user.status != "active":
             return None
         
         return user

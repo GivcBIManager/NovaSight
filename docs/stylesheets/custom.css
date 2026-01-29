@@ -1,0 +1,194 @@
+/* NovaSight Documentation Custom Styles */
+
+:root {
+  --ns-primary: #3B82F6;
+  --ns-secondary: #10B981;
+  --ns-accent: #F59E0B;
+  --ns-danger: #EF4444;
+  --ns-text: #1F2937;
+  --ns-text-muted: #6B7280;
+  --ns-border: #E5E7EB;
+  --ns-bg: #F9FAFB;
+}
+
+/* Improve code block readability */
+.highlight pre {
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+/* Style admonitions */
+.admonition {
+  border-radius: 8px;
+  border-left-width: 4px;
+}
+
+/* Custom tip styling */
+.admonition.tip {
+  border-color: var(--ns-secondary);
+}
+
+/* Custom warning styling */
+.admonition.warning {
+  border-color: var(--ns-accent);
+}
+
+/* Custom note styling */
+.admonition.note {
+  border-color: var(--ns-primary);
+}
+
+/* Table styling */
+.md-typeset table:not([class]) {
+  border: 1px solid var(--ns-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.md-typeset table:not([class]) th {
+  background: var(--ns-bg);
+  font-weight: 600;
+}
+
+.md-typeset table:not([class]) td,
+.md-typeset table:not([class]) th {
+  padding: 12px 16px;
+  border-color: var(--ns-border);
+}
+
+/* YAML code block styling */
+.language-yaml {
+  background: #f8f9fa;
+}
+
+/* Improve grid cards */
+.grid.cards > ul > li {
+  border: 1px solid var(--ns-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.grid.cards > ul > li:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Status indicators */
+.status-success {
+  color: var(--ns-secondary);
+}
+
+.status-warning {
+  color: var(--ns-accent);
+}
+
+.status-error {
+  color: var(--ns-danger);
+}
+
+/* Keyboard keys */
+.md-typeset kbd {
+  background: var(--ns-bg);
+  border: 1px solid var(--ns-border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.85em;
+}
+
+/* Improve readability of architecture diagrams */
+.md-typeset pre code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+
+/* Hero section on home page */
+.hero {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.hero h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.hero p {
+  font-size: 1.2rem;
+  color: var(--ns-text-muted);
+}
+
+/* Feature cards */
+.feature-card {
+  background: white;
+  border: 1px solid var(--ns-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+}
+
+.feature-card h3 {
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Print styles */
+@media print {
+  .md-header,
+  .md-sidebar,
+  .md-footer {
+    display: none;
+  }
+  
+  .md-content {
+    max-width: 100%;
+  }
+}
+
+/* Mobile improvements */
+@media screen and (max-width: 768px) {
+  .md-typeset table:not([class]) {
+    font-size: 0.85em;
+  }
+  
+  .grid.cards > ul {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mermaid diagram styling */
+.mermaid {
+  background: transparent;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+/* Version selector */
+.md-version {
+  font-size: 0.85em;
+}
+
+/* Search improvements */
+.md-search__input {
+  border-radius: 8px;
+}
+
+/* Navigation tab styling */
+.md-tabs__link--active,
+.md-tabs__link:hover {
+  opacity: 1;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Improve footnote styling */
+.footnote {
+  font-size: 0.9em;
+  color: var(--ns-text-muted);
+}

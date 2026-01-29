@@ -1,0 +1,146 @@
+# NovaSight Backend ServiceMonitor
+# =================================
+# Prometheus Operator ServiceMonitor for backend metrics collection
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: novasight-backend
+  namespace: novasight
+  labels:
+    app.kubernetes.io/name: novasight
+    app.kubernetes.io/component: backend
+    prometheus: main
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+      app.kubernetes.io/part-of: novasight
+  namespaceSelector:
+    matchNames:
+      - novasight
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+      honorLabels: true
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+      metricRelabelings:
+        # Drop high-cardinality metrics if needed
+        - sourceLabels: [__name__]
+          regex: 'go_gc_.*'
+          action: drop
+
+---
+# Frontend ServiceMonitor (nginx metrics)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: novasight-frontend
+  namespace: novasight
+  labels:
+    app.kubernetes.io/name: novasight
+    app.kubernetes.io/component: frontend
+    prometheus: main
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+      app.kubernetes.io/part-of: novasight
+  namespaceSelector:
+    matchNames:
+      - novasight
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+
+---
+# Airflow ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: novasight-airflow
+  namespace: novasight
+  labels:
+    app.kubernetes.io/name: novasight
+    app.kubernetes.io/component: airflow
+    prometheus: main
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: airflow
+      app.kubernetes.io/part-of: novasight
+  namespaceSelector:
+    matchNames:
+      - novasight
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+
+---
+# PodMonitor for all NovaSight pods with prometheus annotations
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: novasight-pods
+  namespace: novasight
+  labels:
+    app.kubernetes.io/name: novasight
+    prometheus: main
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: novasight
+  namespaceSelector:
+    matchNames:
+      - novasight
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      honorLabels: true
+
+---
+# PrometheusRule for NovaSight
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: novasight-rules
+  namespace: novasight
+  labels:
+    app.kubernetes.io/name: novasight
+    prometheus: main
+    role: alert-rules
+spec:
+  groups:
+    - name: novasight.critical
+      rules:
+        - alert: NovaSightBackendDown
+          expr: |
+            absent(up{job="novasight-backend"} == 1)
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "NovaSight backend is down"
+            description: "No healthy backend instances detected for 2 minutes"
+        
+        - alert: NovaSightHighErrorRate
+          expr: |
+            sum(rate(novasight_http_requests_total{status=~"5.."}[5m])) /
+            sum(rate(novasight_http_requests_total[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High error rate detected"
+            description: "Error rate is {{ $value | humanizePercentage }}"

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NovaSight API Documentation</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Custom styling for Redoc */
+        .redoc-wrap {
+            font-family: 'Roboto', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <!-- 
+        NovaSight API Documentation
+        
+        This page displays interactive API documentation using Redoc.
+        The OpenAPI specification is loaded from openapi.yaml.
+        
+        To regenerate the OpenAPI spec:
+        $ cd backend
+        $ flask docs export-openapi
+        
+        To serve locally:
+        $ flask docs serve
+    -->
+    <redoc 
+        spec-url='openapi.yaml'
+        expand-responses="200,201"
+        hide-download-button
+        native-scrollbars
+        theme='{
+            "colors": {
+                "primary": {
+                    "main": "#3B82F6"
+                }
+            },
+            "typography": {
+                "fontSize": "15px",
+                "fontFamily": "Roboto, sans-serif",
+                "headings": {
+                    "fontFamily": "Montserrat, sans-serif"
+                },
+                "code": {
+                    "fontSize": "13px",
+                    "fontFamily": "JetBrains Mono, Consolas, monospace"
+                }
+            },
+            "sidebar": {
+                "backgroundColor": "#FAFAFA",
+                "width": "280px"
+            },
+            "rightPanel": {
+                "backgroundColor": "#1E293B"
+            }
+        }'
+    ></redoc>
+    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+</body>
+</html>

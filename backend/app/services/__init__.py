@@ -71,6 +71,18 @@ from app.services.pipeline_generator import (
     get_pipeline_generator,
 )
 
+# RBAC Service (Prompt 031)
+from app.services.rbac_service import (
+    RBACService,
+    rbac_service,
+)
+
+# Audit Service (Prompt 032)
+from app.services.audit_service import (
+    AuditService,
+    audit_service,
+)
+
 __all__ = [
     # Auth & User Services
     "AuthService",
@@ -82,6 +94,9 @@ __all__ = [
     "LoginAttemptTracker",
     "token_blacklist",
     "login_tracker",
+    # RBAC Service
+    "RBACService",
+    "rbac_service",
     # Data Services
     "ConnectionService",
     "DagService",
@@ -128,4 +143,7 @@ __all__ = [
     "PipelineValidationError",
     "FullPipelineBuilder",
     "get_pipeline_generator",
+    # Audit Service (Prompt 032)
+    "AuditService",
+    "audit_service",
 ]

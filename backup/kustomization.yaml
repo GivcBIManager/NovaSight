@@ -1,0 +1,29 @@
+# Kustomization for Backup Resources
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: novasight
+
+resources:
+  - common/backup-config.yaml
+  - postgresql/backup-cronjob.yaml
+  - postgresql/wal-archiver.yaml
+  - clickhouse/backup-cronjob.yaml
+  - clickhouse/config.yaml
+  - redis/backup-cronjob.yaml
+
+commonLabels:
+  app.kubernetes.io/name: novasight
+  app.kubernetes.io/component: backup
+  app.kubernetes.io/managed-by: kustomize
+
+# Image transforms for backup containers
+images:
+  - name: postgres
+    newTag: "15-alpine"
+  - name: altinity/clickhouse-backup
+    newTag: "2.4.0"
+  - name: redis
+    newTag: "7-alpine"
+  - name: amazon/aws-cli
+    newTag: "2.13.0"
