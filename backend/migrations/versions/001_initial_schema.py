@@ -334,9 +334,10 @@ def upgrade() -> None:
     op.execute("SELECT create_tenant_schema('dev')")
     
     # Create default admin user (password: admin123)
+    # Using Argon2 hash format (compatible with password_service)
     op.execute("""
         INSERT INTO public.users (tenant_id, email, password_hash, name, status)
-        SELECT t.id, 'admin@novasight.dev', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.UTq/8ACyRpKoOG', 'Admin User', 'active'
+        SELECT t.id, 'admin@novasight.dev', '$argon2id$v=19$m=65536,t=3,p=4$ghBaySmTKHDX8jCd5nWMfg$wOI1pvzV42j7Llj7xfbGaSniDehzhT7of0UGm2HZTBg', 'Admin User', 'active'
         FROM public.tenants t WHERE t.slug = 'dev'
         ON CONFLICT DO NOTHING;
     """)
