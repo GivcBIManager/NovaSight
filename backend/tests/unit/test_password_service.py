@@ -90,12 +90,15 @@ class TestPasswordStrengthValidation:
     
     def test_valid_passwords(self, service):
         """Test valid passwords pass validation."""
+        # Note: Passwords cannot contain:
+        # - Sequences like 123, 456, abc, etc.
+        # - Common words like password, admin, qwerty, etc.
         valid_passwords = [
-            "SecurePass123!@#",
-            "MyP@ssw0rd2024!",
-            "Complex#1Password",
-            "AbCdEfGh12!@#$",
-            "V3ryStr0ng!Pass",
+            "SecureP@ss8642!",      # No sequential digits, no weak words
+            "MyC0mpl3x#Key!",       # Mixed characters, no patterns
+            "Xr7#Yt9@Kz2!",         # Random non-sequential
+            "Str0ngK3y!@#$9",       # No weak words
+            "V3ryG00d!Phrase9",     # No patterns
         ]
         
         for password in valid_passwords:

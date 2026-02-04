@@ -198,7 +198,7 @@ class UserService:
             tenant_id=self.tenant_id,
             email=email.lower(),
             name=name,
-            status=UserStatus.ACTIVE,
+            status=UserStatus.ACTIVE.value,  # Use string value for DB
         )
         user.set_password(password)
         
@@ -288,7 +288,7 @@ class UserService:
         if not user:
             return False
         
-        user.status = UserStatus.INACTIVE
+        user.status = UserStatus.INACTIVE.value  # Use string value for DB
         db.session.commit()
         
         logger.info(f"Deactivated user: {user.email}")
@@ -312,7 +312,7 @@ class UserService:
         if not user:
             raise ValueError("User not found")
         
-        user.status = UserStatus.INACTIVE
+        user.status = UserStatus.INACTIVE.value  # Use string value for DB
         user.updated_at = datetime.utcnow()
         db.session.commit()
         

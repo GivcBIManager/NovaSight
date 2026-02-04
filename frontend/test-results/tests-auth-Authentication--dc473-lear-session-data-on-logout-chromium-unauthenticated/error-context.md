@@ -1,0 +1,47 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]: "N"
+      - heading "Welcome back" [level=3] [ref=e8]
+      - paragraph [ref=e9]: Sign in to your NovaSight account
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e15]: Request failed with status code 401
+        - generic [ref=e16]:
+          - text: Email
+          - textbox "Email" [ref=e17]:
+            - /placeholder: name@company.com
+            - text: admin@novasight.dev
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - generic [ref=e20]: Password
+            - link "Forgot password?" [ref=e21] [cursor=pointer]:
+              - /url: /forgot-password
+          - generic [ref=e23]:
+            - textbox "Password" [ref=e24]:
+              - /placeholder: ••••••••
+              - text: admin123
+            - button "Show password" [ref=e25] [cursor=pointer]:
+              - img [ref=e26]
+        - generic [ref=e29]:
+          - checkbox "Remember me for 30 days" [ref=e30] [cursor=pointer]
+          - checkbox
+          - generic [ref=e31] [cursor=pointer]: Remember me for 30 days
+        - button "Sign In" [ref=e32] [cursor=pointer]
+        - paragraph [ref=e33]:
+          - text: Don't have an account?
+          - link "Create an account" [ref=e34] [cursor=pointer]:
+            - /url: /register
+      - paragraph [ref=e36]: "Demo: admin@novasight.dev / admin123"
+  - region "Notifications (F8)":
+    - list
+  - generic [ref=e37]:
+    - img [ref=e39]
+    - button "Open Tanstack query devtools" [ref=e87] [cursor=pointer]:
+      - img [ref=e88]
+```

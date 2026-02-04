@@ -7,7 +7,8 @@ Flask-RESTX namespace for administration endpoint documentation.
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from app.decorators import require_tenant_context, require_roles
 import logging
 
@@ -310,7 +311,7 @@ class UserList(Resource):
         """
         from app.services.user_service import UserService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
         
         page = request.args.get('page', 1, type=int)
@@ -350,7 +351,7 @@ class UserList(Resource):
         """
         from app.services.user_service import UserService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
         
         data = request.json
@@ -382,7 +383,7 @@ class UserDetail(Resource):
         """
         from app.services.user_service import UserService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
         
         user = UserService.get_user(str(user_id), tenant_id)
@@ -409,7 +410,7 @@ class UserDetail(Resource):
         """
         from app.services.user_service import UserService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
         
         data = request.json
@@ -436,7 +437,7 @@ class UserDetail(Resource):
         """
         from app.services.user_service import UserService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
         
         success = UserService.delete_user(str(user_id), tenant_id)
@@ -473,7 +474,7 @@ class RoleList(Resource):
         """
         from app.services.role_service import RoleService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
         
         roles = RoleService.list_roles(tenant_id)
@@ -503,7 +504,7 @@ class RoleList(Resource):
         """
         from app.services.role_service import RoleService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
         
         data = request.json
@@ -532,7 +533,7 @@ class RoleDetail(Resource):
         """
         from app.services.role_service import RoleService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
         
         role = RoleService.get_role(str(role_id), tenant_id)
@@ -556,7 +557,7 @@ class RoleDetail(Resource):
         """
         from app.services.role_service import RoleService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
         
         data = request.json
@@ -583,7 +584,7 @@ class RoleDetail(Resource):
         """
         from app.services.role_service import RoleService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
         
         success = RoleService.delete_role(str(role_id), tenant_id)
@@ -634,7 +635,7 @@ class AuditLogList(Resource):
         """
         from app.services.audit_service import AuditService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
         
         page = request.args.get('page', 1, type=int)

@@ -275,9 +275,9 @@ class QuerySuggestions(Resource):
         """
         from app.services.ollama.client import get_ollama_client, OllamaError
         from app.services.semantic_service import SemanticService
-        from flask_jwt_extended import get_jwt_identity
+        from app.middleware.jwt_handlers import get_jwt_identity_dict
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         context = request.json.get('context', '') if request.json else ''
@@ -405,9 +405,9 @@ class QuerySchema(Resource):
         Useful for building query builders or autocomplete.
         """
         from app.services.semantic_service import SemanticService
-        from flask_jwt_extended import get_jwt_identity
+        from app.middleware.jwt_handlers import get_jwt_identity_dict
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         semantic_models = SemanticService.list_models(tenant_id)

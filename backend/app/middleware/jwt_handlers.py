@@ -5,13 +5,47 @@ NovaSight JWT Handlers
 Flask-JWT-Extended callback handlers for token validation.
 """
 
+import json
 from flask import Flask, jsonify
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, get_jwt_identity as _get_jwt_identity_raw
 from app.services.token_service import token_blacklist
 from app.services.auth_service import AuthService
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _serialize_identity(identity: dict) -> str:
+    """Serialize identity dict to JSON string for JWT sub claim."""
+    return json.dumps(identity, sort_keys=True)
+
+
+def _deserialize_identity(identity_str) -> dict:
+    """Deserialize identity from JWT sub claim (string or dict for backwards compat)."""
+    if isinstance(identity_str, dict):
+        # Backwards compatibility: if already a dict, return as-is
+        return identity_str
+    if isinstance(identity_str, str):
+        try:
+            return json.loads(identity_str)
+        except json.JSONDecodeError:
+            logger.error(f"Failed to deserialize JWT identity: {identity_str}")
+            return {}
+    return {}
+
+
+def get_jwt_identity_dict() -> dict:
+    """
+    Get the current JWT identity as a dictionary.
+    
+    This wraps Flask-JWT-Extended's get_jwt_identity() to handle
+    the JSON string serialization we use for the 'sub' claim.
+    
+    Returns:
+        dict: The identity dictionary from the JWT token
+    """
+    raw_identity = _get_jwt_identity_raw()
+    return _deserialize_identity(raw_identity)
 
 
 def register_jwt_handlers(jwt: JWTManager) -> None:
@@ -83,21 +117,25 @@ def register_jwt_handlers(jwt: JWTManager) -> None:
         """
         Callback to convert user object to identity for token.
         
+        The identity must be a string (not a dict) for PyJWT verify_sub to work.
+        We serialize the identity dict as a JSON string.
+        
         Args:
             user: User dict or object passed to create_access_token
         
         Returns:
-            Identity to embed in token
+            JSON string identity to embed in token
         """
         if isinstance(user, dict):
-            return user
+            return _serialize_identity(user)
         # If it's a User model object
-        return {
+        identity = {
             "user_id": str(user.id),
             "email": user.email,
             "tenant_id": str(user.tenant_id),
             "roles": [role.name for role in user.roles] if hasattr(user, 'roles') else [],
         }
+        return _serialize_identity(identity)
     
     @jwt.user_lookup_loader
     def user_lookup_callback(jwt_header, jwt_payload):
@@ -107,8 +145,12 @@ def register_jwt_handlers(jwt: JWTManager) -> None:
         Returns:
             User object or None
         """
-        identity = jwt_payload.get("sub")
-        if not identity or not isinstance(identity, dict):
+        identity_raw = jwt_payload.get("sub")
+        if not identity_raw:
+            return None
+        
+        identity = _deserialize_identity(identity_raw)
+        if not identity:
             return None
         
         auth_service = AuthService()
@@ -120,11 +162,13 @@ def register_jwt_handlers(jwt: JWTManager) -> None:
         Add additional claims to access token.
         
         Args:
-            identity: User identity dict
+            identity: User identity (dict passed to create_access_token, before serialization)
         
         Returns:
             Additional claims to add
         """
+        # Note: identity here is the original dict passed to create_access_token,
+        # NOT the serialized string (serialization happens after this callback)
         if not isinstance(identity, dict):
             return {}
         

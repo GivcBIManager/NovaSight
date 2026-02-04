@@ -26,8 +26,8 @@ class TestAuthRegistrationFlow:
         
         # Register new user
         register_response = integration_client.post("/api/v1/auth/register", json={
-            "email": "newuser@integration.test",
-            "password": "SecurePassword123!",
+            "email": "newuser@example.com",
+            "password": "Xt9#kP2@mN7$",
             "name": "New Test User",
             "tenant_slug": tenant.slug,
         })
@@ -35,7 +35,7 @@ class TestAuthRegistrationFlow:
         assert register_response.status_code == 201
         data = register_response.get_json()
         assert "user" in data
-        assert data["user"]["email"] == "newuser@integration.test"
+        assert data["user"]["email"] == "newuser@example.com"
         assert "id" in data["user"]
     
     def test_registration_duplicate_email(
@@ -50,7 +50,7 @@ class TestAuthRegistrationFlow:
         # Try to register with existing email
         response = integration_client.post("/api/v1/auth/register", json={
             "email": admin_user.email,
-            "password": "SecurePassword123!",
+            "password": "Xt9#kP2@mN7$",
             "name": "Duplicate User",
             "tenant_slug": tenant.slug,
         })
@@ -67,7 +67,7 @@ class TestAuthRegistrationFlow:
         tenant = seeded_tenant["tenant"]
         
         response = integration_client.post("/api/v1/auth/register", json={
-            "email": "weakpassword@integration.test",
+            "email": "weakpassword@example.com",
             "password": "weak",  # Too short
             "name": "Weak Password User",
             "tenant_slug": tenant.slug,
@@ -81,8 +81,8 @@ class TestAuthRegistrationFlow:
     ):
         """Test that registration with invalid tenant fails."""
         response = integration_client.post("/api/v1/auth/register", json={
-            "email": "novatenant@integration.test",
-            "password": "SecurePassword123!",
+            "email": "novatenant@example.com",
+            "password": "Xt9#kP2@mN7$",
             "name": "No Tenant User",
             "tenant_slug": "nonexistent-tenant",
         })
@@ -146,7 +146,7 @@ class TestAuthLoginFlow:
         tenant = seeded_tenant["tenant"]
         
         response = integration_client.post("/api/v1/auth/login", json={
-            "email": "nobody@integration.test",
+            "email": "nobody@example.com",
             "password": "TestPassword123!",
             "tenant_slug": tenant.slug,
         })
@@ -303,7 +303,7 @@ class TestAuthPasswordReset:
     ):
         """Test password reset for unknown email."""
         response = integration_client.post("/api/v1/auth/forgot-password", json={
-            "email": "unknown@integration.test",
+            "email": "unknown@example.com",
         })
         
         # Should return success to prevent email enumeration
@@ -324,7 +324,7 @@ class TestAuthRateLimiting:
         # Make multiple failed login attempts
         for i in range(6):
             response = integration_client.post("/api/v1/auth/login", json={
-                "email": f"brute-force-{i}@integration.test",
+                "email": f"brute-force-{i}@example.com",
                 "password": "WrongPassword123!",
                 "tenant_slug": tenant.slug,
             })
@@ -348,12 +348,12 @@ class TestAuthTenantIsolation:
         from app.extensions import db
         
         with integration_app.app_context():
-            # Create another tenant
+            # Create another tenant - use string values for enum columns
             other_tenant = Tenant(
                 name="Other Tenant",
                 slug="other-tenant",
-                plan=SubscriptionPlan.PROFESSIONAL,
-                status=TenantStatus.ACTIVE,
+                plan="professional",
+                status="active",
             )
             db.session.add(other_tenant)
             db.session.commit()

@@ -6,7 +6,8 @@ Role and permission CRUD operations within tenant scope.
 """
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from app.api.v1 import api_v1_bp
 from app.models.user import Role
 from app.extensions import db
@@ -36,7 +37,7 @@ def list_roles():
     Returns:
         List of roles with their permissions
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     # Get tenant-specific and global roles
@@ -63,7 +64,7 @@ def get_role(role_id: str):
     Returns:
         Role details with permissions
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     role = Role.query.filter(
@@ -95,7 +96,7 @@ def create_role():
     Returns:
         Created role details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     data = request.get_json()
@@ -164,7 +165,7 @@ def update_role(role_id: str):
     Returns:
         Updated role details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     role = Role.query.filter(
@@ -230,7 +231,7 @@ def delete_role(role_id: str):
     Returns:
         Success message
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     role = Role.query.filter(
@@ -327,7 +328,7 @@ def initialize_default_roles():
     Returns:
         List of created roles
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     created_roles = []

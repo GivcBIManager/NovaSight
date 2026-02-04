@@ -115,8 +115,25 @@ class TestingConfig(BaseConfig):
     DEBUG = True
     JSON_LOGS = False  # Human-readable logs in tests
     
-    # Use in-memory SQLite for faster tests
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    # Use PostgreSQL for tests to support JSONB, UUID, etc.
+    # Falls back to SQLite only if DATABASE_URL not set
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "TEST_DATABASE_URL",
+        os.getenv(
+            "DATABASE_URL",
+            "postgresql://novasight:novasight@localhost:5432/novasight_test"
+        )
+    )
+    
+    # Reduced pool for tests
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 5,
+        "pool_recycle": 3600,
+        "pool_pre_ping": True,
+    }
+    
+    # Disable rate limiting in tests
+    RATELIMIT_ENABLED = False
     
     # Disable JWT in tests by default (can be overridden)
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=5)

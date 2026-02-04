@@ -7,7 +7,8 @@ Flask-RESTX namespace for data connection endpoint documentation.
 
 from flask import request, jsonify
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from app.services.connection_service import ConnectionService
 from app.decorators import require_roles, require_tenant_context
 from app.errors import ValidationError, NotFoundError, ConnectionTestError
@@ -129,7 +130,7 @@ class ConnectionList(Resource):
         
         **Permissions Required:** Authenticated user
         """
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         page = request.args.get("page", 1, type=int)
@@ -166,7 +167,7 @@ class ConnectionList(Resource):
         
         **Permissions Required:** `data_engineer` or `tenant_admin` role
         """
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         data = request.get_json()
@@ -217,7 +218,7 @@ class ConnectionDetail(Resource):
         Returns the connection configuration. Password is never included
         in the response.
         """
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         connection_service = ConnectionService(tenant_id)
@@ -246,7 +247,7 @@ class ConnectionDetail(Resource):
         
         **Permissions Required:** `data_engineer` or `tenant_admin` role
         """
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         data = request.get_json()
         
@@ -280,7 +281,7 @@ class ConnectionDetail(Resource):
         
         **Permissions Required:** `data_engineer` or `tenant_admin` role
         """
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         connection_service = ConnectionService(tenant_id)
@@ -311,7 +312,7 @@ class ConnectionTest(Resource):
         
         **Note:** Does not sync any data - only tests connectivity.
         """
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         connection_service = ConnectionService(tenant_id)
@@ -346,7 +347,7 @@ class ConnectionSchema(Resource):
         **Note:** Large schemas may take several seconds to retrieve.
         Consider caching the response client-side.
         """
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         connection_service = ConnectionService(tenant_id)

@@ -6,7 +6,8 @@ User CRUD operations within tenant scope.
 """
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from app.api.v1 import api_v1_bp
 from app.services.user_service import UserService
 from app.decorators import require_roles, require_tenant_context
@@ -41,7 +42,7 @@ def list_users():
     Returns:
         Paginated list of users
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     page = request.args.get("page", 1, type=int)
@@ -80,7 +81,7 @@ def create_user():
     Returns:
         Created user details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     data = request.get_json()
     
@@ -120,7 +121,7 @@ def get_user(user_id: str):
     Returns:
         User details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     current_user_id = identity.get("user_id")
     roles = identity.get("roles", [])
@@ -160,7 +161,7 @@ def update_user(user_id: str):
     Returns:
         Updated user details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     current_user_id = identity.get("user_id")
     roles = identity.get("roles", [])
@@ -208,7 +209,7 @@ def delete_user(user_id: str):
     Returns:
         Success message
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     current_user_id = identity.get("user_id")
     
@@ -242,7 +243,7 @@ def get_user_permissions(user_id: str):
     Returns:
         List of permission strings
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     current_user_id = identity.get("user_id")
     roles = identity.get("roles", [])
@@ -281,7 +282,7 @@ def assign_user_roles(user_id: str):
     Returns:
         Updated user details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     data = request.get_json()
     
@@ -324,7 +325,7 @@ def change_user_password(user_id: str):
     Returns:
         Success message
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     current_user_id = identity.get("user_id")
     roles = identity.get("roles", [])

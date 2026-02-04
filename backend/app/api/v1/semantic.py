@@ -7,7 +7,8 @@ semantic models, dimensions, measures, relationships, and query execution.
 """
 
 from flask import request, g, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from pydantic import ValidationError
 import logging
 
@@ -43,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 def get_tenant_id():
     """Get tenant ID from JWT identity."""
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     return identity.get("tenant_id")
 
 

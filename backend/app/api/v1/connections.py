@@ -6,7 +6,8 @@ Database connection management for data sources.
 """
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from app.api.v1 import api_v1_bp
 from app.services.connection_service import ConnectionService
 from app.decorators import require_roles, require_tenant_context
@@ -32,7 +33,7 @@ def list_connections():
     Returns:
         Paginated list of connections (credentials masked)
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     page = request.args.get("page", 1, type=int)
@@ -70,7 +71,7 @@ def create_connection():
     Returns:
         Created connection details (password masked)
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     user_id = identity.get("user_id")
     data = request.get_json()
@@ -89,18 +90,21 @@ def create_connection():
         raise ValidationError(f"Invalid db_type. Must be one of: {', '.join(valid_db_types)}")
     
     connection_service = ConnectionService(tenant_id)
-    connection = connection_service.create_connection(
-        name=data["name"],
-        db_type=data["db_type"],
-        host=data["host"],
-        port=data["port"],
-        database=data["database"],
-        username=data["username"],
-        password=data["password"],
-        ssl_mode=data.get("ssl_mode"),
-        extra_params=data.get("extra_params", {}),
-        created_by=user_id,
-    )
+    try:
+        connection = connection_service.create_connection(
+            name=data["name"],
+            db_type=data["db_type"],
+            host=data["host"],
+            port=data["port"],
+            database=data["database"],
+            username=data["username"],
+            password=data["password"],
+            ssl_mode=data.get("ssl_mode"),
+            extra_params=data.get("extra_params", {}),
+            created_by=user_id,
+        )
+    except ValueError as e:
+        raise ValidationError(str(e))
     
     logger.info(f"Connection '{data['name']}' created in tenant {tenant_id}")
     
@@ -120,7 +124,7 @@ def get_connection(connection_id: str):
     Returns:
         Connection details (password masked)
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     connection_service = ConnectionService(tenant_id)
@@ -156,7 +160,7 @@ def update_connection(connection_id: str):
     Returns:
         Updated connection details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     data = request.get_json()
     
@@ -188,7 +192,7 @@ def delete_connection(connection_id: str):
     Returns:
         Success message
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     connection_service = ConnectionService(tenant_id)
@@ -216,7 +220,7 @@ def test_connection(connection_id: str):
     Returns:
         Connection test result
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     connection_service = ConnectionService(tenant_id)
@@ -256,7 +260,7 @@ def test_new_connection():
     Returns:
         Connection test result
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     data = request.get_json()
     
@@ -310,7 +314,7 @@ def get_connection_schema(connection_id: str):
     Returns:
         Database schema information (tables, columns, types)
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     schema_name = request.args.get("schema_name")
@@ -348,7 +352,7 @@ def trigger_connection_sync(connection_id: str):
     Returns:
         Job information with job_id and status
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     data = request.get_json() or {}

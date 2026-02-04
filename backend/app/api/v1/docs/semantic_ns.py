@@ -7,7 +7,8 @@ Flask-RESTX namespace for semantic layer endpoint documentation.
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from app.decorators import require_tenant_context
 from app.middleware.permissions import require_permission
 import logging
@@ -170,7 +171,7 @@ class SemanticModelList(Resource):
         """
         from app.services.semantic_service import SemanticService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
@@ -211,7 +212,7 @@ class SemanticModelList(Resource):
         from pydantic import ValidationError
         from app.schemas.semantic_schemas import SemanticModelCreateSchema
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         try:
@@ -245,7 +246,7 @@ class SemanticModelDetail(Resource):
         """
         from app.services.semantic_service import SemanticService, ModelNotFoundError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         try:
@@ -271,7 +272,7 @@ class SemanticModelDetail(Resource):
         """
         from app.services.semantic_service import SemanticService, ModelNotFoundError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         try:
@@ -379,7 +380,7 @@ class RelationshipList(Resource):
         """
         from app.services.semantic_service import SemanticService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         
         relationships = SemanticService.list_relationships(tenant_id)

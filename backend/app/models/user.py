@@ -178,13 +178,16 @@ class User(db.Model):
     
     def to_dict(self, include_roles: bool = True) -> dict:
         """Convert user to dictionary."""
+        # Handle status as either Enum or string
+        status_value = self.status.value if hasattr(self.status, 'value') else str(self.status)
+        
         result = {
             "id": str(self.id),
             "tenant_id": str(self.tenant_id),
             "email": self.email,
             "name": self.name,
             "avatar_url": self.avatar_url,
-            "status": self.status.value,
+            "status": status_value,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
             "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
@@ -195,4 +198,4 @@ class User(db.Model):
     
     def is_active(self) -> bool:
         """Check if user is active."""
-        return self.status == UserStatus.ACTIVE
+        return self.status == UserStatus.ACTIVE or self.status == UserStatus.ACTIVE.value

@@ -6,7 +6,8 @@ REST API for PySpark application configuration and code generation.
 """
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from pydantic import ValidationError as PydanticValidationError
 
 from app.api.v1 import api_v1_bp
@@ -41,7 +42,7 @@ def list_pyspark_apps():
     Returns:
         Paginated list of PySpark apps
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     page = request.args.get("page", 1, type=int)
@@ -89,7 +90,7 @@ def create_pyspark_app():
     Returns:
         Created PySpark app details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     user_id = identity.get("user_id")
     
@@ -146,7 +147,7 @@ def get_pyspark_app(app_id: str):
     Returns:
         PySpark app details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     include_code = request.args.get("include_code", "false").lower() == "true"
     
@@ -176,7 +177,7 @@ def update_pyspark_app(app_id: str):
     Returns:
         Updated PySpark app details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     data = request.get_json()
@@ -227,7 +228,7 @@ def delete_pyspark_app(app_id: str):
     Returns:
         Success message
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     service = PySparkAppService(tenant_id)
@@ -250,7 +251,7 @@ def generate_pyspark_code(app_id: str):
     Returns:
         Generated code and metadata
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     service = PySparkAppService(tenant_id)
@@ -278,7 +279,7 @@ def get_pyspark_code(app_id: str):
     Returns:
         Generated code and metadata
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     service = PySparkAppService(tenant_id)
@@ -312,7 +313,7 @@ def preview_pyspark_code():
     Returns:
         Generated code preview and metadata
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     data = request.get_json()
@@ -369,7 +370,7 @@ def validate_pyspark_query():
     Returns:
         Validation result with columns
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     data = request.get_json()

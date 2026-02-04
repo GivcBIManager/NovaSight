@@ -6,7 +6,8 @@ Apache Airflow DAG configuration and monitoring.
 """
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from app.api.v1 import api_v1_bp
 from app.services.dag_service import DagService
 from app.decorators import require_roles, require_tenant_context
@@ -32,7 +33,7 @@ def list_dags():
     Returns:
         Paginated list of DAG configurations
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     page = request.args.get("page", 1, type=int)
@@ -71,7 +72,7 @@ def create_dag():
     Returns:
         Created DAG configuration
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     user_id = identity.get("user_id")
     data = request.get_json()
@@ -129,7 +130,7 @@ def get_dag(dag_id: str):
     Returns:
         DAG configuration details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     include_runs = request.args.get("include_runs", "false").lower() == "true"
@@ -160,7 +161,7 @@ def update_dag(dag_id: str):
     Returns:
         Updated DAG configuration
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     user_id = identity.get("user_id")
     data = request.get_json()
@@ -193,7 +194,7 @@ def delete_dag(dag_id: str):
     Returns:
         Success message
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     dag_service = DagService(tenant_id)
@@ -221,7 +222,7 @@ def validate_dag(dag_id: str):
     Returns:
         Validation results (errors, warnings)
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     dag_service = DagService(tenant_id)
@@ -247,7 +248,7 @@ def deploy_dag(dag_id: str):
     Returns:
         Deployment result
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     user_id = identity.get("user_id")
     
@@ -282,7 +283,7 @@ def trigger_dag(dag_id: str):
     Returns:
         Triggered run details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     data = request.get_json() or {}
     
@@ -314,7 +315,7 @@ def pause_dag(dag_id: str):
     Returns:
         Updated DAG status
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     dag_service = DagService(tenant_id)
@@ -342,7 +343,7 @@ def unpause_dag(dag_id: str):
     Returns:
         Updated DAG status
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     dag_service = DagService(tenant_id)
@@ -374,7 +375,7 @@ def list_dag_runs(dag_id: str):
     Returns:
         Paginated list of DAG runs
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     page = request.args.get("page", 1, type=int)
@@ -404,7 +405,7 @@ def get_dag_run(dag_id: str, run_id: str):
     Returns:
         DAG run details with task instances
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     dag_service = DagService(tenant_id)
@@ -434,7 +435,7 @@ def get_task_logs(dag_id: str, run_id: str, task_id: str):
     Returns:
         Task execution logs
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     try_number = request.args.get("try_number", type=int)
@@ -502,7 +503,7 @@ def generate_pyspark_dag():
             }
         }
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     data = request.get_json()
@@ -570,7 +571,7 @@ def generate_pyspark_pipeline_dag():
             "description": "Daily data ingestion pipeline"
         }
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     data = request.get_json()
@@ -626,7 +627,7 @@ def list_pyspark_dags():
             - is_pipeline: True if this is a multi-app pipeline DAG
             - created_at: Creation timestamp
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     generator = _get_pyspark_dag_generator(tenant_id)
@@ -648,7 +649,7 @@ def get_pyspark_dag(dag_id: str):
     Returns:
         DAG information including schedule and job count
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     generator = _get_pyspark_dag_generator(tenant_id)
@@ -674,7 +675,7 @@ def delete_pyspark_dag(dag_id: str):
     Returns:
         Success message
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     generator = _get_pyspark_dag_generator(tenant_id)
@@ -707,7 +708,7 @@ def update_pyspark_dag_schedule(dag_id: str):
             "schedule": "@daily"
         }
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     tenant_id = identity.get("tenant_id")
     
     data = request.get_json()

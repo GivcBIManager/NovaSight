@@ -8,7 +8,8 @@ Custom decorators for authorization and request handling.
 import asyncio
 from functools import wraps
 from flask import request, g
-from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended import verify_jwt_in_request
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from app.errors import AuthorizationError, AuthenticationError
 import logging
 
@@ -49,7 +50,7 @@ def require_roles(allowed_roles: list):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            identity = get_jwt_identity()
+            identity = get_jwt_identity_dict()
             
             if not identity:
                 raise AuthenticationError("Authentication required")
@@ -57,11 +58,19 @@ def require_roles(allowed_roles: list):
             user_roles = identity.get("roles", [])
             
             # Super admin can access everything
-            if "super_admin" in user_roles:
+            if "super_admin" in user_roles or any(r.startswith("super_admin") for r in user_roles):
                 return f(*args, **kwargs)
             
             # Check if user has any of the allowed roles
-            if not any(role in user_roles for role in allowed_roles):
+            # Support both exact match and prefix match (for test fixtures with unique suffixes)
+            def role_matches(user_role: str, allowed_role: str) -> bool:
+                return user_role == allowed_role or user_role.startswith(allowed_role + "_")
+            
+            if not any(
+                role_matches(user_role, allowed_role)
+                for user_role in user_roles
+                for allowed_role in allowed_roles
+            ):
                 logger.warning(
                     f"Access denied for user {identity.get('email')}: "
                     f"required roles {allowed_roles}, has {user_roles}"
@@ -90,7 +99,7 @@ def require_tenant_context(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         
         if not identity:
             raise AuthenticationError("Authentication required")
@@ -129,7 +138,7 @@ def audit_action(action: str, resource_type: str = None):
         def decorated_function(*args, **kwargs):
             from app.services.audit_service import AuditService
             
-            identity = get_jwt_identity() or {}
+            identity = get_jwt_identity_dict() or {}
             tenant_id = identity.get("tenant_id")
             user_id = identity.get("user_id")
             

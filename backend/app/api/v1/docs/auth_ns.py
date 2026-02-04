@@ -233,7 +233,7 @@ class Refresh(Resource):
         
         **Note:** Refresh tokens have a 7-day expiry.
         """
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         access_token = create_access_token(identity=identity)
         
         return {
@@ -254,7 +254,7 @@ class CurrentUser(Resource):
         
         Returns the user profile from the current JWT token.
         """
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         
         return {
             "id": identity.get("user_id"),
@@ -277,7 +277,7 @@ class Logout(Resource):
         Blacklists the current JWT token, preventing further use.
         The user will need to login again to get new tokens.
         """
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         jwt_data = get_jwt()
         jti = jwt_data.get("jti")
         
@@ -326,7 +326,7 @@ class ChangePassword(Resource):
         if not current_password or not new_password:
             raise ValidationError("Current password and new password are required")
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         user_id = identity.get("user_id")
         
         auth_service = AuthService()

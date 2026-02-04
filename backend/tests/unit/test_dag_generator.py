@@ -10,7 +10,8 @@ import json
 from pathlib import Path
 from unittest.mock import Mock, MagicMock, patch, mock_open
 from app.services.dag_generator import DagGenerator
-from app.models.connection import DataSource, DataSourceTable
+from app.models.connection import DataConnection
+from app.models.data_source import DataSourceTable
 from app.services.airflow_client import AirflowClient
 
 
@@ -38,36 +39,39 @@ def dag_generator(mock_airflow_client):
 @pytest.fixture
 def sample_datasource():
     """Sample PostgreSQL datasource."""
-    return DataSource(
-        id="datasource-456",
-        tenant_id="test-tenant-123",
-        name="Test PostgreSQL DB",
-        type="postgresql",
-        host="localhost",
-        port=5432,
-        database="testdb",
-        username="testuser",
-        sync_frequency="@hourly"
-    )
+    # Create a Mock object since DataSource is not a real model
+    datasource = Mock()
+    datasource.id = "datasource-456"
+    datasource.tenant_id = "test-tenant-123"
+    datasource.name = "Test PostgreSQL DB"
+    # Create a mock enum-like type with .value attribute
+    type_mock = Mock()
+    type_mock.value = "postgresql"
+    datasource.type = type_mock
+    datasource.host = "localhost"
+    datasource.port = 5432
+    datasource.database = "testdb"
+    datasource.username = "testuser"
+    datasource.sync_frequency = "@hourly"
+    return datasource
 
 
 @pytest.fixture
 def sample_tables():
-    """Sample tables configuration."""
-    return [
-        DataSourceTable(
-            source_name="public.users",
-            target_name="users",
-            incremental_column="updated_at",
-            primary_keys=["id"]
-        ),
-        DataSourceTable(
-            source_name="public.orders",
-            target_name="orders",
-            incremental_column=None,
-            primary_keys=["order_id"]
-        ),
-    ]
+    """Sample tables configuration for DAG generator (uses Mock for expected interface)."""
+    table1 = Mock()
+    table1.source_name = "public.users"
+    table1.target_name = "users"
+    table1.incremental_column = "updated_at"
+    table1.primary_keys = ["id"]
+    
+    table2 = Mock()
+    table2.source_name = "public.orders"
+    table2.target_name = "orders"
+    table2.incremental_column = None
+    table2.primary_keys = ["order_id"]
+    
+    return [table1, table2]
 
 
 class TestDagGenerator:
@@ -145,10 +149,10 @@ class TestDagGenerator:
             schedule="@hourly"
         )
         
-        # Get config file write call
+        # Get config file write call (config is the second write, starts with '{')
         config_call = [
             call for call in mock_write_text.call_args_list
-            if 'config.json' in str(call)
+            if call[0][0].strip().startswith('{')
         ][0]
         
         config_content = config_call[0][0]
@@ -189,10 +193,10 @@ class TestDagGenerator:
             schedule="@daily"
         )
         
-        # Get DAG file write call
+        # Get DAG file write call (DAG is Python code, starts with '"""')
         dag_call = [
             call for call in mock_write_text.call_args_list
-            if '.py' in str(call) and 'config.json' not in str(call)
+            if call[0][0].strip().startswith('"""')
         ][0]
         
         dag_content = dag_call[0][0]
@@ -274,10 +278,10 @@ class TestDagGenerator:
             schedule="0 */6 * * *"  # Every 6 hours
         )
         
-        # Get DAG content
+        # Get DAG content (DAG is Python code, starts with '"""')
         dag_call = [
             call for call in mock_write_text.call_args_list
-            if '.py' in str(call) and 'config.json' not in str(call)
+            if call[0][0].strip().startswith('"""')
         ][0]
         dag_content = dag_call[0][0]
         
@@ -285,16 +289,18 @@ class TestDagGenerator:
     
     def test_generate_with_mysql_datasource(self, dag_generator, sample_tables, mock_airflow_client):
         """Test DAG generation for MySQL datasource."""
-        mysql_datasource = DataSource(
-            id="mysql-123",
-            tenant_id="test-tenant-123",
-            name="MySQL DB",
-            type="mysql",
-            host="mysql.example.com",
-            port=3306,
-            database="mydb",
-            username="mysql_user"
-        )
+        mysql_datasource = Mock()
+        mysql_datasource.id = "mysql-123"
+        mysql_datasource.tenant_id = "test-tenant-123"
+        mysql_datasource.name = "MySQL DB"
+        # Create mock type with .value attribute for enum-like behavior
+        type_mock = Mock()
+        type_mock.value = "mysql"
+        mysql_datasource.type = type_mock
+        mysql_datasource.host = "mysql.example.com"
+        mysql_datasource.port = 3306
+        mysql_datasource.database = "mydb"
+        mysql_datasource.username = "mysql_user"
         
         with patch('pathlib.Path.write_text'), patch('pathlib.Path.mkdir'):
             dag_generator.generate_ingestion_dag(
@@ -324,10 +330,10 @@ class TestDagGenerator:
             schedule="@hourly"
         )
         
-        # Get DAG content
+        # Get DAG content (DAG is Python code, starts with '"""')
         dag_call = [
             call for call in mock_write_text.call_args_list
-            if '.py' in str(call) and 'config.json' not in str(call)
+            if call[0][0].strip().startswith('"""')
         ][0]
         dag_content = dag_call[0][0]
         
@@ -370,14 +376,12 @@ class TestTableConfiguration:
     @patch('pathlib.Path.mkdir')
     def test_incremental_table_config(self, mock_mkdir, mock_write_text, dag_generator, sample_datasource):
         """Test incremental table configuration."""
-        tables = [
-            DataSourceTable(
-                source_name="public.events",
-                target_name="events",
-                incremental_column="event_time",
-                primary_keys=["event_id"]
-            )
-        ]
+        table = Mock()
+        table.source_name = "public.events"
+        table.target_name = "events"
+        table.incremental_column = "event_time"
+        table.primary_keys = ["event_id"]
+        tables = [table]
         
         dag_generator.generate_ingestion_dag(
             datasource=sample_datasource,
@@ -385,10 +389,10 @@ class TestTableConfiguration:
             schedule="@hourly"
         )
         
-        # Get config
+        # Get config (config is JSON, starts with '{')
         config_call = [
             call for call in mock_write_text.call_args_list
-            if 'config.json' in str(call)
+            if call[0][0].strip().startswith('{')
         ][0]
         config = json.loads(config_call[0][0])
         
@@ -400,14 +404,12 @@ class TestTableConfiguration:
     @patch('pathlib.Path.mkdir')
     def test_full_refresh_table_config(self, mock_mkdir, mock_write_text, dag_generator, sample_datasource):
         """Test full refresh table configuration."""
-        tables = [
-            DataSourceTable(
-                source_name="public.static_data",
-                target_name="static_data",
-                incremental_column=None,  # No incremental column
-                primary_keys=["id"]
-            )
-        ]
+        table = Mock()
+        table.source_name = "public.static_data"
+        table.target_name = "static_data"
+        table.incremental_column = None  # No incremental column = full refresh
+        table.primary_keys = ["id"]
+        tables = [table]
         
         dag_generator.generate_ingestion_dag(
             datasource=sample_datasource,
@@ -415,10 +417,10 @@ class TestTableConfiguration:
             schedule="@daily"
         )
         
-        # Get config
+        # Get config (config is JSON, starts with '{')
         config_call = [
             call for call in mock_write_text.call_args_list
-            if 'config.json' in str(call)
+            if call[0][0].strip().startswith('{')
         ][0]
         config = json.loads(config_call[0][0])
         

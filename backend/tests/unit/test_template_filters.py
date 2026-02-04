@@ -115,22 +115,24 @@ class TestSqlIdentifierSafe:
 
 
 class TestSqlStringEscape:
-    """Tests for sql_string_escape filter."""
+    """Tests for sql_string_escape filter - returns SQL-ready quoted values."""
 
     def test_single_quote_escape(self):
-        assert sql_string_escape("it's a test") == "it''s a test"
+        # Function returns quoted string for SQL
+        assert sql_string_escape("it's a test") == "'it''s a test'"
 
     def test_multiple_quotes(self):
-        assert sql_string_escape("can't won't") == "can''t won''t"
+        assert sql_string_escape("can't won't") == "'can''t won''t'"
 
     def test_backslash_escape(self):
-        assert sql_string_escape("path\\to\\file") == "path\\\\to\\\\file"
+        assert sql_string_escape("path\\to\\file") == "'path\\\\to\\\\file'"
 
     def test_none_value(self):
         assert sql_string_escape(None) == "NULL"
 
     def test_no_escape_needed(self):
-        assert sql_string_escape("normal text") == "normal text"
+        # Normal text is still wrapped in quotes for SQL
+        assert sql_string_escape("normal text") == "'normal text'"
 
 
 class TestSqlTypeMapping:

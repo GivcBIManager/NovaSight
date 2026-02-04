@@ -34,44 +34,36 @@ export function DashboardPage() {
 
   const stats = [
     {
-      title: 'Data Connections',
+      label: 'Data Connections',
       value: 8,
-      change: '+2 this month',
-      changeValue: 25,
-      trend: 'up' as const,
+      trendPercent: 25,
       icon: Database,
-      iconColor: 'text-accent-indigo',
-      sparkline: [4, 5, 6, 5, 7, 6, 8],
+      iconColor: 'indigo' as const,
+      sparklineData: [4, 5, 6, 5, 7, 6, 8],
     },
     {
-      title: 'Active DAGs',
+      label: 'Active DAGs',
       value: 12,
-      change: '3 running now',
-      changeValue: 10,
-      trend: 'up' as const,
+      trendPercent: 10,
       icon: GitBranch,
-      iconColor: 'text-neon-green',
-      sparkline: [10, 11, 10, 12, 11, 12, 12],
+      iconColor: 'green' as const,
+      sparklineData: [10, 11, 10, 12, 11, 12, 12],
     },
     {
-      title: 'Jobs Today',
+      label: 'Jobs Today',
       value: 47,
-      change: '95% success rate',
-      changeValue: 15,
-      trend: 'up' as const,
+      trendPercent: 15,
       icon: Activity,
-      iconColor: 'text-accent-purple',
-      sparkline: [30, 35, 42, 38, 45, 43, 47],
+      iconColor: 'purple' as const,
+      sparklineData: [30, 35, 42, 38, 45, 43, 47],
     },
     {
-      title: 'Alerts',
+      label: 'Alerts',
       value: 2,
-      change: '1 critical',
-      changeValue: -50,
-      trend: 'down' as const,
+      trendPercent: -50,
       icon: AlertTriangle,
-      iconColor: 'text-orange-500',
-      sparkline: [5, 4, 3, 4, 2, 3, 2],
+      iconColor: 'pink' as const,
+      sparklineData: [5, 4, 3, 4, 2, 3, 2],
     },
   ];
 
@@ -165,18 +157,16 @@ export function DashboardPage() {
         {/* Stats Grid */}
         <motion.div variants={fadeVariants}>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat, index) => (
+            {stats.map((stat) => (
               <MetricCard
-                key={stat.title}
-                title={stat.title}
+                key={stat.label}
+                label={stat.label}
                 value={stat.value}
-                changeValue={stat.changeValue}
-                trend={stat.trend}
-                icon={<stat.icon className="h-5 w-5" />}
+                trendPercent={stat.trendPercent}
+                icon={stat.icon}
                 iconColor={stat.iconColor}
-                sparklineData={stat.sparkline}
-                animateValue
-                delay={index * 0.1}
+                sparklineData={stat.sparklineData}
+                animated
               />
             ))}
           </div>

@@ -7,7 +7,8 @@ Flask-RESTX namespace for dashboard and widget endpoint documentation.
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from app.decorators import require_tenant_context
 from app.middleware.permissions import require_permission
 import logging
@@ -166,7 +167,7 @@ class DashboardList(Resource):
         """
         from app.services.dashboard_service import DashboardService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -210,7 +211,7 @@ class DashboardList(Resource):
         from app.schemas.dashboard_schemas import DashboardCreateSchema
         from pydantic import ValidationError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -255,7 +256,7 @@ class DashboardDetail(Resource):
         """
         from app.services.dashboard_service import DashboardService, DashboardNotFoundError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -289,7 +290,7 @@ class DashboardDetail(Resource):
         """
         from app.services.dashboard_service import DashboardService, DashboardNotFoundError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -322,7 +323,7 @@ class DashboardDetail(Resource):
         """
         from app.services.dashboard_service import DashboardService, DashboardNotFoundError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -365,7 +366,7 @@ class DashboardLayout(Resource):
         from app.schemas.dashboard_schemas import DashboardLayoutUpdateSchema
         from pydantic import ValidationError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -408,7 +409,7 @@ class DashboardSharing(Resource):
         from app.schemas.dashboard_schemas import DashboardShareSchema
         from pydantic import ValidationError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -442,7 +443,7 @@ class WidgetList(Resource):
         """
         from app.services.dashboard_service import DashboardService
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -483,7 +484,7 @@ class WidgetList(Resource):
         from app.schemas.dashboard_schemas import WidgetCreateSchema
         from pydantic import ValidationError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -517,7 +518,7 @@ class WidgetDetail(Resource):
         """
         from app.services.dashboard_service import DashboardService, WidgetNotFoundError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -547,7 +548,7 @@ class WidgetDetail(Resource):
         """
         from app.services.dashboard_service import DashboardService, WidgetNotFoundError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -574,7 +575,7 @@ class WidgetDetail(Resource):
         """
         from app.services.dashboard_service import DashboardService, WidgetNotFoundError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         
@@ -608,7 +609,7 @@ class WidgetData(Resource):
         """
         from app.services.dashboard_service import DashboardService, WidgetNotFoundError
         
-        identity = get_jwt_identity()
+        identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
         user_id = identity.get("user_id")
         

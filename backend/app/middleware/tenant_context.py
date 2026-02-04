@@ -7,7 +7,8 @@ Ensures complete data isolation between tenants.
 """
 
 from flask import Flask, g, request, abort
-from flask_jwt_extended import verify_jwt_in_request, get_jwt, get_jwt_identity
+from flask_jwt_extended import verify_jwt_in_request, get_jwt
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from sqlalchemy import text
 from functools import wraps
 from typing import Optional, List
@@ -25,14 +26,19 @@ PUBLIC_ENDPOINTS = frozenset([
     "api_v1.login",
     "api_v1.register",
     "api_v1.refresh",
+    "api_v1.forgot_password",
+    "api_v1.reset_password",
 ])
 
 # Path prefixes for public endpoints
 PUBLIC_PATH_PREFIXES = (
     "/health",
+    "/ready",
     "/api/v1/auth/login",
     "/api/v1/auth/register",
     "/api/v1/auth/refresh",
+    "/api/v1/auth/forgot-password",
+    "/api/v1/auth/reset-password",
 )
 
 
@@ -75,7 +81,7 @@ class TenantContextMiddleware:
             # Verify JWT and extract claims
             verify_jwt_in_request()
             claims = get_jwt()
-            identity = get_jwt_identity()
+            identity = get_jwt_identity_dict()
             
             tenant_id = None
             if isinstance(identity, dict):
@@ -95,7 +101,8 @@ class TenantContextMiddleware:
                 logger.warning(f"Tenant not found: {tenant_id}")
                 abort(401, description="Invalid tenant")
             
-            if tenant.status != TenantStatus.ACTIVE:
+            # Check tenant status - compare with string value since DB stores as string
+            if tenant.status != TenantStatus.ACTIVE.value and tenant.status != TenantStatus.ACTIVE:
                 logger.warning(f"Inactive tenant access attempt: {tenant.slug}")
                 abort(401, description="Tenant is not active")
             

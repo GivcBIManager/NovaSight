@@ -6,7 +6,8 @@ Multi-tenant administration endpoints.
 """
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from app.api.v1 import api_v1_bp
 from app.services.tenant_service import TenantService
 from app.decorators import require_roles
@@ -93,7 +94,7 @@ def get_tenant(tenant_id: str):
     Returns:
         Tenant details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     
     # Tenant admins can only view their own tenant
     if "super_admin" not in identity.get("roles", []):
@@ -127,7 +128,7 @@ def update_tenant(tenant_id: str):
     Returns:
         Updated tenant details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     data = request.get_json()
     
     if not data:

@@ -74,12 +74,15 @@ class Tenant(db.Model):
     
     def to_dict(self, include_settings: bool = True) -> dict:
         """Convert tenant to dictionary."""
+        # Handle both enum and string values
+        plan_value = self.plan.value if hasattr(self.plan, 'value') else str(self.plan)
+        status_value = self.status.value if hasattr(self.status, 'value') else str(self.status)
         result = {
             "id": str(self.id),
             "name": self.name,
             "slug": self.slug,
-            "plan": self.plan.value,
-            "status": self.status.value,
+            "plan": plan_value,
+            "status": status_value,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
@@ -94,4 +97,7 @@ class Tenant(db.Model):
     
     def is_active(self) -> bool:
         """Check if tenant is active."""
-        return self.status == TenantStatus.ACTIVE
+        # Handle both enum and string values
+        if hasattr(self.status, 'value'):
+            return self.status == TenantStatus.ACTIVE
+        return str(self.status).lower() == 'active'

@@ -58,7 +58,7 @@ def sample_tenant(db_session) -> Tenant:
         name="Test Tenant",
         slug="test-tenant",
         plan="professional",
-        status=TenantStatus.ACTIVE,
+        status="active",  # Use string value, not enum
         settings={"timezone": "UTC"}
     )
     db_session.add(tenant)
@@ -75,7 +75,7 @@ def sample_user(db_session, sample_tenant) -> User:
         tenant_id=sample_tenant.id,
         email="test@example.com",
         name="Test User",
-        status=UserStatus.ACTIVE,
+        status="active",  # Use string value, not enum
         password_hash=password_service.hash("TestPassword123!")
     )
     db_session.add(user)

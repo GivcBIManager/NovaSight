@@ -10,9 +10,9 @@ from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
     jwt_required,
-    get_jwt_identity,
     get_jwt,
 )
+from app.middleware.jwt_handlers import get_jwt_identity_dict
 from pydantic import ValidationError as PydanticValidationError
 from app.api.v1 import api_v1_bp
 from app.services.auth_service import AuthService
@@ -152,7 +152,7 @@ def refresh():
     Returns:
         New JWT access token
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     access_token = create_access_token(identity=identity)
     
     return jsonify({
@@ -170,7 +170,7 @@ def get_current_user():
     Returns:
         Current user details
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     
     return jsonify({
         "user": {
@@ -191,7 +191,7 @@ def logout():
     Returns:
         Success message
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     jwt_data = get_jwt()
     jti = jwt_data.get("jti")
     
@@ -220,7 +220,7 @@ def logout_all():
     Returns:
         Success message
     """
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     
     # In a production system, you would:
     # 1. Increment user's token version in database
@@ -258,7 +258,7 @@ def change_password():
     if not current_password or not new_password:
         raise ValidationError("Current password and new password are required")
     
-    identity = get_jwt_identity()
+    identity = get_jwt_identity_dict()
     user_id = identity.get("user_id")
     
     # Get user from database
