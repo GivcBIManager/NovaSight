@@ -6,6 +6,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { pysparkApi } from '@/services/pysparkApi'
+import { useAuthStore } from '@/store/authStore'
 import type {
   PySparkAppCreate,
   PySparkAppUpdate,
@@ -35,9 +36,20 @@ export const pysparkKeys = {
  * Hook to list PySpark apps
  */
 export function usePySparkApps(params: ListPySparkAppsParams = {}) {
+  const { isAuthenticated, accessToken } = useAuthStore()
+  
+  // Check localStorage directly as fallback - this is what apiClient uses
+  const localStorageToken = typeof window !== 'undefined' 
+    ? localStorage.getItem('novasight_access_token') 
+    : null
+  
+  // Enable query if we have a token (either in store or localStorage)
+  const isEnabled = !!localStorageToken || (isAuthenticated && !!accessToken)
+
   return useQuery({
     queryKey: pysparkKeys.list(params),
     queryFn: () => pysparkApi.list(params),
+    enabled: isEnabled,
   })
 }
 

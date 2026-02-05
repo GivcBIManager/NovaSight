@@ -17,7 +17,7 @@ data:
   # Database hosts (constructed from dependencies)
   POSTGRES_HOST: {{ include "novasight.postgresql.host" . | quote }}
   POSTGRES_PORT: {{ include "novasight.postgresql.port" . | quote }}
-  POSTGRES_DB: {{ .Values.postgresql.auth.database | default "novasight" | quote }}
+  POSTGRES_DB: {{ .Values.postgresql.auth.database | default "novasight_platform" | quote }}
   
   # Redis configuration
   REDIS_HOST: {{ include "novasight.redis.host" . | quote }}

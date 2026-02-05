@@ -27,7 +27,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U novasight"]
+      test: ["CMD-SHELL", "pg_isready -U novasight -d novasight_platform"]
       interval: 10s
       timeout: 5s
       retries: 5

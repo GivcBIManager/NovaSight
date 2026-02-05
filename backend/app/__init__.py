@@ -6,7 +6,7 @@ Self-Service End-to-End BI Solution Backend API.
 Flask-based REST API with multi-tenant architecture.
 """
 
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -67,7 +67,14 @@ def _init_extensions(app: Flask) -> None:
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    CORS(app, resources={r"/api/*": {"origins": app.config.get("CORS_ORIGINS", "*")}})
+    
+    # Configure CORS with explicit settings for preflight requests
+    CORS(app, 
+         resources={r"/api/*": {"origins": app.config.get("CORS_ORIGINS", "*")}},
+         supports_credentials=True,
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+         expose_headers=["Content-Type", "Authorization"])
     
     # Initialize Redis if configured
     if app.config.get("REDIS_URL"):
@@ -75,7 +82,12 @@ def _init_extensions(app: Flask) -> None:
         # Use Redis for rate limiting in production
         limiter._storage_uri = app.config.get("REDIS_URL")
     
-    # Initialize rate limiter
+    # Initialize rate limiter with OPTIONS exemption
+    @limiter.request_filter
+    def _rate_limit_exempt():
+        """Exempt OPTIONS requests from rate limiting (CORS preflight)."""
+        return request.method == "OPTIONS"
+    
     limiter.init_app(app)
     
     # Register JWT handlers (callbacks for token blacklist, etc.)

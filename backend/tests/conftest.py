@@ -46,9 +46,21 @@ def db_session(app: Flask) -> Generator:
         
         yield db.session
         
-        # Rollback and cleanup
-        db.session.rollback()
-        db.drop_all()
+        # Cleanup: close all sessions first to release locks
+        db.session.remove()
+        
+        # Drop tables in correct order to avoid FK constraint issues
+        # Use raw SQL with CASCADE for reliable cleanup
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("SET session_replication_role = 'replica';"))
+            db.drop_all()
+            db.session.execute(text("SET session_replication_role = 'origin';"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            # Fallback: drop with CASCADE
+            db.drop_all()
 
 
 @pytest.fixture

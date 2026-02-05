@@ -331,7 +331,7 @@ postgresql:
     postgresPassword: ""  # Set via --set or secrets
     username: novasight
     password: ""  # Set via --set or secrets
-    database: novasight
+    database: novasight_platform
   
   primary:
     resources:

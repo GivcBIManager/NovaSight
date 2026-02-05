@@ -48,26 +48,23 @@ class TestRateLimiting:
 class TestSecurityHeaders:
     """Tests for security headers."""
     
-    def test_cors_headers(self, integration_client: FlaskClient, api_headers):
+    def test_cors_headers(self, integration_client: FlaskClient):
         """Test CORS headers are properly set."""
         response = integration_client.options(
             "/api/v1/dashboards",
             headers={
-                **api_headers,
                 "Origin": "http://localhost:3000",
-                "Access-Control-Request-Method": "GET"
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "Content-Type, Authorization"
             }
         )
         
         # Should have CORS headers or not require them
         assert response.status_code in [200, 204, 404]
     
-    def test_content_type_header(self, integration_client: FlaskClient, api_headers):
+    def test_content_type_header(self, integration_client: FlaskClient):
         """Test Content-Type is set correctly."""
-        response = integration_client.get(
-            "/api/v1/health",
-            headers=api_headers
-        )
+        response = integration_client.get("/api/v1/health")
         
         assert response.content_type in [
             'application/json',
@@ -75,12 +72,12 @@ class TestSecurityHeaders:
         ]
     
     def test_no_cache_for_authenticated_endpoints(
-        self, integration_client: FlaskClient, api_headers
+        self, integration_client: FlaskClient, auth_headers
     ):
         """Test that authenticated endpoints have appropriate cache headers."""
         response = integration_client.get(
             "/api/v1/auth/me",
-            headers=api_headers
+            headers=auth_headers
         )
         
         # Should have no-cache or similar
@@ -180,7 +177,7 @@ class TestJWTSecurity:
 class TestInputValidation:
     """Tests for input validation security."""
     
-    def test_oversized_request_rejected(self, integration_client: FlaskClient, api_headers):
+    def test_oversized_request_rejected(self, integration_client: FlaskClient, auth_headers):
         """Test that oversized requests are rejected."""
         # Create large payload
         large_payload = {
@@ -191,26 +188,26 @@ class TestInputValidation:
         response = integration_client.post(
             "/api/v1/dashboards",
             json=large_payload,
-            headers=api_headers
+            headers=auth_headers
         )
         
         # Should be rejected (413 or 400)
         assert response.status_code in [400, 413, 422, 401]
     
-    def test_invalid_json_rejected(self, integration_client: FlaskClient, api_headers):
+    def test_invalid_json_rejected(self, integration_client: FlaskClient, auth_headers):
         """Test that invalid JSON is rejected."""
         response = integration_client.post(
             "/api/v1/dashboards",
             data="{ invalid json }",
             headers={
-                **api_headers,
+                **auth_headers,
                 "Content-Type": "application/json"
             }
         )
         
         assert response.status_code in [400, 422, 401]
     
-    def test_null_bytes_rejected(self, integration_client: FlaskClient, api_headers):
+    def test_null_bytes_rejected(self, integration_client: FlaskClient, auth_headers):
         """Test that null bytes in input are handled."""
         response = integration_client.post(
             "/api/v1/dashboards",
@@ -218,13 +215,13 @@ class TestInputValidation:
                 "name": "Test\x00Dashboard",
                 "description": "Description with null\x00byte"
             },
-            headers=api_headers
+            headers=auth_headers
         )
         
         # Should either sanitize or reject
         assert response.status_code in [200, 201, 400, 422, 401]
     
-    def test_unicode_normalization(self, integration_client: FlaskClient, api_headers):
+    def test_unicode_normalization(self, integration_client: FlaskClient, auth_headers):
         """Test that unicode is properly normalized."""
         # Different unicode representations of same string
         response = integration_client.post(
@@ -233,7 +230,7 @@ class TestInputValidation:
                 "name": "Caf\u00e9",  # é as single codepoint
                 "description": "Test"
             },
-            headers=api_headers
+            headers=auth_headers
         )
         
         assert response.status_code in [200, 201, 400, 401]
@@ -243,48 +240,48 @@ class TestTenantIsolation:
     """Tests for multi-tenant isolation."""
     
     def test_cannot_access_other_tenant_dashboard(
-        self, integration_client: FlaskClient, api_headers
+        self, integration_client: FlaskClient, auth_headers
     ):
         """Test that users cannot access other tenant's dashboards."""
         # Try to access a dashboard with a different tenant's ID format
         response = integration_client.get(
             "/api/v1/dashboards/00000000-0000-0000-0000-000000000001",
-            headers=api_headers
+            headers=auth_headers
         )
         
         # Should be 404 (not found in tenant) or 403 (forbidden)
         assert response.status_code in [404, 403, 401]
     
     def test_cannot_modify_other_tenant_resource(
-        self, integration_client: FlaskClient, api_headers
+        self, integration_client: FlaskClient, auth_headers
     ):
         """Test that users cannot modify other tenant's resources."""
         response = integration_client.patch(
             "/api/v1/dashboards/00000000-0000-0000-0000-000000000001",
             json={"name": "Hijacked Dashboard"},
-            headers=api_headers
+            headers=auth_headers
         )
         
         assert response.status_code in [404, 403, 401]
     
     def test_cannot_delete_other_tenant_resource(
-        self, integration_client: FlaskClient, api_headers
+        self, integration_client: FlaskClient, auth_headers
     ):
         """Test that users cannot delete other tenant's resources."""
         response = integration_client.delete(
             "/api/v1/dashboards/00000000-0000-0000-0000-000000000001",
-            headers=api_headers
+            headers=auth_headers
         )
         
         assert response.status_code in [404, 403, 401]
     
     def test_list_only_returns_tenant_resources(
-        self, integration_client: FlaskClient, api_headers, seeded_tenant
+        self, integration_client: FlaskClient, auth_headers
     ):
         """Test that listing only returns current tenant's resources."""
         response = integration_client.get(
             "/api/v1/dashboards",
-            headers=api_headers
+            headers=auth_headers
         )
         
         if response.status_code == 200:
@@ -333,13 +330,13 @@ class TestErrorHandling:
             assert "psycopg2" not in data
     
     def test_404_consistent_for_auth_and_missing(
-        self, integration_client: FlaskClient, api_headers
+        self, integration_client: FlaskClient, auth_headers
     ):
         """Test that 404 is returned consistently to prevent enumeration."""
         # Both missing and forbidden should return same error
         response = integration_client.get(
             "/api/v1/dashboards/nonexistent-id",
-            headers=api_headers
+            headers=auth_headers
         )
         
         assert response.status_code in [404, 401]

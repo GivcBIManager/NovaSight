@@ -26,7 +26,7 @@ data:
   
   POSTGRES_HOST: "postgres-service"
   POSTGRES_PORT: "5432"
-  POSTGRES_DB: "novasight"
+  POSTGRES_DB: "novasight_platform"
   
   OLLAMA_HOST: "ollama-service"
   OLLAMA_PORT: "11434"

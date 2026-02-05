@@ -24,6 +24,7 @@ import { DashboardsListPage, DashboardBuilderPage } from '@/features/dashboards'
 import { QueryPage } from '@/features/query'
 import { DocumentationPage } from '@/pages/documentation'
 import { InfrastructureConfigPage } from '@/pages/admin'
+import { SettingsPage } from '@/pages/settings'
 
 function App() {
   return (
@@ -80,6 +81,9 @@ function App() {
             
             {/* Admin Pages */}
             <Route path="admin/infrastructure" element={<InfrastructureConfigPage />} />
+            
+            {/* Settings */}
+            <Route path="settings" element={<SettingsPage />} />
             
             {/* Documentation */}
             <Route path="docs" element={<DocumentationPage />} />

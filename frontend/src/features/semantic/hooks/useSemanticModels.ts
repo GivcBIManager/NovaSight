@@ -35,7 +35,7 @@ export function useSemanticModels(options?: { includeInactive?: boolean; modelTy
       if (options?.includeInactive) params.append('include_inactive', 'true')
       if (options?.modelType) params.append('model_type', options.modelType)
       
-      const response = await api.get<SemanticModel[]>(`/v1/semantic/models?${params}`)
+      const response = await api.get<SemanticModel[]>(`/semantic/models?${params}`)
       return response.data
     },
   })
@@ -45,7 +45,7 @@ export function useSemanticModel(modelId: string | undefined) {
   return useQuery({
     queryKey: [SEMANTIC_MODELS_KEY, modelId],
     queryFn: async () => {
-      const response = await api.get<SemanticModel>(`/v1/semantic/models/${modelId}`)
+      const response = await api.get<SemanticModel>(`/semantic/models/${modelId}`)
       return response.data
     },
     enabled: !!modelId,
@@ -57,7 +57,7 @@ export function useCreateSemanticModel() {
   
   return useMutation({
     mutationFn: async (data: CreateSemanticModelDto) => {
-      const response = await api.post<SemanticModel>('/v1/semantic/models', data)
+      const response = await api.post<SemanticModel>('/semantic/models', data)
       return response.data
     },
     onSuccess: () => {
@@ -71,7 +71,7 @@ export function useUpdateSemanticModel() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateSemanticModelDto }) => {
-      const response = await api.put<SemanticModel>(`/v1/semantic/models/${id}`, data)
+      const response = await api.put<SemanticModel>(`/semantic/models/${id}`, data)
       return response.data
     },
     onSuccess: (_, { id }) => {
@@ -86,7 +86,7 @@ export function useDeleteSemanticModel() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/v1/semantic/models/${id}`)
+      await api.delete(`/semantic/models/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [SEMANTIC_MODELS_KEY] })
@@ -106,7 +106,7 @@ export function useDimensions(modelId: string | undefined, options?: { includeHi
       if (options?.includeHidden) params.append('include_hidden', 'true')
       
       const response = await api.get<Dimension[]>(
-        `/v1/semantic/models/${modelId}/dimensions?${params}`
+        `/semantic/models/${modelId}/dimensions?${params}`
       )
       return response.data
     },
@@ -120,7 +120,7 @@ export function useAddDimension() {
   return useMutation({
     mutationFn: async ({ modelId, data }: { modelId: string; data: CreateDimensionDto }) => {
       const response = await api.post<Dimension>(
-        `/v1/semantic/models/${modelId}/dimensions`,
+        `/semantic/models/${modelId}/dimensions`,
         data
       )
       return response.data
@@ -144,7 +144,7 @@ export function useUpdateDimension() {
       data: UpdateDimensionDto 
     }) => {
       const response = await api.put<Dimension>(
-        `/v1/semantic/dimensions/${dimensionId}`,
+        `/semantic/dimensions/${dimensionId}`,
         data
       )
       return response.data
@@ -160,7 +160,7 @@ export function useDeleteDimension() {
   
   return useMutation({
     mutationFn: async ({ dimensionId }: { dimensionId: string; modelId: string }) => {
-      await api.delete(`/v1/semantic/dimensions/${dimensionId}`)
+      await api.delete(`/semantic/dimensions/${dimensionId}`)
     },
     onSuccess: (_, { modelId }) => {
       queryClient.invalidateQueries({ queryKey: [SEMANTIC_MODELS_KEY, modelId] })
@@ -180,7 +180,7 @@ export function useMeasures(modelId: string | undefined, options?: { includeHidd
       if (options?.includeHidden) params.append('include_hidden', 'true')
       
       const response = await api.get<Measure[]>(
-        `/v1/semantic/models/${modelId}/measures?${params}`
+        `/semantic/models/${modelId}/measures?${params}`
       )
       return response.data
     },
@@ -194,7 +194,7 @@ export function useAddMeasure() {
   return useMutation({
     mutationFn: async ({ modelId, data }: { modelId: string; data: CreateMeasureDto }) => {
       const response = await api.post<Measure>(
-        `/v1/semantic/models/${modelId}/measures`,
+        `/semantic/models/${modelId}/measures`,
         data
       )
       return response.data
@@ -218,7 +218,7 @@ export function useUpdateMeasure() {
       data: UpdateMeasureDto 
     }) => {
       const response = await api.put<Measure>(
-        `/v1/semantic/measures/${measureId}`,
+        `/semantic/measures/${measureId}`,
         data
       )
       return response.data
@@ -234,7 +234,7 @@ export function useDeleteMeasure() {
   
   return useMutation({
     mutationFn: async ({ measureId }: { measureId: string; modelId: string }) => {
-      await api.delete(`/v1/semantic/measures/${measureId}`)
+      await api.delete(`/semantic/measures/${measureId}`)
     },
     onSuccess: (_, { modelId }) => {
       queryClient.invalidateQueries({ queryKey: [SEMANTIC_MODELS_KEY, modelId] })
@@ -250,7 +250,7 @@ export function useRelationships() {
   return useQuery({
     queryKey: [SEMANTIC_MODELS_KEY, 'relationships'],
     queryFn: async () => {
-      const response = await api.get<Relationship[]>('/v1/semantic/relationships')
+      const response = await api.get<Relationship[]>('/semantic/relationships')
       return response.data
     },
   })
@@ -261,7 +261,7 @@ export function useCreateRelationship() {
   
   return useMutation({
     mutationFn: async (data: CreateRelationshipDto) => {
-      const response = await api.post<Relationship>('/v1/semantic/relationships', data)
+      const response = await api.post<Relationship>('/semantic/relationships', data)
       return response.data
     },
     onSuccess: () => {
@@ -275,7 +275,7 @@ export function useDeleteRelationship() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/v1/semantic/relationships/${id}`)
+      await api.delete(`/semantic/relationships/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [SEMANTIC_MODELS_KEY] })
@@ -290,7 +290,7 @@ export function useDeleteRelationship() {
 export function useSemanticQuery() {
   return useMutation({
     mutationFn: async (query: SemanticQuery) => {
-      const response = await api.post<QueryResult>('/v1/semantic/query', query)
+      const response = await api.post<QueryResult>('/semantic/query', query)
       return response.data
     },
   })
@@ -309,7 +309,7 @@ export function useSemanticExplore() {
         dimensions: Dimension[]
         measures: Measure[]
         relationships: Relationship[]
-      }>('/v1/semantic/explore')
+      }>('/semantic/explore')
       return response.data
     },
   })
@@ -323,7 +323,7 @@ export function useClearSemanticCache() {
   return useMutation({
     mutationFn: async () => {
       const response = await api.post<{ message: string; entries_cleared: number }>(
-        '/v1/semantic/cache/clear'
+        '/semantic/cache/clear'
       )
       return response.data
     },

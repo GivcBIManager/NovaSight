@@ -15,6 +15,7 @@ from typing import Optional, List
 import logging
 
 from app.extensions import db
+from app.utils.tenant_utils import get_tenant_schema_name
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,8 @@ class TenantContextMiddleware:
             # Set tenant context
             g.tenant = tenant
             g.tenant_id = str(tenant.id)
-            g.tenant_schema = f"tenant_{tenant.slug}"
+            # Use utility function to generate valid PostgreSQL schema name
+            g.tenant_schema = get_tenant_schema_name(tenant.slug)
             
             # Set user context from JWT
             if isinstance(identity, dict):
@@ -126,7 +128,10 @@ class TenantContextMiddleware:
         except Exception as e:
             if hasattr(e, 'code') and e.code in (401, 403):
                 raise
-            logger.error(f"Error initializing tenant context: {e}")
+            # Log the actual error type for debugging
+            error_type = type(e).__name__
+            logger.error(f"Error initializing tenant context ({error_type}): {e}")
+            logger.debug(f"Request path: {request.path}, Authorization header present: {'Authorization' in request.headers}")
             abort(401, description="Authentication required")
     
     def _set_search_path(self, tenant_schema: str) -> None:
@@ -150,6 +155,10 @@ class TenantContextMiddleware:
     
     def _is_public_endpoint(self) -> bool:
         """Check if current endpoint is public (no auth required)."""
+        # Skip OPTIONS requests (CORS preflight) - they never have auth headers
+        if request.method == "OPTIONS":
+            return True
+        
         # Check by endpoint name
         if request.endpoint in PUBLIC_ENDPOINTS:
             return True

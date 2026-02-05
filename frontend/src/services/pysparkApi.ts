@@ -44,7 +44,8 @@ export async function listPySparkApps(
   const queryString = searchParams.toString()
   const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL
   
-  return apiClient.get<PySparkAppsListResponse>(url)
+  const response = await apiClient.get<PySparkAppsListResponse>(url)
+  return response.data
 }
 
 /**
@@ -58,7 +59,8 @@ export async function getPySparkApp(
     ? `${BASE_URL}/${appId}?include_code=true`
     : `${BASE_URL}/${appId}`
   
-  return apiClient.get<PySparkAppWithCode>(url)
+  const response = await apiClient.get<PySparkAppWithCode>(url)
+  return response.data
 }
 
 /**
@@ -67,7 +69,8 @@ export async function getPySparkApp(
 export async function createPySparkApp(
   data: PySparkAppCreate
 ): Promise<PySparkApp> {
-  return apiClient.post<PySparkApp>(BASE_URL, data)
+  const response = await apiClient.post<PySparkApp>(BASE_URL, data)
+  return response.data
 }
 
 /**
@@ -77,7 +80,8 @@ export async function updatePySparkApp(
   appId: string,
   data: PySparkAppUpdate
 ): Promise<PySparkApp> {
-  return apiClient.put<PySparkApp>(`${BASE_URL}/${appId}`, data)
+  const response = await apiClient.put<PySparkApp>(`${BASE_URL}/${appId}`, data)
+  return response.data
 }
 
 /**
@@ -86,7 +90,8 @@ export async function updatePySparkApp(
 export async function deletePySparkApp(
   appId: string
 ): Promise<{ message: string }> {
-  return apiClient.delete<{ message: string }>(`${BASE_URL}/${appId}`)
+  const response = await apiClient.delete<{ message: string }>(`${BASE_URL}/${appId}`)
+  return response.data
 }
 
 /**
@@ -95,7 +100,8 @@ export async function deletePySparkApp(
 export async function generatePySparkCode(
   appId: string
 ): Promise<PySparkCodeResponse> {
-  return apiClient.post<PySparkCodeResponse>(`${BASE_URL}/${appId}/generate`, {})
+  const response = await apiClient.post<PySparkCodeResponse>(`${BASE_URL}/${appId}/generate`, {})
+  return response.data
 }
 
 /**
@@ -109,7 +115,8 @@ export async function getPySparkCode(
   template_version: string
   generated_at: string
 }> {
-  return apiClient.get(`${BASE_URL}/${appId}/code`)
+  const response = await apiClient.get(`${BASE_URL}/${appId}/code`)
+  return response.data
 }
 
 /**
@@ -118,7 +125,8 @@ export async function getPySparkCode(
 export async function previewPySparkCode(
   data: PySparkCodePreview
 ): Promise<PySparkCodeResponse> {
-  return apiClient.post<PySparkCodeResponse>(`${BASE_URL}/preview`, data)
+  const response = await apiClient.post<PySparkCodeResponse>(`${BASE_URL}/preview`, data)
+  return response.data
 }
 
 /**
@@ -127,7 +135,8 @@ export async function previewPySparkCode(
 export async function validateQuery(
   data: QueryValidationRequest
 ): Promise<QueryValidationResponse> {
-  return apiClient.post<QueryValidationResponse>(`${BASE_URL}/validate-query`, data)
+  const response = await apiClient.post<QueryValidationResponse>(`${BASE_URL}/validate-query`, data)
+  return response.data
 }
 
 // Export all functions as a namespace

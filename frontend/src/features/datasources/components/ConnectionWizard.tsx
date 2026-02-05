@@ -82,6 +82,7 @@ export function ConnectionWizard({ open, onOpenChange, onSuccess }: ConnectionWi
 
   const handleConnectionSubmit = async (data: ConnectionFormData) => {
     setTestResult(null)
+    setCurrentStep(2) // Move to test step to show loading/result
     try {
       const result = await testConnection.mutateAsync(data)
       setTestResult(result)

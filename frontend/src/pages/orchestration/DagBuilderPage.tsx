@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/use-toast'
+import { dagService, TaskConfig } from '@/services/dagService'
 import {
   Save,
   Play,
@@ -25,6 +27,7 @@ import {
   Mail,
   Timer,
   Terminal,
+  Loader2,
 } from 'lucide-react'
 
 const taskTypes = [
@@ -39,6 +42,7 @@ const taskTypes = [
 export function DagBuilderPage() {
   const { dagId } = useParams()
   const navigate = useNavigate()
+  const { toast } = useToast()
   const isEditing = !!dagId
 
   const [dagName, setDagName] = useState(dagId || '')
@@ -46,6 +50,8 @@ export function DagBuilderPage() {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeploying, setIsDeploying] = useState(false)
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -114,14 +120,111 @@ export function DagBuilderPage() {
     setSelectedNode(node)
   }, [])
 
+  // Convert ReactFlow nodes to TaskConfig format
+  const nodesToTasks = (): TaskConfig[] => {
+    return nodes.map((node) => {
+      // Find dependencies based on edges
+      const dependencies = edges
+        .filter((edge) => edge.target === node.id)
+        .map((edge) => edge.source)
+
+      return {
+        task_id: node.id,
+        task_type: node.data.taskType,
+        config: {},
+        timeout_minutes: 60,
+        retries: 1,
+        retry_delay_minutes: 5,
+        trigger_rule: 'all_success',
+        depends_on: dependencies,
+        position_x: node.position.x,
+        position_y: node.position.y,
+      }
+    })
+  }
+
   const handleSave = async () => {
-    // TODO: Implement save logic
-    console.log('Saving DAG:', { dagName, description, nodes, edges })
+    if (!dagName.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'DAG name is required',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (nodes.length === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Add at least one task to the DAG',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const tasks = nodesToTasks()
+      
+      if (isEditing && dagId) {
+        await dagService.update(dagId, {
+          description,
+          tasks,
+        })
+        toast({
+          title: 'DAG Updated',
+          description: `Successfully updated ${dagName}`,
+        })
+      } else {
+        const dag = await dagService.create({
+          dag_id: dagName,
+          description,
+          schedule_type: 'manual',
+          tasks,
+        })
+        toast({
+          title: 'DAG Created',
+          description: `Successfully created ${dag.dag_id}`,
+        })
+        navigate(`/dags/${dag.id}/edit`)
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to save DAG. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleDeploy = async () => {
-    // TODO: Implement deploy logic
-    console.log('Deploying DAG')
+    if (!dagId && !isEditing) {
+      toast({
+        title: 'Save Required',
+        description: 'Please save the DAG before deploying',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsDeploying(true)
+    try {
+      const result = await dagService.deploy(dagId || dagName)
+      toast({
+        title: 'DAG Deployed',
+        description: result.message || 'DAG successfully deployed to Airflow',
+      })
+    } catch (error) {
+      toast({
+        title: 'Deploy Failed',
+        description: 'Failed to deploy DAG. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeploying(false)
+    }
   }
 
   return (
@@ -169,13 +272,21 @@ export function DagBuilderPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleSave}>
-              <Save className="mr-2 h-4 w-4" />
-              Save
+            <Button variant="outline" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
-            <Button variant="outline" onClick={handleDeploy}>
-              <Upload className="mr-2 h-4 w-4" />
-              Deploy
+            <Button variant="outline" onClick={handleDeploy} disabled={isDeploying || !isEditing}>
+              {isDeploying ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              {isDeploying ? 'Deploying...' : 'Deploy'}
             </Button>
             <Button>
               <Play className="mr-2 h-4 w-4" />

@@ -52,7 +52,6 @@ def list_connections():
 @api_v1_bp.route("/connections", methods=["POST"])
 @jwt_required()
 @require_tenant_context
-@require_roles(["data_engineer", "tenant_admin"])
 def create_connection():
     """
     Create a new data source connection.
@@ -90,6 +89,12 @@ def create_connection():
         raise ValidationError(f"Invalid db_type. Must be one of: {', '.join(valid_db_types)}")
     
     connection_service = ConnectionService(tenant_id)
+    
+    # Handle both ssl_mode (string) and ssl_enabled (boolean) for compatibility
+    ssl_mode = data.get("ssl_mode")
+    if ssl_mode is None and data.get("ssl_enabled"):
+        ssl_mode = "require"  # Default SSL mode when ssl_enabled is True
+    
     try:
         connection = connection_service.create_connection(
             name=data["name"],
@@ -99,7 +104,7 @@ def create_connection():
             database=data["database"],
             username=data["username"],
             password=data["password"],
-            ssl_mode=data.get("ssl_mode"),
+            ssl_mode=ssl_mode,
             extra_params=data.get("extra_params", {}),
             created_by=user_id,
         )
@@ -243,10 +248,11 @@ def test_connection(connection_id: str):
 @api_v1_bp.route("/connections/test", methods=["POST"])
 @jwt_required()
 @require_tenant_context
-@require_roles(["data_engineer", "tenant_admin"])
 def test_new_connection():
     """
     Test connection parameters without saving.
+    
+    Any authenticated user can test connection parameters.
     
     Request Body:
         - db_type: Database type
@@ -273,6 +279,12 @@ def test_new_connection():
             raise ValidationError(f"Field '{field}' is required")
     
     connection_service = ConnectionService(tenant_id)
+    
+    # Handle both ssl_mode (string) and ssl_enabled (boolean) for compatibility
+    ssl_mode = data.get("ssl_mode")
+    if ssl_mode is None and data.get("ssl_enabled"):
+        ssl_mode = "require"  # Default SSL mode when ssl_enabled is True
+    
     result = connection_service.test_connection_params(
         db_type=data["db_type"],
         host=data["host"],
@@ -280,7 +292,7 @@ def test_new_connection():
         database=data["database"],
         username=data["username"],
         password=data["password"],
-        ssl_mode=data.get("ssl_mode"),
+        ssl_mode=ssl_mode,
     )
     
     if not result["success"]:

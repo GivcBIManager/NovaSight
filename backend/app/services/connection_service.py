@@ -69,6 +69,12 @@ class ConnectionService:
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         
         return {
+            "items": [c.to_dict(mask_password=True) for c in pagination.items],
+            "total": pagination.total,
+            "page": page,
+            "pageSize": per_page,
+            "totalPages": pagination.pages,
+            # Keep legacy fields for backwards compatibility
             "connections": [c.to_dict(mask_password=True) for c in pagination.items],
             "pagination": {
                 "page": page,

@@ -94,9 +94,21 @@ def integration_app() -> Generator[Flask, None, None]:
         # Create all tables
         db.create_all()
         yield app
-        # Cleanup
+        # Cleanup: close all sessions first to release locks
         db.session.remove()
-        db.drop_all()
+        
+        # Drop tables with CASCADE to avoid FK constraint locks
+        from sqlalchemy import text
+        try:
+            # Disable FK checks temporarily for clean drop
+            db.session.execute(text("SET session_replication_role = 'replica';"))
+            db.drop_all()
+            db.session.execute(text("SET session_replication_role = 'origin';"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            # Fallback
+            db.drop_all()
 
 
 @pytest.fixture(scope="session")
@@ -128,8 +140,19 @@ def app_with_containers(postgres_container, redis_container) -> Generator[Flask,
         
         yield app
         
+        # Cleanup: close all sessions first to release locks
         db.session.remove()
-        db.drop_all()
+        
+        # Drop tables with CASCADE to avoid FK constraint locks
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("SET session_replication_role = 'replica';"))
+            db.drop_all()
+            db.session.execute(text("SET session_replication_role = 'origin';"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            db.drop_all()
 
 
 @pytest.fixture
