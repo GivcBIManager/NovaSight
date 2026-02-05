@@ -333,7 +333,7 @@ def upgrade() -> None:
     
     op.execute("SELECT create_tenant_schema('dev')")
     
-    # Create default admin user (password: admin123)
+    # Create default admin user (password: Admin123!)
     # Using Argon2 hash format (compatible with password_service)
     op.execute("""
         INSERT INTO public.users (tenant_id, email, password_hash, name, status)

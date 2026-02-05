@@ -17,7 +17,7 @@ test.describe('Authentication', () => {
       page 
     }) => {
       await loginPage.goto()
-      await loginPage.login('admin@novasight.dev', 'admin123')
+      await loginPage.login('admin@novasight.dev', 'Admin123!')
 
       // Should redirect to dashboard
       await expect(page).toHaveURL(/.*dashboard/)
@@ -86,7 +86,7 @@ test.describe('Authentication', () => {
     test('should clear session data on logout', async ({ page, loginPage }) => {
       // Login first
       await loginPage.goto()
-      await loginPage.loginAndWaitForDashboard('admin@novasight.dev', 'admin123')
+      await loginPage.loginAndWaitForDashboard('admin@novasight.dev', 'Admin123!')
 
       // Logout
       const userMenu = page.getByRole('button', { name: /user|menu|profile|avatar/i })
@@ -132,7 +132,7 @@ test.describe('Authentication', () => {
       await expect(page).toHaveURL(/.*login/)
 
       // Login
-      await loginPage.login('admin@novasight.dev', 'admin123')
+      await loginPage.login('admin@novasight.dev', 'Admin123!')
 
       // Should redirect to originally requested page
       await expect(page).toHaveURL(/.*datasources/)

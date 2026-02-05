@@ -29,7 +29,7 @@ export function LoginPage() {
           <LoginForm />
           
           <div className="mt-6 text-center text-xs text-muted-foreground">
-            <p>Demo: admin@novasight.dev / admin123</p>
+            <p>Demo: admin@novasight.dev / Admin123!</p>
           </div>
         </CardContent>
       </Card>

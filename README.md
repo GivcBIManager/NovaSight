@@ -128,7 +128,7 @@ NovaSight is a multi-tenant SaaS platform that enables users to ingest, transfor
 
 | Service | Username | Password |
 |---------|----------|----------|
-| NovaSight | admin@novasight.dev | admin123 |
+| NovaSight | admin@novasight.dev | Admin123! |
 | Airflow | airflow | airflow |
 
 ## 📖 Documentation

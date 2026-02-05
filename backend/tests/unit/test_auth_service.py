@@ -123,7 +123,7 @@ class TestUserAuthentication:
         """Test successful authentication."""
         user, error = auth_service.authenticate(
             email=sample_user.email,
-            password="TestPassword123!",
+            password="Admin123!",
             tenant_slug=sample_tenant.slug
         )
         
@@ -161,7 +161,7 @@ class TestUserAuthentication:
             tenant_id=sample_tenant.id,
             email="inactive@example.com",
             name="Inactive User",
-            password_hash=password_service.hash("TestPassword123!"),
+            password_hash=password_service.hash("Admin123!"),
             status=UserStatus.LOCKED,  # Using LOCKED instead of SUSPENDED
         )
         db_session.add(inactive_user)
@@ -169,7 +169,7 @@ class TestUserAuthentication:
         
         user, error = auth_service.authenticate(
             email="inactive@example.com",
-            password="TestPassword123!",
+            password="Admin123!",
             tenant_slug=sample_tenant.slug
         )
         
@@ -180,7 +180,7 @@ class TestUserAuthentication:
         """Test authentication is case-insensitive for email."""
         user, error = auth_service.authenticate(
             email=sample_user.email.upper(),
-            password="TestPassword123!",
+            password="Admin123!",
             tenant_slug=sample_tenant.slug
         )
         
@@ -208,7 +208,7 @@ class TestLoginAttemptTracking:
         # Try with correct password - should be locked out
         user, error = auth_service.authenticate(
             email=sample_user.email,
-            password="TestPassword123!",  # Correct password
+            password="Admin123!",  # Correct password
             tenant_slug=sample_tenant.slug
         )
         
@@ -229,7 +229,7 @@ class TestLoginAttemptTracking:
         # Successful login
         user, error = auth_service.authenticate(
             email=sample_user.email,
-            password="TestPassword123!",
+            password="Admin123!",
             tenant_slug=sample_tenant.slug
         )
         

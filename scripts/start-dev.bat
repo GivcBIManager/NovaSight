@@ -111,7 +111,7 @@ echo   Redis:           localhost:6379
 if "%NO_OLLAMA%"=="false" echo   Ollama:          http://localhost:11434
 echo.
 echo Default credentials:
-echo   - NovaSight: admin@novasight.dev / admin123
+echo   - NovaSight: admin@novasight.dev / Admin123!
 echo   - Airflow:   airflow / airflow
 echo.
 echo Useful commands:

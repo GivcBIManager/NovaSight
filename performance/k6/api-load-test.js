@@ -58,7 +58,7 @@ export function setup() {
     `${BASE_URL}/api/v1/auth/login`,
     JSON.stringify({
       email: __ENV.TEST_USER || 'perf-test@example.com',
-      password: __ENV.TEST_PASSWORD || 'TestPassword123!',
+      password: __ENV.TEST_PASSWORD || 'Admin123!',
     }),
     {
       headers: { 'Content-Type': 'application/json' },

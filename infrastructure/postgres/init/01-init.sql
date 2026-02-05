@@ -228,7 +228,7 @@ INSERT INTO public.tenants (name, slug, plan, status, settings)
 VALUES ('Development Tenant', 'dev', 'enterprise', 'active', '{"theme": "light", "timezone": "UTC"}')
 ON CONFLICT (slug) DO NOTHING;
 
--- Create a default admin user for development (password: admin123)
+-- Create a default admin user for development (password: Admin123!)
 INSERT INTO public.users (tenant_id, email, password_hash, name, status)
 SELECT 
     t.id,

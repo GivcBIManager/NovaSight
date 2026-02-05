@@ -318,7 +318,7 @@ ON CONFLICT (slug) DO NOTHING;
 -- Create dev tenant schema
 SELECT create_tenant_schema('dev');
 
--- Create default admin user (password: admin123)
+-- Create default admin user (password: Admin123!)
 INSERT INTO public.users (tenant_id, email, password_hash, name, status)
 SELECT 
     t.id,
@@ -344,6 +344,6 @@ DO $$ BEGIN
     RAISE NOTICE 'NovaSight PostgreSQL initialized';
     RAISE NOTICE 'Default tenant: dev';
     RAISE NOTICE 'Default user: admin@novasight.dev';
-    RAISE NOTICE 'Default password: admin123';
+    RAISE NOTICE 'Default password: Admin123!';
     RAISE NOTICE '========================================';
 END $$;

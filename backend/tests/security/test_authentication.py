@@ -37,7 +37,7 @@ class TestPasswordSecurity:
         """Ensure password hash is not in login response."""
         response = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         
@@ -49,7 +49,7 @@ class TestPasswordSecurity:
     def test_passwords_are_properly_hashed(self, db_session, sample_user):
         """Verify passwords are hashed, not stored in plain text."""
         # Password should never equal the hash
-        assert sample_user.password_hash != 'TestPassword123!'
+        assert sample_user.password_hash != 'Admin123!'
         
         # Hash should be a proper bcrypt/argon2 hash
         assert len(sample_user.password_hash) > 20
@@ -208,7 +208,7 @@ class TestSessionSecurity:
         # First login
         response1 = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         
@@ -225,7 +225,7 @@ class TestSessionSecurity:
         # Second login
         response2 = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         
@@ -242,7 +242,7 @@ class TestSessionSecurity:
         # Login
         login_resp = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         

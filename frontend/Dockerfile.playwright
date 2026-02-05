@@ -1,0 +1,30 @@
+# NovaSight Playwright E2E Test Dockerfile
+# =========================================
+# Uses official Playwright image with pre-installed browsers
+
+FROM mcr.microsoft.com/playwright:v1.58.0-noble
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Install Playwright browsers
+RUN npx playwright install --with-deps chromium
+
+# Copy test files and config
+COPY e2e/ ./e2e/
+COPY playwright.config.ts ./
+COPY playwright.docker.config.ts ./
+COPY tsconfig.json ./
+COPY vite.config.ts ./
+
+# Set environment variables
+ENV PLAYWRIGHT_BASE_URL=http://frontend:5173
+ENV CI=true
+
+# Default command runs all e2e tests
+CMD ["npx", "playwright", "test", "--config=playwright.docker.config.ts", "--project=chromium-unauthenticated"]

@@ -100,5 +100,5 @@ echo ========================================
 echo.
 echo Default admin user:
 echo   Email: admin@novasight.io
-echo   Password: admin123
+echo   Password: Admin123!
 echo.

@@ -28,7 +28,7 @@ async function globalSetup(config: FullConfig) {
     
     // Login with test credentials
     await page.getByLabel('Email').fill('admin@novasight.dev')
-    await page.getByLabel('Password').fill('admin123')
+    await page.getByLabel('Password').fill('Admin123!')
     await page.getByRole('button', { name: /sign in/i }).click()
 
     // Wait for successful login (redirect to dashboard)

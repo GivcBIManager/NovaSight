@@ -3,8 +3,6 @@
 # This file contains development-specific overrides
 # It's automatically loaded by docker-compose
 
-version: '3.8'
-
 services:
   # ============================================
   # Backend - Development Mode

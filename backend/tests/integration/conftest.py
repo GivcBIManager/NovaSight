@@ -222,7 +222,7 @@ def seeded_tenant(integration_app: Flask) -> Dict[str, Any]:
         
         # Admin email and password for tests (use example.com which is a valid test domain)
         admin_email = f"admin-{unique_suffix}@example.com"
-        admin_password = "TestPassword123!"
+        admin_password = "Admin123!"
         
         # Create admin user - use string value for status
         admin_user = User(

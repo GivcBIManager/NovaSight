@@ -15,7 +15,7 @@ services:
       - API_URL=${API_URL:-http://host.docker.internal:5000}
       - TENANT_SLUG=${TENANT_SLUG:-perf-test}
       - TEST_USER=${TEST_USER:-perf-test@example.com}
-      - TEST_PASSWORD=${TEST_PASSWORD:-TestPassword123!}
+      - TEST_PASSWORD=${TEST_PASSWORD:-Admin123!!}
       - ENVIRONMENT=${ENVIRONMENT:-local}
     networks:
       - perf-network
@@ -36,7 +36,7 @@ services:
       - INFLUXDB_DB=k6
       - INFLUXDB_HTTP_AUTH_ENABLED=false
       - INFLUXDB_ADMIN_USER=admin
-      - INFLUXDB_ADMIN_PASSWORD=admin123
+      - INFLUXDB_ADMIN_PASSWORD=Admin123!
     volumes:
       - influxdb-data:/var/lib/influxdb
     networks:
@@ -54,7 +54,7 @@ services:
       - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ADMIN_PASSWORD=Admin123!
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer

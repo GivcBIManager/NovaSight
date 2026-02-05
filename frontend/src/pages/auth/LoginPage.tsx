@@ -125,7 +125,7 @@ export function LoginPage() {
           </form>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            <p>Demo credentials: admin@novasight.dev / admin123</p>
+            <p>Demo credentials: admin@novasight.dev / Admin123!</p>
           </div>
         </CardContent>
       </Card>

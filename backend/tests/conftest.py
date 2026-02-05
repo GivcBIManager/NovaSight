@@ -73,10 +73,10 @@ def sample_user(db_session, sample_tenant) -> User:
     
     user = User(
         tenant_id=sample_tenant.id,
-        email="test@example.com",
-        name="Test User",
+        email="admin@novasight.dev",
+        name="Admin User",
         status="active",  # Use string value, not enum
-        password_hash=password_service.hash("TestPassword123!")
+        password_hash=password_service.hash("Admin123!")
     )
     db_session.add(user)
     db_session.commit()
@@ -88,7 +88,7 @@ def auth_headers(client: FlaskClient, sample_user: User, sample_tenant: Tenant) 
     """Get authentication headers for API requests."""
     response = client.post("/api/v1/auth/login", json={
         "email": sample_user.email,
-        "password": "TestPassword123!",
+        "password": "Admin123!",
         "tenant_slug": sample_tenant.slug
     })
     

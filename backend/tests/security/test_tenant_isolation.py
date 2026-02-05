@@ -19,7 +19,7 @@ class TestTenantDataIsolation:
         # Login as user from tenant A
         login_a = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         
@@ -43,7 +43,7 @@ class TestTenantDataIsolation:
         # Login as user from tenant B
         login_b = client.post('/api/v1/auth/login', json={
             'email': other_tenant_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': other_tenant.slug
         })
         
@@ -70,7 +70,7 @@ class TestTenantDataIsolation:
         # Login as tenant A user
         login_a = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         
@@ -98,7 +98,7 @@ class TestTenantDataIsolation:
         # Login as tenant B user
         login_b = client.post('/api/v1/auth/login', json={
             'email': other_tenant_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': other_tenant.slug
         })
         
@@ -124,7 +124,7 @@ class TestTenantDataIsolation:
         # Login as tenant B user
         login_b = client.post('/api/v1/auth/login', json={
             'email': other_tenant_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': other_tenant.slug
         })
         
@@ -154,7 +154,7 @@ class TestTenantModificationIsolation:
         # Login as tenant A and create dashboard
         login_a = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         
@@ -176,7 +176,7 @@ class TestTenantModificationIsolation:
         # Login as tenant B
         login_b = client.post('/api/v1/auth/login', json={
             'email': other_tenant_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': other_tenant.slug
         })
         
@@ -200,7 +200,7 @@ class TestTenantModificationIsolation:
         # Create dashboard as tenant A
         login_a = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         
@@ -222,7 +222,7 @@ class TestTenantModificationIsolation:
         # Login as tenant B
         login_b = client.post('/api/v1/auth/login', json={
             'email': other_tenant_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': other_tenant.slug
         })
         
@@ -248,7 +248,7 @@ class TestTenantIDManipulation:
         # Login as tenant A
         login_a = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         
@@ -276,7 +276,7 @@ class TestTenantIDManipulation:
         """Verify tenant_id in URL is validated against user's tenant."""
         login_a = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         
@@ -306,7 +306,7 @@ class TestQueryIsolation:
         """Verify NL-to-SQL queries respect tenant context."""
         login_a = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         
@@ -336,7 +336,7 @@ class TestQueryIsolation:
         """Verify direct query execution includes tenant filter."""
         login_a = client.post('/api/v1/auth/login', json={
             'email': sample_user.email,
-            'password': 'TestPassword123!',
+            'password': 'Admin123!',
             'tenant_slug': sample_tenant.slug
         })
         

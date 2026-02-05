@@ -11,7 +11,7 @@
       - generic [ref=e11]:
         - generic [ref=e12]:
           - img [ref=e13]
-          - generic [ref=e15]: Request failed with status code 401
+          - generic [ref=e15]: Network Error
         - generic [ref=e16]:
           - text: Email
           - textbox "Email" [ref=e17]:

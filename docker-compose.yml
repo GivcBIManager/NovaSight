@@ -9,8 +9,6 @@
 #   docker-compose down                     # Stop all services
 #   docker-compose down -v                  # Stop and remove volumes
 
-version: '3.8'
-
 services:
   # ============================================
   # PostgreSQL - Metadata Store

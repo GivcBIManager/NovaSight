@@ -37,7 +37,7 @@ docker compose up -d influxdb grafana
 docker compose run --rm k6 run /scripts/api-load-test.js
 
 # View results in Grafana
-open http://localhost:3001  # admin/admin123
+open http://localhost:3001  # admin/Admin123!
 ```
 
 #### Option 2: Using k6 Directly
@@ -79,7 +79,7 @@ To trigger manually:
 | `API_URL` | `http://localhost:5000` | Backend API URL |
 | `TENANT_SLUG` | `perf-test` | Test tenant identifier |
 | `TEST_USER` | `perf-test@example.com` | Test user email |
-| `TEST_PASSWORD` | `TestPassword123!` | Test user password |
+| `TEST_PASSWORD` | `Admin123!!` | Test user password |
 | `ENVIRONMENT` | `staging` | Environment tag for metrics |
 
 ### Performance Thresholds
@@ -98,7 +98,7 @@ To trigger manually:
 
 1. Start the performance stack: `docker compose up -d`
 2. Open Grafana: http://localhost:3001
-3. Login: admin / admin123
+3. Login: admin / Admin123!
 4. Navigate to: Performance → NovaSight k6 Performance Results
 
 ### Dashboard Features

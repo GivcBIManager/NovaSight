@@ -151,7 +151,7 @@ class TestAuthLogin:
         """Test successful login."""
         response = client.post("/api/v1/auth/login", json={
             "email": sample_user.email,
-            "password": "TestPassword123!",  # Default test password
+            "password": "Admin123!",  # Default test password
             "tenant_slug": sample_tenant.slug
         })
         

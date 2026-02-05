@@ -143,7 +143,7 @@ if [ "$NO_OLLAMA" = false ]; then
 fi
 echo ""
 echo "Default credentials:"
-echo "  - NovaSight: admin@novasight.dev / admin123"
+echo "  - NovaSight: admin@novasight.dev / Admin123!"
 echo "  - Airflow:   airflow / airflow"
 echo ""
 echo "Useful commands:"
