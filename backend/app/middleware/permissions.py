@@ -4,12 +4,26 @@ NovaSight Permission Decorators
 
 RBAC permission decorators for endpoint authorization.
 Integrates with RBACService for comprehensive permission checking.
+
+.. deprecated::
+    Core permission decorators (``require_permission``, ``require_any_permission``,
+    ``require_all_permissions``) have moved to ``app.platform.auth.decorators``.
+    This module re-exports them for backward compatibility. Resource-level
+    permission helpers remain here until they are migrated.
 """
 
 from functools import wraps
 from flask import g, abort, request
 from typing import List, Union, Optional, Callable
 import logging
+import warnings
+
+# ──────────────────────────────────────────────────────────────────
+# Re-exports from the unified platform module
+# ──────────────────────────────────────────────────────────────────
+from app.platform.auth.decorators import (          # noqa: F401
+    require_roles as _platform_require_roles,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +91,6 @@ def require_permission(permission: str, use_rbac_service: bool = True):
                         f"Permission denied: {permission} for user {g.get('current_user_id')}"
                     )
                     abort(403, description=f"Permission denied: {permission}")
-            
-            return f(*args, **kwargs)
             
             return f(*args, **kwargs)
         return wrapper

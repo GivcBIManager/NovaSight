@@ -35,6 +35,12 @@ const ServiceIcon: React.FC<{ type: InfrastructureServiceType; className?: strin
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
         </svg>
       );
+    case 'ollama':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7zm2 14h-4v-1h4v1zm1.5-4.37l-.77.54-.73.51V14h-4v-1.32l-.73-.51-.77-.54A4.98 4.98 0 0 1 7 9a5 5 0 0 1 10 0c0 1.67-.82 3.14-2.5 4.13zM10 20h4v1a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1z" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -88,12 +94,14 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
     clickhouse: 'ClickHouse',
     spark: 'Apache Spark',
     airflow: 'Apache Airflow',
+    ollama: 'Ollama LLM',
   };
 
   const descriptions: Record<InfrastructureServiceType, string> = {
     clickhouse: 'Column-oriented OLAP database for analytics workloads',
     spark: 'Distributed computing engine for big data processing',
     airflow: 'Workflow orchestration platform for data pipelines',
+    ollama: 'Local LLM server for AI-powered natural language queries',
   };
 
   const getStatus = (): 'connected' | 'disconnected' | 'testing' | 'unknown' => {
@@ -106,7 +114,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
     <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
       <div className="flex items-start justify-between">
         <div className="flex items-center space-x-3">
-          <div className={`p-2 rounded-lg ${serviceType === 'clickhouse' ? 'bg-yellow-100 text-yellow-600' : serviceType === 'spark' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+          <div className={`p-2 rounded-lg ${serviceType === 'clickhouse' ? 'bg-yellow-100 text-yellow-600' : serviceType === 'spark' ? 'bg-orange-100 text-orange-600' : serviceType === 'ollama' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
             <ServiceIcon type={serviceType} />
           </div>
           <div>
@@ -191,6 +199,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({
     clickhouse: 'ClickHouse',
     spark: 'Apache Spark',
     airflow: 'Apache Airflow',
+    ollama: 'Ollama LLM',
   };
 
   const defaultSettings = infrastructureService.getDefaultSettings(serviceType);
@@ -428,6 +437,83 @@ const ConfigForm: React.FC<ConfigFormProps> = ({
           </>
         );
       
+      case 'ollama':
+        return (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Base URL</label>
+              <input
+                type="text"
+                value={formData.settings.base_url as string || ''}
+                onChange={(e) => handleSettingChange('base_url', e.target.value)}
+                placeholder="http://localhost:11434"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Default Model</label>
+                <input
+                  type="text"
+                  value={formData.settings.default_model as string || ''}
+                  onChange={(e) => handleSettingChange('default_model', e.target.value)}
+                  placeholder="llama3.2"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+                <p className="mt-1 text-xs text-gray-500">Model name available on the Ollama server</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Request Timeout (s)</label>
+                <input
+                  type="number"
+                  value={formData.settings.request_timeout as number || 120}
+                  onChange={(e) => handleSettingChange('request_timeout', parseInt(e.target.value))}
+                  min={10}
+                  max={600}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Context Window</label>
+                <input
+                  type="number"
+                  value={formData.settings.num_ctx as number || 4096}
+                  onChange={(e) => handleSettingChange('num_ctx', parseInt(e.target.value))}
+                  min={512}
+                  step={512}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+                <p className="mt-1 text-xs text-gray-500">Tokens</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Temperature</label>
+                <input
+                  type="number"
+                  value={formData.settings.temperature as number || 0.7}
+                  onChange={(e) => handleSettingChange('temperature', parseFloat(e.target.value))}
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Keep Alive</label>
+                <input
+                  type="text"
+                  value={formData.settings.keep_alive as string || '5m'}
+                  onChange={(e) => handleSettingChange('keep_alive', e.target.value)}
+                  placeholder="5m"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+                <p className="mt-1 text-xs text-gray-500">e.g., 5m, 1h</p>
+              </div>
+            </div>
+          </>
+        );
+      
       default:
         return null;
     }
@@ -574,11 +660,13 @@ const InfrastructureConfigPage: React.FC = () => {
     clickhouse: { config: null, source: 'environment' },
     spark: { config: null, source: 'environment' },
     airflow: { config: null, source: 'environment' },
+    ollama: { config: null, source: 'environment' },
   });
   const [testResults, setTestResults] = useState<Record<InfrastructureServiceType, InfrastructureConfigTestResult | null>>({
     clickhouse: null,
     spark: null,
     airflow: null,
+    ollama: null,
   });
   const [testingServices, setTestingServices] = useState<Set<InfrastructureServiceType>>(new Set());
   const [editingService, setEditingService] = useState<InfrastructureServiceType | null>(null);
@@ -594,6 +682,7 @@ const InfrastructureConfigPage: React.FC = () => {
         clickhouse: { config: null, source: 'environment' },
         spark: { config: null, source: 'environment' },
         airflow: { config: null, source: 'environment' },
+        ollama: { config: null, source: 'environment' },
       };
 
       for (const [type, response] of Object.entries(allConfigs)) {
@@ -655,7 +744,7 @@ const InfrastructureConfigPage: React.FC = () => {
 
   // Test all services
   const handleTestAll = async () => {
-    const services: InfrastructureServiceType[] = ['clickhouse', 'spark', 'airflow'];
+    const services: InfrastructureServiceType[] = ['clickhouse', 'spark', 'airflow', 'ollama'];
     await Promise.all(services.map(s => handleTest(s)));
   };
 
@@ -742,8 +831,8 @@ const InfrastructureConfigPage: React.FC = () => {
       </div>
 
       {/* Service Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {(['clickhouse', 'spark', 'airflow'] as InfrastructureServiceType[]).map(serviceType => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {(['clickhouse', 'spark', 'airflow', 'ollama'] as InfrastructureServiceType[]).map(serviceType => (
           <ServiceCard
             key={serviceType}
             serviceType={serviceType}

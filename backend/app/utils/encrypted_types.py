@@ -73,7 +73,7 @@ class EncryptedString(TypeDecorator):
     
     def _get_encryption_service(self):
         """Get encryption service instance."""
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         
         tenant_id = None
         if self.tenant_aware:
@@ -174,7 +174,7 @@ class EncryptedJSON(TypeDecorator):
     
     def _get_encryption_service(self):
         """Get encryption service instance."""
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         
         tenant_id = None
         if self.tenant_aware:
@@ -260,7 +260,7 @@ class EncryptedText(TypeDecorator):
     
     def _get_encryption_service(self):
         """Get encryption service instance."""
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         
         tenant_id = None
         if self.tenant_aware:

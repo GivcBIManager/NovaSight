@@ -121,11 +121,12 @@ export const infrastructureService = {
    * Get all active configurations for display/dashboard
    */
   async getAllActiveConfigs(tenantId?: string): Promise<Record<InfrastructureServiceType, InfrastructureConfigResponse | null>> {
-    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'airflow'];
+    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'airflow', 'ollama'];
     const results: Record<string, InfrastructureConfigResponse | null> = {
       clickhouse: null,
       spark: null,
       airflow: null,
+      ollama: null,
     };
 
     await Promise.all(
@@ -145,11 +146,12 @@ export const infrastructureService = {
    * Test all active configurations
    */
   async testAllConnections(tenantId?: string): Promise<Record<InfrastructureServiceType, InfrastructureConfigTestResult>> {
-    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'airflow'];
+    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'airflow', 'ollama'];
     const results: Record<string, InfrastructureConfigTestResult> = {
       clickhouse: { success: false, message: 'Not tested' },
       spark: { success: false, message: 'Not tested' },
       airflow: { success: false, message: 'Not tested' },
+      ollama: { success: false, message: 'Not tested' },
     };
 
     await Promise.all(
@@ -187,6 +189,7 @@ export const infrastructureService = {
       clickhouse: 8123,
       spark: 7077,
       airflow: 8080,
+      ollama: 11434,
     };
     return defaultPorts[serviceType];
   },
@@ -226,6 +229,15 @@ export const infrastructureService = {
           dag_folder: '/opt/airflow/dags',
           request_timeout: 30,
           verify_ssl: true,
+        };
+      case 'ollama':
+        return {
+          base_url: 'http://localhost:11434',
+          default_model: 'llama3.2',
+          request_timeout: 120,
+          num_ctx: 4096,
+          temperature: 0.7,
+          keep_alive: '5m',
         };
       default:
         return {};

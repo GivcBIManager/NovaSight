@@ -34,7 +34,7 @@ def get_tenant_id() -> str:
 @api_v1_bp.route('/dbt/run', methods=['POST'])
 @jwt_required()
 @require_tenant_context
-@require_roles(['admin', 'data_engineer'])
+@require_roles(['tenant_admin', 'data_engineer'])
 def dbt_run_models():
     """
     Run dbt models.
@@ -78,7 +78,7 @@ def dbt_run_models():
 @api_v1_bp.route('/dbt/test', methods=['POST'])
 @jwt_required()
 @require_tenant_context
-@require_roles(['admin', 'data_engineer'])
+@require_roles(['tenant_admin', 'data_engineer'])
 def dbt_run_tests():
     """
     Run dbt tests.
@@ -116,7 +116,7 @@ def dbt_run_tests():
 @api_v1_bp.route('/dbt/build', methods=['POST'])
 @jwt_required()
 @require_tenant_context
-@require_roles(['admin', 'data_engineer'])
+@require_roles(['tenant_admin', 'data_engineer'])
 def dbt_build():
     """
     Run dbt build (run + test in DAG order).
@@ -154,7 +154,7 @@ def dbt_build():
 @api_v1_bp.route('/dbt/compile', methods=['POST'])
 @jwt_required()
 @require_tenant_context
-@require_roles(['admin', 'data_engineer', 'analyst'])
+@require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_compile_models():
     """
     Compile dbt models without executing.
@@ -190,7 +190,7 @@ def dbt_compile_models():
 @api_v1_bp.route('/dbt/seed', methods=['POST'])
 @jwt_required()
 @require_tenant_context
-@require_roles(['admin', 'data_engineer'])
+@require_roles(['tenant_admin', 'data_engineer'])
 def dbt_seed():
     """
     Load dbt seed data.
@@ -227,7 +227,7 @@ def dbt_seed():
 @api_v1_bp.route('/dbt/snapshot', methods=['POST'])
 @jwt_required()
 @require_tenant_context
-@require_roles(['admin', 'data_engineer'])
+@require_roles(['tenant_admin', 'data_engineer'])
 def dbt_snapshot():
     """
     Run dbt snapshots (SCD Type 2).
@@ -262,7 +262,7 @@ def dbt_snapshot():
 
 @api_v1_bp.route('/dbt/deps', methods=['POST'])
 @jwt_required()
-@require_roles(['admin'])
+@require_roles(['tenant_admin'])
 def dbt_install_deps():
     """
     Install dbt packages.
@@ -285,7 +285,7 @@ def dbt_install_deps():
 @api_v1_bp.route('/dbt/debug', methods=['GET'])
 @jwt_required()
 @require_tenant_context
-@require_roles(['admin', 'data_engineer', 'analyst'])
+@require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_debug():
     """
     Test dbt connection and configuration.
@@ -319,7 +319,7 @@ def dbt_debug():
 @api_v1_bp.route('/dbt/docs/generate', methods=['POST'])
 @jwt_required()
 @require_tenant_context
-@require_roles(['admin', 'data_engineer', 'analyst'])
+@require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_generate_docs():
     """
     Generate dbt documentation.
@@ -343,7 +343,7 @@ def dbt_generate_docs():
 @api_v1_bp.route('/dbt/models', methods=['GET'])
 @jwt_required()
 @require_tenant_context
-@require_roles(['admin', 'data_engineer', 'analyst'])
+@require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_list_models():
     """
     List dbt models.
@@ -401,7 +401,7 @@ def dbt_list_models():
 @api_v1_bp.route('/dbt/lineage/<model_name>', methods=['GET'])
 @jwt_required()
 @require_tenant_context
-@require_roles(['admin', 'data_engineer', 'analyst'])
+@require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_get_lineage(model_name: str):
     """
     Get lineage information for a model.
@@ -440,7 +440,7 @@ def dbt_get_lineage(model_name: str):
 @api_v1_bp.route('/dbt/parse', methods=['POST'])
 @jwt_required()
 @require_tenant_context
-@require_roles(['admin', 'data_engineer', 'analyst'])
+@require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_parse_project():
     """
     Parse dbt project and return manifest.

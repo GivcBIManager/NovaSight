@@ -155,7 +155,7 @@ class DashboardList(Resource):
     @ns.marshal_list_with(dashboard_response)
     @ns.response(401, 'Unauthorized', error_response)
     @require_tenant_context
-    @require_permission('dashboards:view')
+    @require_permission('dashboards.view')
     def get(self):
         """
         List all accessible dashboards.
@@ -163,7 +163,7 @@ class DashboardList(Resource):
         Returns dashboards the user owns, has been shared with,
         or are public within the tenant.
         
-        **Permissions Required:** `dashboards:view`
+        **Permissions Required:** `dashboards.view`
         """
         from app.services.dashboard_service import DashboardService
         
@@ -197,7 +197,7 @@ class DashboardList(Resource):
     @ns.response(400, 'Validation Error', error_response)
     @ns.response(401, 'Unauthorized', error_response)
     @require_tenant_context
-    @require_permission('dashboards:create')
+    @require_permission('dashboards.create')
     def post(self):
         """
         Create a new dashboard.
@@ -205,7 +205,7 @@ class DashboardList(Resource):
         Creates an empty dashboard that can have widgets added.
         The creator becomes the owner.
         
-        **Permissions Required:** `dashboards:create`
+        **Permissions Required:** `dashboards.create`
         """
         from app.services.dashboard_service import DashboardService
         from app.schemas.dashboard_schemas import DashboardCreateSchema
@@ -246,7 +246,7 @@ class DashboardDetail(Resource):
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Dashboard not found', error_response)
     @require_tenant_context
-    @require_permission('dashboards:view')
+    @require_permission('dashboards.view')
     def get(self, dashboard_id):
         """
         Get dashboard with all widgets.
@@ -278,7 +278,7 @@ class DashboardDetail(Resource):
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Dashboard not found', error_response)
     @require_tenant_context
-    @require_permission('dashboards:edit')
+    @require_permission('dashboards.edit')
     def patch(self, dashboard_id):
         """
         Update dashboard properties.
@@ -286,7 +286,7 @@ class DashboardDetail(Resource):
         Partial updates supported. Does not modify widgets.
         Use widget endpoints to add/update/remove widgets.
         
-        **Permissions Required:** Dashboard owner or `dashboards:edit`
+        **Permissions Required:** Dashboard owner or `dashboards.edit`
         """
         from app.services.dashboard_service import DashboardService, DashboardNotFoundError
         
@@ -311,7 +311,7 @@ class DashboardDetail(Resource):
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Dashboard not found', error_response)
     @require_tenant_context
-    @require_permission('dashboards:delete')
+    @require_permission('dashboards.delete')
     def delete(self, dashboard_id):
         """
         Delete a dashboard.
@@ -319,7 +319,7 @@ class DashboardDetail(Resource):
         Permanently deletes the dashboard and all its widgets.
         This action cannot be undone.
         
-        **Permissions Required:** Dashboard owner or `dashboards:delete`
+        **Permissions Required:** Dashboard owner or `dashboards.delete`
         """
         from app.services.dashboard_service import DashboardService, DashboardNotFoundError
         
@@ -349,7 +349,7 @@ class DashboardLayout(Resource):
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Dashboard not found', error_response)
     @require_tenant_context
-    @require_permission('dashboards:edit')
+    @require_permission('dashboards.edit')
     def put(self, dashboard_id):
         """
         Update dashboard widget layout.
@@ -395,7 +395,7 @@ class DashboardSharing(Resource):
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Dashboard not found', error_response)
     @require_tenant_context
-    @require_permission('dashboards:share')
+    @require_permission('dashboards.share')
     def post(self, dashboard_id):
         """
         Share dashboard with users or roles.
@@ -403,7 +403,7 @@ class DashboardSharing(Resource):
         Grants access to the dashboard for specified users or roles
         with the given permission level.
         
-        **Permissions Required:** Dashboard owner or `dashboards:share`
+        **Permissions Required:** Dashboard owner or `dashboards.share`
         """
         from app.services.dashboard_service import DashboardService
         from app.schemas.dashboard_schemas import DashboardShareSchema
@@ -436,7 +436,7 @@ class WidgetList(Resource):
     @ns.doc('list_widgets', security='Bearer')
     @ns.marshal_list_with(widget_response)
     @require_tenant_context
-    @require_permission('dashboards:view')
+    @require_permission('dashboards.view')
     def get(self, dashboard_id):
         """
         List all widgets on a dashboard.
@@ -462,7 +462,7 @@ class WidgetList(Resource):
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(403, 'Forbidden', error_response)
     @require_tenant_context
-    @require_permission('dashboards:edit')
+    @require_permission('dashboards.edit')
     def post(self, dashboard_id):
         """
         Add a widget to a dashboard.
@@ -511,7 +511,7 @@ class WidgetDetail(Resource):
     @ns.marshal_with(widget_response)
     @ns.response(404, 'Widget not found', error_response)
     @require_tenant_context
-    @require_permission('dashboards:view')
+    @require_permission('dashboards.view')
     def get(self, dashboard_id, widget_id):
         """
         Get widget details.
@@ -539,7 +539,7 @@ class WidgetDetail(Resource):
     @ns.response(400, 'Validation Error', error_response)
     @ns.response(404, 'Widget not found', error_response)
     @require_tenant_context
-    @require_permission('dashboards:edit')
+    @require_permission('dashboards.edit')
     def patch(self, dashboard_id, widget_id):
         """
         Update widget configuration.
@@ -568,7 +568,7 @@ class WidgetDetail(Resource):
     @ns.response(204, 'Widget deleted')
     @ns.response(404, 'Widget not found', error_response)
     @require_tenant_context
-    @require_permission('dashboards:edit')
+    @require_permission('dashboards.edit')
     def delete(self, dashboard_id, widget_id):
         """
         Delete a widget from a dashboard.
@@ -599,7 +599,7 @@ class WidgetData(Resource):
     @ns.response(200, 'Widget data')
     @ns.response(404, 'Widget not found', error_response)
     @require_tenant_context
-    @require_permission('dashboards:view')
+    @require_permission('dashboards.view')
     def get(self, dashboard_id, widget_id):
         """
         Get data for a widget.

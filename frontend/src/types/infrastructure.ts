@@ -6,7 +6,7 @@
  */
 
 // Service types
-export type InfrastructureServiceType = 'clickhouse' | 'spark' | 'airflow';
+export type InfrastructureServiceType = 'clickhouse' | 'spark' | 'airflow' | 'ollama';
 
 // Base configuration interface
 export interface InfrastructureConfig {
@@ -61,6 +61,16 @@ export interface AirflowSettings {
   dag_folder: string;
   request_timeout: number;
   verify_ssl: boolean;
+}
+
+// Ollama-specific settings
+export interface OllamaSettings {
+  base_url: string;
+  default_model: string;
+  request_timeout: number;
+  num_ctx: number;
+  temperature: number;
+  keep_alive: string;
 }
 
 // Create/Update DTOs
@@ -145,6 +155,7 @@ export const DEFAULT_PORTS: Record<InfrastructureServiceType, number> = {
   clickhouse: 8123,
   spark: 7077,
   airflow: 8080,
+  ollama: 11434,
 };
 
 // Display labels
@@ -152,6 +163,7 @@ export const SERVICE_LABELS: Record<InfrastructureServiceType, string> = {
   clickhouse: 'ClickHouse',
   spark: 'Apache Spark',
   airflow: 'Apache Airflow',
+  ollama: 'Ollama LLM',
 };
 
 // Service descriptions
@@ -159,4 +171,5 @@ export const SERVICE_DESCRIPTIONS: Record<InfrastructureServiceType, string> = {
   clickhouse: 'Column-oriented OLAP database for analytics workloads',
   spark: 'Distributed computing engine for big data processing',
   airflow: 'Workflow orchestration platform for data pipelines',
+  ollama: 'Local LLM server for AI-powered natural language queries',
 };

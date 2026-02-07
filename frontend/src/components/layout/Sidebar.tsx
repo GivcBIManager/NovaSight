@@ -13,9 +13,11 @@ import {
   Boxes,
   MessageSquare,
   Book,
+  Shield,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -32,6 +34,11 @@ const navigation = [
 export function Sidebar() {
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
+  const { user } = useAuth()
+
+  const isSuperAdmin = user?.roles?.some(
+    (r) => r === 'super_admin' || (typeof r === 'object' && (r as { name?: string }).name === 'super_admin')
+  )
 
   return (
     <div
@@ -73,6 +80,24 @@ export function Sidebar() {
           )
         })}
       </nav>
+
+      {/* Portal Management (Super Admin only) */}
+      {isSuperAdmin && (
+        <div className="border-t px-2 py-3">
+          <Link
+            to="/portal"
+            className={cn(
+              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              location.pathname.startsWith('/portal')
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            )}
+          >
+            <Shield className="h-5 w-5 shrink-0" />
+            {!collapsed && <span>Portal Management</span>}
+          </Link>
+        </div>
+      )}
 
       {/* Collapse toggle */}
       <div className="border-t p-2">

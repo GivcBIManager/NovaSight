@@ -66,6 +66,14 @@ def validate_password(password: str) -> Optional[str]:
     """
     Validate a password meets security requirements.
     
+    Requirements:
+    - Minimum 12 characters
+    - At most 128 characters
+    - At least one uppercase letter
+    - At least one lowercase letter
+    - At least one digit
+    - At least one special character
+    
     Args:
         password: The password to validate.
     
@@ -75,8 +83,8 @@ def validate_password(password: str) -> Optional[str]:
     if not password:
         return "Password is required"
     
-    if len(password) < 8:
-        return "Password must be at least 8 characters"
+    if len(password) < 12:
+        return "Password must be at least 12 characters"
     
     if len(password) > 128:
         return "Password must be 128 characters or less"
@@ -89,6 +97,9 @@ def validate_password(password: str) -> Optional[str]:
     
     if not re.search(r'\d', password):
         return "Password must contain at least one number"
+    
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\;\'`~]', password):
+        return "Password must contain at least one special character"
     
     return None
 

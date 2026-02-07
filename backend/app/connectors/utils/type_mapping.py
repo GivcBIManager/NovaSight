@@ -77,19 +77,19 @@ class TypeMapper:
     
     # Oracle type mappings
     ORACLE_TYPE_MAP = {
-        'VARCHAR2': 'varchar',
-        'NVARCHAR2': 'varchar',
-        'CHAR': 'char',
-        'NCHAR': 'char',
-        'CLOB': 'text',
-        'NCLOB': 'text',
-        'NUMBER': 'decimal',
-        'BINARY_FLOAT': 'float',
-        'BINARY_DOUBLE': 'double',
-        'DATE': 'datetime',
-        'TIMESTAMP': 'timestamp',
-        'BLOB': 'binary',
-        'RAW': 'binary',
+        'varchar2': 'varchar',
+        'nvarchar2': 'varchar',
+        'char': 'char',
+        'nchar': 'char',
+        'clob': 'text',
+        'nclob': 'text',
+        'number': 'decimal',
+        'binary_float': 'float',
+        'binary_double': 'double',
+        'date': 'datetime',
+        'timestamp': 'timestamp',
+        'blob': 'binary',
+        'raw': 'binary',
     }
     
     # SQL Server type mappings

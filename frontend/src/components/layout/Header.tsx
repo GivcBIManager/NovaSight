@@ -10,11 +10,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Bell, Moon, Sun, LogOut, User, Settings } from 'lucide-react'
+import { Bell, Moon, Sun, LogOut, User, Settings, Shield } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 export function Header() {
   const { user, logout } = useAuth()
   const { theme, setTheme } = useTheme()
+  const navigate = useNavigate()
+
+  const isSuperAdmin = user?.roles?.some(
+    (r) => r === 'super_admin' || (typeof r === 'object' && (r as { name?: string }).name === 'super_admin')
+  )
 
   const initials = user?.name
     ? user.name
@@ -70,11 +76,20 @@ export function Header() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            {isSuperAdmin && (
+              <>
+                <DropdownMenuItem onClick={() => navigate('/portal')}>
+                  <Shield className="mr-2 h-4 w-4" />
+                  Portal Management
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
               <User className="mr-2 h-4 w-4" />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </DropdownMenuItem>

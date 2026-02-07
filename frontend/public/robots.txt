@@ -1,0 +1,21 @@
+# NovaSight Robots.txt
+# https://novasight.io/robots.txt
+
+User-agent: *
+Allow: /
+
+# Disallow private/app routes
+Disallow: /app/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /admin/
+Disallow: /settings/
+Disallow: /dashboard/
+
+# Disallow utility routes
+Disallow: /healthz
+Disallow: /ready
+
+# Sitemap location
+Sitemap: https://novasight.io/sitemap.xml

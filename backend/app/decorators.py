@@ -3,15 +3,34 @@ NovaSight Decorators
 ====================
 
 Custom decorators for authorization and request handling.
+
+DEPRECATION NOTICE: This module re-exports decorators from
+app.platform.auth.decorators. Import directly from there for new code.
 """
 
 import asyncio
+import warnings
 from functools import wraps
 from flask import request, g
 from flask_jwt_extended import verify_jwt_in_request
 from app.middleware.jwt_handlers import get_jwt_identity_dict
 from app.errors import AuthorizationError, AuthenticationError
 import logging
+
+# Re-export unified decorators from platform
+from app.platform.auth.decorators import (  # noqa: F401
+    require_roles as _platform_require_roles,
+    tenant_required,
+    require_permission,
+    require_any_permission,
+    require_all_permissions,
+    authenticated,
+)
+from app.platform.auth.identity import (  # noqa: F401
+    Identity,
+    get_current_identity,
+    require_identity,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,86 +57,34 @@ def async_route(f):
 def require_roles(allowed_roles: list):
     """
     Decorator to require specific roles for endpoint access.
-    
+
+    DEPRECATED: Import from app.platform.auth.decorators instead.
+
     Args:
         allowed_roles: List of role names that can access the endpoint
-    
-    Usage:
-        @require_roles(["admin", "data_engineer"])
-        def my_endpoint():
-            ...
     """
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            identity = get_jwt_identity_dict()
-            
-            if not identity:
-                raise AuthenticationError("Authentication required")
-            
-            user_roles = identity.get("roles", [])
-            
-            # Super admin can access everything
-            if "super_admin" in user_roles or any(r.startswith("super_admin") for r in user_roles):
-                return f(*args, **kwargs)
-            
-            # Check if user has any of the allowed roles
-            # Support both exact match and prefix match (for test fixtures with unique suffixes)
-            def role_matches(user_role: str, allowed_role: str) -> bool:
-                return user_role == allowed_role or user_role.startswith(allowed_role + "_")
-            
-            if not any(
-                role_matches(user_role, allowed_role)
-                for user_role in user_roles
-                for allowed_role in allowed_roles
-            ):
-                logger.warning(
-                    f"Access denied for user {identity.get('email')}: "
-                    f"required roles {allowed_roles}, has {user_roles}"
-                )
-                raise AuthorizationError(
-                    f"Access denied. Required roles: {', '.join(allowed_roles)}"
-                )
-            
-            return f(*args, **kwargs)
-        
-        return decorated_function
-    return decorator
+    warnings.warn(
+        "app.decorators.require_roles is deprecated. "
+        "Use app.platform.auth.decorators.require_roles instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return _platform_require_roles(allowed_roles)
 
 
 def require_tenant_context(f):
     """
     Decorator to ensure tenant context is available.
-    
-    Sets g.tenant_id from JWT identity for use in request handlers.
-    
-    Usage:
-        @require_tenant_context
-        def my_endpoint():
-            tenant_id = g.tenant_id
-            ...
+
+    DEPRECATED: Import tenant_required from app.platform.auth.decorators instead.
     """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        identity = get_jwt_identity_dict()
-        
-        if not identity:
-            raise AuthenticationError("Authentication required")
-        
-        tenant_id = identity.get("tenant_id")
-        
-        if not tenant_id:
-            raise AuthorizationError("Tenant context required")
-        
-        # Store in Flask g object for request-scoped access
-        g.tenant_id = tenant_id
-        g.user_id = identity.get("user_id")
-        g.user_email = identity.get("email")
-        g.user_roles = identity.get("roles", [])
-        
-        return f(*args, **kwargs)
-    
-    return decorated_function
+    warnings.warn(
+        "app.decorators.require_tenant_context is deprecated. "
+        "Use app.platform.auth.decorators.tenant_required instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return tenant_required(f)
 
 
 def audit_action(action: str, resource_type: str = None):

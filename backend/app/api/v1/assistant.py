@@ -447,6 +447,8 @@ Model: {model.name}
 
 
 @api_v1_bp.route('/assistant/health', methods=['GET'])
+@jwt_required()
+@require_tenant_context
 @async_route
 async def ollama_health():
     """

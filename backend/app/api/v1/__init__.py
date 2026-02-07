@@ -9,10 +9,15 @@ from flask import Blueprint
 
 api_v1_bp = Blueprint("api_v1", __name__)
 
-# Import and register route modules
-from app.api.v1 import auth
-from app.api.v1 import tenants
-from app.api.v1 import users
+# Identity domain routes (canonical)
+from app.domains.identity.api import auth_routes   # noqa: F401
+from app.domains.identity.api import user_routes   # noqa: F401
+from app.domains.identity.api import role_routes   # noqa: F401
+
+# Tenants domain routes (canonical)
+from app.domains.tenants.api import tenant_routes  # noqa: F401
+
+# Other route modules
 from app.api.v1 import connections
 from app.api.v1 import dags
 from app.api.v1 import pyspark_apps

@@ -52,6 +52,7 @@ def list_connections():
 @api_v1_bp.route("/connections", methods=["POST"])
 @jwt_required()
 @require_tenant_context
+@require_roles(["data_engineer", "tenant_admin"])
 def create_connection():
     """
     Create a new data source connection.
@@ -248,11 +249,12 @@ def test_connection(connection_id: str):
 @api_v1_bp.route("/connections/test", methods=["POST"])
 @jwt_required()
 @require_tenant_context
+@require_roles(["data_engineer", "tenant_admin"])
 def test_new_connection():
     """
     Test connection parameters without saving.
     
-    Any authenticated user can test connection parameters.
+    Only data engineers and tenant admins can test connection parameters.
     
     Request Body:
         - db_type: Database type

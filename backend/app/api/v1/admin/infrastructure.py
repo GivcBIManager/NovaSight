@@ -24,6 +24,7 @@ from app.schemas.infrastructure_schemas import (
     ClickHouseConfigCreateSchema,
     SparkConfigCreateSchema,
     AirflowConfigCreateSchema,
+    OllamaConfigCreateSchema,
 )
 from app.errors import ValidationError, NotFoundError
 from marshmallow import ValidationError as MarshmallowValidationError
@@ -36,6 +37,7 @@ CREATE_SCHEMAS = {
     'clickhouse': ClickHouseConfigCreateSchema,
     'spark': SparkConfigCreateSchema,
     'airflow': AirflowConfigCreateSchema,
+    'ollama': OllamaConfigCreateSchema,
 }
 
 
@@ -114,7 +116,7 @@ def get_active_infrastructure_config(service_type):
     Returns:
         Active configuration or default settings
     """
-    if service_type not in ['clickhouse', 'spark', 'airflow']:
+    if service_type not in ['clickhouse', 'spark', 'airflow', 'ollama']:
         raise ValidationError(f"Invalid service type: {service_type}")
     
     tenant_id = request.args.get('tenant_id')

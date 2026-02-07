@@ -4,10 +4,19 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { MainLayout } from '@/components/layout/MainLayout'
+import { MarketingLayout } from '@/components/marketing/layout'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
+import {
+  HomePage,
+  FeaturesPage,
+  SolutionsPage,
+  PricingPage,
+  AboutPage,
+  ContactPage,
+} from '@/pages/marketing'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { DagsListPage } from '@/pages/orchestration/DagsListPage'
 import { DagBuilderPage } from '@/pages/orchestration/DagBuilderPage'
@@ -25,12 +34,28 @@ import { QueryPage } from '@/features/query'
 import { DocumentationPage } from '@/pages/documentation'
 import { InfrastructureConfigPage } from '@/pages/admin'
 import { SettingsPage } from '@/pages/settings'
+import {
+  PortalLayout,
+  PortalOverviewPage,
+  TenantManagementPage,
+  UserManagementPage,
+} from '@/pages/portal'
 
 function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="novasight-theme">
       <AuthProvider>
         <Routes>
+          {/* Marketing routes - Public */}
+          <Route element={<MarketingLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/features" element={<FeaturesPage />} />
+            <Route path="/solutions" element={<SolutionsPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+          </Route>
+
           {/* Public routes - Authentication */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -39,14 +64,14 @@ function App() {
 
           {/* Protected routes */}
           <Route
-            path="/"
+            path="/app"
             element={
               <ProtectedRoute>
                 <MainLayout />
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route index element={<Navigate to="/app/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             
             {/* Data Sources */}
@@ -79,8 +104,16 @@ function App() {
             {/* AI Query Interface */}
             <Route path="query" element={<QueryPage />} />
             
-            {/* Admin Pages */}
+            {/* Admin Pages (legacy route) */}
             <Route path="admin/infrastructure" element={<InfrastructureConfigPage />} />
+            
+            {/* Portal Management (Super Admin) */}
+            <Route path="portal" element={<PortalLayout />}>
+              <Route index element={<PortalOverviewPage />} />
+              <Route path="tenants" element={<TenantManagementPage />} />
+              <Route path="users" element={<UserManagementPage />} />
+              <Route path="infrastructure" element={<InfrastructureConfigPage />} />
+            </Route>
             
             {/* Settings */}
             <Route path="settings" element={<SettingsPage />} />
@@ -89,8 +122,11 @@ function App() {
             <Route path="docs" element={<DocumentationPage />} />
           </Route>
 
+          {/* Legacy routes - redirect to new /app prefix */}
+          <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+          
           {/* Catch all */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster />
       </AuthProvider>
