@@ -110,7 +110,7 @@ export function TenantPlanBreakdown() {
   }
 
   const plans = [
-    { name: 'Starter', count: stats?.tenants_by_plan.starter ?? 0, color: 'bg-blue-500' },
+    { name: 'Basic', count: stats?.tenants_by_plan.basic ?? 0, color: 'bg-blue-500' },
     { name: 'Professional', count: stats?.tenants_by_plan.professional ?? 0, color: 'bg-purple-500' },
     { name: 'Enterprise', count: stats?.tenants_by_plan.enterprise ?? 0, color: 'bg-amber-500' },
   ]

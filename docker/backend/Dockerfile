@@ -75,6 +75,10 @@ RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 # Copy application code
 COPY --chown=novasight:novasight . .
 
+# Copy entrypoint script
+COPY --chown=novasight:novasight ../docker/backend/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh 2>/dev/null || true
+
 # Switch to non-root user
 USER novasight
 
@@ -83,6 +87,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
 EXPOSE 5000
+
+# Entrypoint runs migrations + seed, then exec's CMD
+ENTRYPOINT ["/entrypoint.sh"]
 
 # Run with gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:create_app()"]

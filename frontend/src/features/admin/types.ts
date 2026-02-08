@@ -8,7 +8,7 @@ export interface Tenant {
   id: string
   name: string
   slug: string
-  plan: 'starter' | 'professional' | 'enterprise'
+  plan: 'basic' | 'professional' | 'enterprise'
   is_active: boolean
   users_count: number
   settings: Record<string, unknown>
@@ -65,7 +65,7 @@ export interface PlatformStatsData {
   total_storage_gb: number
   queries_today: number
   tenants_by_plan: {
-    starter: number
+    basic: number
     professional: number
     enterprise: number
   }
@@ -75,7 +75,7 @@ export interface PlatformStatsData {
 
 export interface CreateTenantData {
   name: string
-  plan: 'starter' | 'professional' | 'enterprise'
+  plan: 'basic' | 'professional' | 'enterprise'
   admin_email: string
   admin_name: string
   admin_password: string
@@ -84,7 +84,7 @@ export interface CreateTenantData {
 
 export interface UpdateTenantData {
   name?: string
-  plan?: 'starter' | 'professional' | 'enterprise'
+  plan?: 'basic' | 'professional' | 'enterprise'
   settings?: Record<string, unknown>
 }
 

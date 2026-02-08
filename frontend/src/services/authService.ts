@@ -12,7 +12,7 @@ export interface RegisterCredentials {
   email: string
   password: string
   name: string
-  tenant_name?: string
+  tenant_slug: string
 }
 
 export interface User {
@@ -20,7 +20,7 @@ export interface User {
   email: string
   name: string
   tenant_id: string
-  tenant_name: string
+  tenant_name?: string
   roles: string[]
 }
 
@@ -28,16 +28,18 @@ export interface LoginResponse {
   access_token: string
   refresh_token: string
   token_type: string
-  expires_in: number
   user: User
 }
 
+/** Backend register returns { message, user } – NO tokens */
 export interface RegisterResponse {
-  access_token: string
-  refresh_token: string
-  token_type: string
-  expires_in: number
-  user: User
+  message: string
+  user: {
+    id: string
+    email: string
+    name: string
+    tenant_id: string
+  }
 }
 
 const TOKEN_KEY = 'novasight_access_token'

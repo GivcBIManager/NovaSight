@@ -55,6 +55,6 @@ redis_client = RedisClient()
 # Rate limiter instance (uses Redis in production, in-memory for development)
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["1000 per day", "200 per hour"],  # Relaxed for development
+    default_limits=["10000 per day", "2000 per hour"],
     storage_uri="memory://",  # Will be updated to Redis in init_app
 )

@@ -106,6 +106,9 @@ class DevelopmentConfig(BaseConfig):
     
     # Allow more permissive CORS in development
     CORS_ORIGINS = ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"]
+    
+    # Auto-seed test users on startup
+    SEED_USERS = True
 
 
 class TestingConfig(BaseConfig):

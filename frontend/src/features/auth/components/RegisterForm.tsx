@@ -75,7 +75,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       if (onSuccess) {
         onSuccess()
       } else {
-        navigate('/dashboard', { replace: true })
+        navigate('/app/dashboard', { replace: true })
       }
     } catch (err: unknown) {
       if (err instanceof Error) {

@@ -33,7 +33,7 @@ const features = [
     icon: Database,
     color: 'text-accent-indigo',
     bgColor: 'bg-accent-indigo/10',
-    href: '/connections',
+    href: '/app/connections',
   },
   {
     title: 'Orchestration',
@@ -41,7 +41,7 @@ const features = [
     icon: GitBranch,
     color: 'text-neon-green',
     bgColor: 'bg-neon-green/10',
-    href: '/orchestration',
+    href: '/app/dags',
   },
   {
     title: 'Analytics',
@@ -49,7 +49,7 @@ const features = [
     icon: BarChart3,
     color: 'text-accent-purple',
     bgColor: 'bg-accent-purple/10',
-    href: '/dashboard',
+    href: '/app/dashboards',
   },
   {
     title: 'AI Assistant',
@@ -57,7 +57,7 @@ const features = [
     icon: Bot,
     color: 'text-neon-pink',
     bgColor: 'bg-neon-pink/10',
-    href: '/ai-assistant',
+    href: '/app/query',
   },
 ];
 
@@ -172,13 +172,13 @@ export function LandingPage() {
             className="flex flex-wrap items-center justify-center gap-4"
           >
             <Button variant="gradient" size="lg" asChild>
-              <Link to="/dashboard">
+              <Link to="/app/dashboard">
                 Go to Dashboard
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link to="/documentation">
+              <Link to="/app/docs">
                 View Documentation
               </Link>
             </Button>

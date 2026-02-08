@@ -12,7 +12,6 @@ from flask.cli import with_appcontext, AppGroup
 
 # Create command groups
 docs_cli = AppGroup('docs', help='API documentation commands')
-db_cli = AppGroup('db', help='Database management commands')
 
 
 @docs_cli.command('export-openapi')
@@ -323,5 +322,8 @@ def list_infrastructure_configs():
 def register_commands(app):
     """Register CLI commands with the Flask app."""
     app.cli.add_command(docs_cli)
-    app.cli.add_command(db_cli)
     app.cli.add_command(infra_cli)
+
+    # Database seeding commands
+    from app.seed import seed_cli
+    app.cli.add_command(seed_cli)

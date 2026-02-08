@@ -51,15 +51,19 @@ import {
 import api from '@/lib/api'
 import type { Role, Permission } from '../types'
 
-// Permission categories for grouping
-const PERMISSION_CATEGORIES = {
+// Permission categories for grouping (aligned with backend permission categories)
+const PERMISSION_CATEGORIES: Record<string, { label: string; icon: string }> = {
   datasources: { label: 'Data Sources', icon: '🔌' },
+  connections: { label: 'Connections', icon: '🔗' },
   ingestion: { label: 'Ingestion', icon: '📥' },
   models: { label: 'dbt Models', icon: '🔧' },
   dags: { label: 'DAGs', icon: '📊' },
   analytics: { label: 'Analytics', icon: '📈' },
   dashboards: { label: 'Dashboards', icon: '📋' },
+  semantic: { label: 'Semantic Layer', icon: '🧊' },
   admin: { label: 'Administration', icon: '⚙️' },
+  pyspark: { label: 'PySpark Apps', icon: '⚡' },
+  ai: { label: 'AI / NL2SQL', icon: '🤖' },
 }
 
 const createRoleSchema = z.object({

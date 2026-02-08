@@ -173,7 +173,7 @@ export function PySparkAppDetailPage() {
         title: 'App Deleted',
         description: `Successfully deleted "${app.name}"`,
       })
-      navigate('/pyspark')
+      navigate('/app/pyspark')
     } catch (error) {
       toast({
         title: 'Error',
@@ -217,7 +217,7 @@ export function PySparkAppDetailPage() {
               Failed to load PySpark application details.
             </p>
             <div className="flex gap-4">
-              <Button variant="outline" onClick={() => navigate('/pyspark')}>
+              <Button variant="outline" onClick={() => navigate('/app/pyspark')}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to List
               </Button>
@@ -241,7 +241,7 @@ export function PySparkAppDetailPage() {
       <div className="flex items-start justify-between mb-8">
         <div className="flex items-start gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link to="/pyspark">
+            <Link to="/app/pyspark">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
@@ -278,7 +278,7 @@ export function PySparkAppDetailPage() {
             Generate Code
           </Button>
           <Button variant="outline" asChild>
-            <Link to={`/pyspark/${app.id}/edit`}>
+            <Link to={`/app/pyspark/${app.id}/edit`}>
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Link>

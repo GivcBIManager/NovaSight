@@ -442,7 +442,16 @@ const TenantFormDialog: React.FC<TenantFormDialogProps> = ({ open, tenant, onClo
   // Auto-generate slug from name (only for new tenants)
   useEffect(() => {
     if (!tenant) {
-      setSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''))
+      // Generate slug: lowercase, replace non-alphanumeric with hyphens, ensure starts with letter
+      let generatedSlug = name.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with hyphens
+        .replace(/^-+|-+$/g, '')       // Trim leading/trailing hyphens
+        .replace(/^[^a-z]+/, '')       // Remove leading non-letters (numbers, etc.)
+      // If slug is empty or doesn't start with a letter, prefix with 'org-'
+      if (!generatedSlug || !/^[a-z]/.test(generatedSlug)) {
+        generatedSlug = 'org-' + (generatedSlug || 'new')
+      }
+      setSlug(generatedSlug)
     }
   }, [name, tenant])
 
@@ -453,6 +462,11 @@ const TenantFormDialog: React.FC<TenantFormDialogProps> = ({ open, tenant, onClo
     }
     if (!slug.trim()) {
       setError('Slug is required')
+      return
+    }
+    // Validate slug format
+    if (!/^[a-z][a-z0-9_-]*$/.test(slug.trim())) {
+      setError('Slug must start with a letter and contain only lowercase letters, numbers, hyphens, and underscores')
       return
     }
 

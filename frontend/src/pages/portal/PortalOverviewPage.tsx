@@ -125,7 +125,7 @@ export const PortalOverviewPage: React.FC = () => {
                 <CardDescription>User distribution across organizations</CardDescription>
               </div>
               <Link
-                to="/portal/tenants"
+                to="/app/portal/tenants"
                 className="text-sm text-primary hover:underline flex items-center gap-1"
               >
                 View all <ArrowRight className="h-3 w-3" />
@@ -170,7 +170,7 @@ export const PortalOverviewPage: React.FC = () => {
                 <CardDescription>Role distribution across platform</CardDescription>
               </div>
               <Link
-                to="/portal/users"
+                to="/app/portal/users"
                 className="text-sm text-primary hover:underline flex items-center gap-1"
               >
                 View all <ArrowRight className="h-3 w-3" />
@@ -214,7 +214,7 @@ export const PortalOverviewPage: React.FC = () => {
         <CardContent>
           <div className="grid gap-3 md:grid-cols-3">
             <Link
-              to="/portal/tenants"
+              to="/app/portal/tenants"
               className="flex items-center gap-3 p-4 rounded-lg border hover:bg-accent transition-colors"
             >
               <Building2 className="h-8 w-8 text-primary" />
@@ -224,7 +224,7 @@ export const PortalOverviewPage: React.FC = () => {
               </div>
             </Link>
             <Link
-              to="/portal/users"
+              to="/app/portal/users"
               className="flex items-center gap-3 p-4 rounded-lg border hover:bg-accent transition-colors"
             >
               <Users className="h-8 w-8 text-primary" />
@@ -234,7 +234,7 @@ export const PortalOverviewPage: React.FC = () => {
               </div>
             </Link>
             <Link
-              to="/portal/infrastructure"
+              to="/app/portal/infrastructure"
               className="flex items-center gap-3 p-4 rounded-lg border hover:bg-accent transition-colors"
             >
               <Server className="h-8 w-8 text-primary" />
@@ -259,6 +259,7 @@ const RoleBadge: React.FC<{ role: string }> = ({ role }) => {
     bi_developer: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     analyst: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
     viewer: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
+    auditor: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   }
 
   return (

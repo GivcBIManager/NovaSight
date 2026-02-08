@@ -1,6 +1,6 @@
 {
   "config": {
-    "configFile": "/app/playwright.docker.config.ts",
+    "configFile": "/app/playwright.config.ts",
     "rootDir": "/app/e2e",
     "forbidOnly": false,
     "fullyParallel": true,
@@ -10,18 +10,14 @@
     "grep": {},
     "grepInvert": null,
     "maxFailures": 0,
-    "metadata": {
-      "actualWorkers": 11
-    },
+    "metadata": {},
     "preserveOutput": "always",
     "projects": [
       {
         "outputDir": "/app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 11
-        },
+        "metadata": {},
         "id": "setup",
         "name": "setup",
         "testDir": "/app/e2e",
@@ -35,9 +31,7 @@
         "outputDir": "/app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 11
-        },
+        "metadata": {},
         "id": "cleanup",
         "name": "cleanup",
         "testDir": "/app/e2e",
@@ -51,9 +45,7 @@
         "outputDir": "/app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 11
-        },
+        "metadata": {},
         "id": "chromium",
         "name": "chromium",
         "testDir": "/app/e2e",
@@ -67,9 +59,63 @@
         "outputDir": "/app/test-results",
         "repeatEach": 1,
         "retries": 0,
-        "metadata": {
-          "actualWorkers": 11
-        },
+        "metadata": {},
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/app/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/app/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "/app/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "/app/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
         "id": "chromium-unauthenticated",
         "name": "chromium-unauthenticated",
         "testDir": "/app/e2e",
@@ -112,823 +158,19 @@
     "workers": 11,
     "webServer": null
   },
-  "suites": [
+  "suites": [],
+  "errors": [
     {
-      "title": "tests/auth.spec.ts",
-      "file": "tests/auth.spec.ts",
-      "column": 0,
-      "line": 0,
-      "specs": [],
-      "suites": [
-        {
-          "title": "Authentication",
-          "file": "tests/auth.spec.ts",
-          "line": 8,
-          "column": 6,
-          "specs": [],
-          "suites": [
-            {
-              "title": "Login Flow",
-              "file": "tests/auth.spec.ts",
-              "line": 9,
-              "column": 8,
-              "specs": [
-                {
-                  "title": "should display login form",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 16932,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:05.805Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-d4970d7fe3c89f8fe102",
-                  "file": "tests/auth.spec.ts",
-                  "line": 10,
-                  "column": 5
-                },
-                {
-                  "title": "should login with valid credentials and redirect to dashboard",
-                  "ok": false,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 1,
-                          "parallelIndex": 1,
-                          "status": "failed",
-                          "duration": 27075,
-                          "error": {
-                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*dashboard/\u001b[39m\nReceived string:  \u001b[31m\"http://frontend:5173/login\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    14 × unexpected value \"http://frontend:5173/login\"\u001b[22m\n",
-                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*dashboard/\u001b[39m\nReceived string:  \u001b[31m\"http://frontend:5173/login\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    14 × unexpected value \"http://frontend:5173/login\"\u001b[22m\n\n    at /app/e2e/tests/auth.spec.ts:23:26",
-                            "location": {
-                              "file": "/app/e2e/tests/auth.spec.ts",
-                              "column": 26,
-                              "line": 23
-                            },
-                            "snippet": "  21 |\n  22 |       // Should redirect to dashboard\n> 23 |       await expect(page).toHaveURL(/.*dashboard/)\n     |                          ^\n  24 |       \n  25 |       // Welcome message or dashboard content should be visible\n  26 |       await expect(page.getByRole('heading').first()).toBeVisible()"
-                          },
-                          "errors": [
-                            {
-                              "location": {
-                                "file": "/app/e2e/tests/auth.spec.ts",
-                                "column": 26,
-                                "line": 23
-                              },
-                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*dashboard/\u001b[39m\nReceived string:  \u001b[31m\"http://frontend:5173/login\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    14 × unexpected value \"http://frontend:5173/login\"\u001b[22m\n\n\n  21 |\n  22 |       // Should redirect to dashboard\n> 23 |       await expect(page).toHaveURL(/.*dashboard/)\n     |                          ^\n  24 |       \n  25 |       // Welcome message or dashboard content should be visible\n  26 |       await expect(page.getByRole('heading').first()).toBeVisible()\n    at /app/e2e/tests/auth.spec.ts:23:26"
-                            }
-                          ],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:02.655Z",
-                          "annotations": [],
-                          "attachments": [
-                            {
-                              "name": "screenshot",
-                              "contentType": "image/png",
-                              "path": "/app/test-results/tests-auth-Authentication--b1e61-s-and-redirect-to-dashboard-chromium-unauthenticated/test-failed-1.png"
-                            },
-                            {
-                              "name": "error-context",
-                              "contentType": "text/markdown",
-                              "path": "/app/test-results/tests-auth-Authentication--b1e61-s-and-redirect-to-dashboard-chromium-unauthenticated/error-context.md"
-                            }
-                          ],
-                          "errorLocation": {
-                            "file": "/app/e2e/tests/auth.spec.ts",
-                            "column": 26,
-                            "line": 23
-                          }
-                        }
-                      ],
-                      "status": "unexpected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-c6dd2ab10741c909b26c",
-                  "file": "tests/auth.spec.ts",
-                  "line": 15,
-                  "column": 5
-                },
-                {
-                  "title": "should show error for invalid credentials",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 2,
-                          "parallelIndex": 2,
-                          "status": "passed",
-                          "duration": 20045,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:02.610Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-c7248c8167a08dbe5f1a",
-                  "file": "tests/auth.spec.ts",
-                  "line": 29,
-                  "column": 5
-                },
-                {
-                  "title": "should show error for non-existent user",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 3,
-                          "parallelIndex": 3,
-                          "status": "passed",
-                          "duration": 20204,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:02.270Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-95defb0580e8be0d7666",
-                  "file": "tests/auth.spec.ts",
-                  "line": 36,
-                  "column": 5
-                },
-                {
-                  "title": "should show validation error for invalid email format",
-                  "ok": false,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 4,
-                          "parallelIndex": 4,
-                          "status": "failed",
-                          "duration": 27029,
-                          "error": {
-                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/valid email/i)\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/valid email/i)\u001b[22m\n",
-                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/valid email/i)\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/valid email/i)\u001b[22m\n\n    at /app/e2e/tests/auth.spec.ts:47:62",
-                            "location": {
-                              "file": "/app/e2e/tests/auth.spec.ts",
-                              "column": 62,
-                              "line": 47
-                            },
-                            "snippet": "  45 |       await loginPage.login('invalid-email', 'password123')\n  46 |\n> 47 |       await expect(loginPage.page.getByText(/valid email/i)).toBeVisible()\n     |                                                              ^\n  48 |     })\n  49 |\n  50 |     test('should show validation error for empty password', async ({ loginPage, page }) => {"
-                          },
-                          "errors": [
-                            {
-                              "location": {
-                                "file": "/app/e2e/tests/auth.spec.ts",
-                                "column": 62,
-                                "line": 47
-                              },
-                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/valid email/i)\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/valid email/i)\u001b[22m\n\n\n  45 |       await loginPage.login('invalid-email', 'password123')\n  46 |\n> 47 |       await expect(loginPage.page.getByText(/valid email/i)).toBeVisible()\n     |                                                              ^\n  48 |     })\n  49 |\n  50 |     test('should show validation error for empty password', async ({ loginPage, page }) => {\n    at /app/e2e/tests/auth.spec.ts:47:62"
-                            }
-                          ],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:02.652Z",
-                          "annotations": [],
-                          "attachments": [
-                            {
-                              "name": "screenshot",
-                              "contentType": "image/png",
-                              "path": "/app/test-results/tests-auth-Authentication--9a461-or-for-invalid-email-format-chromium-unauthenticated/test-failed-1.png"
-                            },
-                            {
-                              "name": "error-context",
-                              "contentType": "text/markdown",
-                              "path": "/app/test-results/tests-auth-Authentication--9a461-or-for-invalid-email-format-chromium-unauthenticated/error-context.md"
-                            }
-                          ],
-                          "errorLocation": {
-                            "file": "/app/e2e/tests/auth.spec.ts",
-                            "column": 62,
-                            "line": 47
-                          }
-                        }
-                      ],
-                      "status": "unexpected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-0f855468cd317a169bcf",
-                  "file": "tests/auth.spec.ts",
-                  "line": 43,
-                  "column": 5
-                },
-                {
-                  "title": "should show validation error for empty password",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 5,
-                          "parallelIndex": 5,
-                          "status": "passed",
-                          "duration": 17204,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:05.514Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-f69e844b41557462669f",
-                  "file": "tests/auth.spec.ts",
-                  "line": 50,
-                  "column": 5
-                },
-                {
-                  "title": "should preserve email on failed login",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 6,
-                          "parallelIndex": 6,
-                          "status": "passed",
-                          "duration": 20225,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:02.317Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-963527aa5df6baf0d6ee",
-                  "file": "tests/auth.spec.ts",
-                  "line": 58,
-                  "column": 5
-                }
-              ]
-            },
-            {
-              "title": "Logout Flow",
-              "file": "tests/auth.spec.ts",
-              "line": 68,
-              "column": 8,
-              "specs": [
-                {
-                  "title": "should logout and redirect to login",
-                  "ok": false,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 7,
-                          "parallelIndex": 7,
-                          "status": "failed",
-                          "duration": 25962,
-                          "error": {
-                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*dashboard/\u001b[39m\nReceived string:  \u001b[31m\"http://frontend:5173/login\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    13 × unexpected value \"http://frontend:5173/login\"\u001b[22m\n",
-                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*dashboard/\u001b[39m\nReceived string:  \u001b[31m\"http://frontend:5173/login\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    13 × unexpected value \"http://frontend:5173/login\"\u001b[22m\n\n    at /app/e2e/tests/auth.spec.ts:72:26",
-                            "location": {
-                              "file": "/app/e2e/tests/auth.spec.ts",
-                              "column": 26,
-                              "line": 72
-                            },
-                            "snippet": "  70 |       // Start on dashboard (uses authenticated state from fixture)\n  71 |       await page.goto('/dashboard')\n> 72 |       await expect(page).toHaveURL(/.*dashboard/)\n     |                          ^\n  73 |\n  74 |       // Find and click user menu\n  75 |       const userMenu = page.getByRole('button', { name: /user|menu|profile|avatar/i })"
-                          },
-                          "errors": [
-                            {
-                              "location": {
-                                "file": "/app/e2e/tests/auth.spec.ts",
-                                "column": 26,
-                                "line": 72
-                              },
-                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*dashboard/\u001b[39m\nReceived string:  \u001b[31m\"http://frontend:5173/login\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    13 × unexpected value \"http://frontend:5173/login\"\u001b[22m\n\n\n  70 |       // Start on dashboard (uses authenticated state from fixture)\n  71 |       await page.goto('/dashboard')\n> 72 |       await expect(page).toHaveURL(/.*dashboard/)\n     |                          ^\n  73 |\n  74 |       // Find and click user menu\n  75 |       const userMenu = page.getByRole('button', { name: /user|menu|profile|avatar/i })\n    at /app/e2e/tests/auth.spec.ts:72:26"
-                            }
-                          ],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:03.315Z",
-                          "annotations": [],
-                          "attachments": [
-                            {
-                              "name": "screenshot",
-                              "contentType": "image/png",
-                              "path": "/app/test-results/tests-auth-Authentication--03cf9-ogout-and-redirect-to-login-chromium-unauthenticated/test-failed-1.png"
-                            },
-                            {
-                              "name": "error-context",
-                              "contentType": "text/markdown",
-                              "path": "/app/test-results/tests-auth-Authentication--03cf9-ogout-and-redirect-to-login-chromium-unauthenticated/error-context.md"
-                            }
-                          ],
-                          "errorLocation": {
-                            "file": "/app/e2e/tests/auth.spec.ts",
-                            "column": 26,
-                            "line": 72
-                          }
-                        }
-                      ],
-                      "status": "unexpected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-ab05872208f3b243c393",
-                  "file": "tests/auth.spec.ts",
-                  "line": 69,
-                  "column": 5
-                },
-                {
-                  "title": "should clear session data on logout",
-                  "ok": false,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 8,
-                          "parallelIndex": 8,
-                          "status": "failed",
-                          "duration": 32085,
-                          "error": {
-                            "message": "TimeoutError: page.waitForURL: Timeout 15000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"**/dashboard\" until \"load\"\n============================================================",
-                            "stack": "TimeoutError: page.waitForURL: Timeout 15000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"**/dashboard\" until \"load\"\n============================================================\n    at LoginPage.loginAndWaitForDashboard (/app/e2e/pages/LoginPage.ts:57:21)\n    at /app/e2e/tests/auth.spec.ts:89:7",
-                            "location": {
-                              "file": "/app/e2e/pages/LoginPage.ts",
-                              "column": 21,
-                              "line": 57
-                            },
-                            "snippet": "   at pages/LoginPage.ts:57\n\n  55 |   async loginAndWaitForDashboard(email: string, password: string) {\n  56 |     await this.login(email, password)\n> 57 |     await this.page.waitForURL('**/dashboard', { timeout: 15000 })\n     |                     ^\n  58 |   }\n  59 |\n  60 |   /**"
-                          },
-                          "errors": [
-                            {
-                              "location": {
-                                "file": "/app/e2e/pages/LoginPage.ts",
-                                "column": 21,
-                                "line": 57
-                              },
-                              "message": "TimeoutError: page.waitForURL: Timeout 15000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"**/dashboard\" until \"load\"\n============================================================\n\n   at pages/LoginPage.ts:57\n\n  55 |   async loginAndWaitForDashboard(email: string, password: string) {\n  56 |     await this.login(email, password)\n> 57 |     await this.page.waitForURL('**/dashboard', { timeout: 15000 })\n     |                     ^\n  58 |   }\n  59 |\n  60 |   /**\n    at LoginPage.loginAndWaitForDashboard (/app/e2e/pages/LoginPage.ts:57:21)\n    at /app/e2e/tests/auth.spec.ts:89:7"
-                            }
-                          ],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:02.489Z",
-                          "annotations": [],
-                          "attachments": [
-                            {
-                              "name": "screenshot",
-                              "contentType": "image/png",
-                              "path": "/app/test-results/tests-auth-Authentication--dc473-lear-session-data-on-logout-chromium-unauthenticated/test-failed-1.png"
-                            },
-                            {
-                              "name": "error-context",
-                              "contentType": "text/markdown",
-                              "path": "/app/test-results/tests-auth-Authentication--dc473-lear-session-data-on-logout-chromium-unauthenticated/error-context.md"
-                            }
-                          ],
-                          "errorLocation": {
-                            "file": "/app/e2e/pages/LoginPage.ts",
-                            "column": 21,
-                            "line": 57
-                          }
-                        }
-                      ],
-                      "status": "unexpected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-0341f0210dae88d4fde7",
-                  "file": "tests/auth.spec.ts",
-                  "line": 86,
-                  "column": 5
-                }
-              ]
-            },
-            {
-              "title": "Session Management",
-              "file": "tests/auth.spec.ts",
-              "line": 107,
-              "column": 8,
-              "specs": [
-                {
-                  "title": "should redirect to login when accessing protected route without auth",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 9,
-                          "parallelIndex": 9,
-                          "status": "passed",
-                          "duration": 15019,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:07.664Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-a8cb827846439af5bce2",
-                  "file": "tests/auth.spec.ts",
-                  "line": 108,
-                  "column": 5
-                },
-                {
-                  "title": "should redirect to original destination after login",
-                  "ok": false,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 10,
-                          "parallelIndex": 10,
-                          "status": "failed",
-                          "duration": 16096,
-                          "error": {
-                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*datasources/\u001b[39m\nReceived string:  \u001b[31m\"http://frontend:5173/login\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    14 × unexpected value \"http://frontend:5173/login\"\u001b[22m\n",
-                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*datasources/\u001b[39m\nReceived string:  \u001b[31m\"http://frontend:5173/login\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    14 × unexpected value \"http://frontend:5173/login\"\u001b[22m\n\n    at /app/e2e/tests/auth.spec.ts:138:26",
-                            "location": {
-                              "file": "/app/e2e/tests/auth.spec.ts",
-                              "column": 26,
-                              "line": 138
-                            },
-                            "snippet": "  136 |\n  137 |       // Should redirect to originally requested page\n> 138 |       await expect(page).toHaveURL(/.*datasources/)\n      |                          ^\n  139 |     })\n  140 |   })\n  141 |"
-                          },
-                          "errors": [
-                            {
-                              "location": {
-                                "file": "/app/e2e/tests/auth.spec.ts",
-                                "column": 26,
-                                "line": 138
-                              },
-                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/.*datasources/\u001b[39m\nReceived string:  \u001b[31m\"http://frontend:5173/login\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    14 × unexpected value \"http://frontend:5173/login\"\u001b[22m\n\n\n  136 |\n  137 |       // Should redirect to originally requested page\n> 138 |       await expect(page).toHaveURL(/.*datasources/)\n      |                          ^\n  139 |     })\n  140 |   })\n  141 |\n    at /app/e2e/tests/auth.spec.ts:138:26"
-                            }
-                          ],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:13.667Z",
-                          "annotations": [],
-                          "attachments": [
-                            {
-                              "name": "screenshot",
-                              "contentType": "image/png",
-                              "path": "/app/test-results/tests-auth-Authentication--ad5f6-nal-destination-after-login-chromium-unauthenticated/test-failed-1.png"
-                            },
-                            {
-                              "name": "error-context",
-                              "contentType": "text/markdown",
-                              "path": "/app/test-results/tests-auth-Authentication--ad5f6-nal-destination-after-login-chromium-unauthenticated/error-context.md"
-                            }
-                          ],
-                          "errorLocation": {
-                            "file": "/app/e2e/tests/auth.spec.ts",
-                            "column": 26,
-                            "line": 138
-                          }
-                        }
-                      ],
-                      "status": "unexpected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-f5dfe97e2d89910f4867",
-                  "file": "tests/auth.spec.ts",
-                  "line": 121,
-                  "column": 5
-                }
-              ]
-            },
-            {
-              "title": "Password Reset Flow",
-              "file": "tests/auth.spec.ts",
-              "line": 142,
-              "column": 8,
-              "specs": [
-                {
-                  "title": "should navigate to forgot password page",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 9,
-                          "parallelIndex": 9,
-                          "status": "passed",
-                          "duration": 7116,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:22.931Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-c71f5fe8a64968ffa73f",
-                  "file": "tests/auth.spec.ts",
-                  "line": 143,
-                  "column": 5
-                },
-                {
-                  "title": "should show success message after requesting password reset",
-                  "ok": false,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 3,
-                          "parallelIndex": 3,
-                          "status": "failed",
-                          "duration": 7256,
-                          "error": {
-                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/sent|check.*email|success/i)\nExpected: visible\nError: strict mode violation: getByText(/sent|check.*email|success/i) resolved to 2 elements:\n    1) <h3 class=\"text-lg font-semibold\">Check your email</h3> aka getByRole('heading', { name: 'Check your email' })\n    2) <p class=\"text-sm text-muted-foreground\">…</p> aka getByText('We\\'ve sent a password reset')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/sent|check.*email|success/i)\u001b[22m\n",
-                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/sent|check.*email|success/i)\nExpected: visible\nError: strict mode violation: getByText(/sent|check.*email|success/i) resolved to 2 elements:\n    1) <h3 class=\"text-lg font-semibold\">Check your email</h3> aka getByRole('heading', { name: 'Check your email' })\n    2) <p class=\"text-sm text-muted-foreground\">…</p> aka getByText('We\\'ve sent a password reset')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/sent|check.*email|success/i)\u001b[22m\n\n    at /app/e2e/tests/auth.spec.ts:163:66",
-                            "location": {
-                              "file": "/app/e2e/tests/auth.spec.ts",
-                              "column": 66,
-                              "line": 163
-                            },
-                            "snippet": "  161 |\n  162 |       // Should show success/confirmation message\n> 163 |       await expect(page.getByText(/sent|check.*email|success/i)).toBeVisible()\n      |                                                                  ^\n  164 |     })\n  165 |   })\n  166 |"
-                          },
-                          "errors": [
-                            {
-                              "location": {
-                                "file": "/app/e2e/tests/auth.spec.ts",
-                                "column": 66,
-                                "line": 163
-                              },
-                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/sent|check.*email|success/i)\nExpected: visible\nError: strict mode violation: getByText(/sent|check.*email|success/i) resolved to 2 elements:\n    1) <h3 class=\"text-lg font-semibold\">Check your email</h3> aka getByRole('heading', { name: 'Check your email' })\n    2) <p class=\"text-sm text-muted-foreground\">…</p> aka getByText('We\\'ve sent a password reset')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/sent|check.*email|success/i)\u001b[22m\n\n\n  161 |\n  162 |       // Should show success/confirmation message\n> 163 |       await expect(page.getByText(/sent|check.*email|success/i)).toBeVisible()\n      |                                                                  ^\n  164 |     })\n  165 |   })\n  166 |\n    at /app/e2e/tests/auth.spec.ts:163:66"
-                            }
-                          ],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:22.945Z",
-                          "annotations": [],
-                          "attachments": [
-                            {
-                              "name": "error-context",
-                              "contentType": "text/markdown",
-                              "path": "/app/test-results/tests-auth-Authentication--bcfd7-r-requesting-password-reset-chromium-unauthenticated/error-context.md"
-                            }
-                          ],
-                          "errorLocation": {
-                            "file": "/app/e2e/tests/auth.spec.ts",
-                            "column": 66,
-                            "line": 163
-                          }
-                        }
-                      ],
-                      "status": "unexpected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-edbe98cc999e90c82aa4",
-                  "file": "tests/auth.spec.ts",
-                  "line": 151,
-                  "column": 5
-                }
-              ]
-            },
-            {
-              "title": "Accessibility",
-              "file": "tests/auth.spec.ts",
-              "line": 167,
-              "column": 8,
-              "specs": [
-                {
-                  "title": "should have proper form labels",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 7044,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:22.945Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-13694e14f68aaa027c47",
-                  "file": "tests/auth.spec.ts",
-                  "line": 168,
-                  "column": 5
-                },
-                {
-                  "title": "should support keyboard navigation",
-                  "ok": false,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium-unauthenticated",
-                      "projectName": "chromium-unauthenticated",
-                      "results": [
-                        {
-                          "workerIndex": 5,
-                          "parallelIndex": 5,
-                          "status": "failed",
-                          "duration": 12071,
-                          "error": {
-                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeFocused\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('input[name=\"password\"]')\nExpected: focused\nReceived: inactive\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeFocused\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('input[name=\"password\"]')\u001b[22m\n\u001b[2m    14 × locator resolved to <input id=\"password\" type=\"password\" name=\"password\" placeholder=\"••••••••\" autocomplete=\"current-password\" class=\"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pr-10\"/>\u001b[22m\n\u001b[2m       - unexpected value \"inactive\"\u001b[22m\n",
-                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeFocused\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('input[name=\"password\"]')\nExpected: focused\nReceived: inactive\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeFocused\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('input[name=\"password\"]')\u001b[22m\n\u001b[2m    14 × locator resolved to <input id=\"password\" type=\"password\" name=\"password\" placeholder=\"••••••••\" autocomplete=\"current-password\" class=\"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pr-10\"/>\u001b[22m\n\u001b[2m       - unexpected value \"inactive\"\u001b[22m\n\n    at /app/e2e/tests/auth.spec.ts:188:45",
-                            "location": {
-                              "file": "/app/e2e/tests/auth.spec.ts",
-                              "column": 45,
-                              "line": 188
-                            },
-                            "snippet": "  186 |\n  187 |       await page.keyboard.press('Tab')\n> 188 |       await expect(loginPage.passwordInput).toBeFocused()\n      |                                             ^\n  189 |\n  190 |       // Should be able to submit with Enter\n  191 |       await loginPage.emailInput.fill('admin@novasight.dev')"
-                          },
-                          "errors": [
-                            {
-                              "location": {
-                                "file": "/app/e2e/tests/auth.spec.ts",
-                                "column": 45,
-                                "line": 188
-                              },
-                              "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeFocused\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('input[name=\"password\"]')\nExpected: focused\nReceived: inactive\nTimeout:  10000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeFocused\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('input[name=\"password\"]')\u001b[22m\n\u001b[2m    14 × locator resolved to <input id=\"password\" type=\"password\" name=\"password\" placeholder=\"••••••••\" autocomplete=\"current-password\" class=\"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pr-10\"/>\u001b[22m\n\u001b[2m       - unexpected value \"inactive\"\u001b[22m\n\n\n  186 |\n  187 |       await page.keyboard.press('Tab')\n> 188 |       await expect(loginPage.passwordInput).toBeFocused()\n      |                                             ^\n  189 |\n  190 |       // Should be able to submit with Enter\n  191 |       await loginPage.emailInput.fill('admin@novasight.dev')\n    at /app/e2e/tests/auth.spec.ts:188:45"
-                            }
-                          ],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-02-05T09:38:22.952Z",
-                          "annotations": [],
-                          "attachments": [
-                            {
-                              "name": "screenshot",
-                              "contentType": "image/png",
-                              "path": "/app/test-results/tests-auth-Authentication--38430-support-keyboard-navigation-chromium-unauthenticated/test-failed-1.png"
-                            },
-                            {
-                              "name": "error-context",
-                              "contentType": "text/markdown",
-                              "path": "/app/test-results/tests-auth-Authentication--38430-support-keyboard-navigation-chromium-unauthenticated/error-context.md"
-                            }
-                          ],
-                          "errorLocation": {
-                            "file": "/app/e2e/tests/auth.spec.ts",
-                            "column": 45,
-                            "line": 188
-                          }
-                        }
-                      ],
-                      "status": "unexpected"
-                    }
-                  ],
-                  "id": "d2e30edf93c6681ee681-e22c4533e7b2feb0a973",
-                  "file": "tests/auth.spec.ts",
-                  "line": 180,
-                  "column": 5
-                }
-              ]
-            }
-          ]
-        }
-      ]
+      "message": "Error: Process from config.webServer was not able to start. Exit code: 2",
+      "stack": "Error: Process from config.webServer was not able to start. Exit code: 2"
     }
   ],
-  "errors": [],
   "stats": {
-    "startTime": "2026-02-05T09:37:41.515Z",
-    "duration": 53717.771,
-    "expected": 8,
+    "startTime": "2026-02-08T12:36:59.016Z",
+    "duration": 2610.674,
+    "expected": 0,
     "skipped": 0,
-    "unexpected": 7,
+    "unexpected": 0,
     "flaky": 0
   }
 }

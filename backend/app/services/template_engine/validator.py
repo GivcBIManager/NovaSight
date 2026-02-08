@@ -16,6 +16,35 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 # SQL Validators
 # =============================================================================
 
+class TenantSchemaDefinition(BaseModel):
+    """Validates tenant schema creation parameters."""
+    
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    tenant_id: Optional[str] = Field(
+        default=None,
+        description="Tenant UUID"
+    )
+    tenant_slug: str = Field(
+        ...,
+        min_length=1,
+        max_length=63,
+        description="Tenant slug for schema naming"
+    )
+    
+    @field_validator('tenant_slug')
+    @classmethod
+    def validate_tenant_slug(cls, v: str) -> str:
+        """Validate that the slug is a safe identifier."""
+        pattern = r'^[a-z][a-z0-9_-]*$'
+        if not re.match(pattern, v):
+            raise ValueError(
+                f"Invalid tenant slug '{v}'. Must start with a lowercase letter "
+                "and contain only lowercase letters, numbers, underscores, and hyphens."
+            )
+        return v
+
+
 class SQLIdentifier(BaseModel):
     """Validates SQL identifiers (table/column names)."""
     
@@ -464,6 +493,131 @@ class ClickHouseTableDefinition(BaseModel):
         return v
 
 
+class ClickHouseTenantDatabaseDefinition(BaseModel):
+    """Definition for ClickHouse tenant database templates."""
+    
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    tenant_id: str = Field(..., description="Tenant UUID")
+    tenant_slug: str = Field(
+        ...,
+        min_length=1,
+        max_length=63,
+        description="Tenant slug for database naming"
+    )
+    retention_days: Optional[int] = Field(default=730, ge=1)
+    buffer_settings: Optional[Dict[str, Any]] = Field(default=None)
+    
+    @field_validator('tenant_slug')
+    @classmethod
+    def validate_tenant_slug(cls, v: str) -> str:
+        """Validate that the slug is a safe identifier."""
+        pattern = r'^[a-z][a-z0-9_-]*$'
+        if not re.match(pattern, v):
+            raise ValueError(
+                f"Invalid tenant slug '{v}'. Must start with a lowercase letter "
+                "and contain only lowercase letters, numbers, underscores, and hyphens."
+            )
+        return v
+
+
+# =============================================================================
+# PySpark Validators
+# =============================================================================
+
+class PySparkConnectionDefinition(BaseModel):
+    """Validated connection configuration for PySpark templates."""
+    
+    model_config = ConfigDict(str_strip_whitespace=True, extra='allow')
+    
+    host: str = Field(..., min_length=1)
+    port: int = Field(..., ge=1, le=65535)
+    database: str = Field(..., min_length=1)
+    username: Optional[str] = Field(default=None)
+    password: Optional[str] = Field(default=None)  # Injected at runtime
+    db_type: str = Field(default="postgresql")
+    id: Optional[str] = Field(default=None)
+    schema: Optional[str] = Field(default=None)
+
+
+class PySparkSourceDefinition(BaseModel):
+    """Validated source configuration for PySpark templates."""
+    
+    model_config = ConfigDict(str_strip_whitespace=True, extra='allow')
+    
+    type: str = Field(..., pattern=r'^(table|query)$')
+    schema: Optional[str] = Field(default=None)
+    schema_name: Optional[str] = Field(default=None)
+    table: Optional[str] = Field(default=None)
+    query: Optional[str] = Field(default=None)
+
+
+class PySparkColumnDefinition(BaseModel):
+    """Validated column configuration for PySpark templates."""
+    
+    model_config = ConfigDict(str_strip_whitespace=True, extra='allow')
+    
+    name: str = Field(..., min_length=1)
+    data_type: Optional[str] = Field(default=None)
+    alias: Optional[str] = Field(default=None)
+    nullable: bool = Field(default=True)
+    include: bool = Field(default=True)
+
+
+class PySparkCDCDefinition(BaseModel):
+    """Validated CDC configuration for PySpark templates."""
+    
+    model_config = ConfigDict(str_strip_whitespace=True, extra='allow')
+    
+    type: Optional[str] = Field(default="none")
+    column: Optional[str] = Field(default=None)
+
+
+class PySparkTargetDefinition(BaseModel):
+    """Validated target configuration for PySpark templates."""
+    
+    model_config = ConfigDict(str_strip_whitespace=True, extra='allow')
+    
+    database: str = Field(..., min_length=1)
+    table: str = Field(..., min_length=1)
+    engine: str = Field(default="MergeTree")
+    write_mode: Optional[str] = Field(default="append")
+
+
+class PySparkExtractJobDefinition(BaseModel):
+    """Validates PySpark extract job template parameters."""
+    
+    model_config = ConfigDict(str_strip_whitespace=True, extra='allow')
+    
+    app_name: str = Field(..., min_length=1)
+    app_id: str = Field(...)
+    tenant_id: str = Field(...)
+    connection: PySparkConnectionDefinition
+    source: PySparkSourceDefinition
+    columns: List[PySparkColumnDefinition]
+    primary_keys: List[str] = Field(default_factory=list)
+    cdc: Optional[PySparkCDCDefinition] = Field(default=None)
+    partitions: List[str] = Field(default_factory=list)
+    target: PySparkTargetDefinition
+    options: Dict[str, Any] = Field(default_factory=dict)
+    generated_at: Optional[str] = Field(default=None)
+    template_version: Optional[str] = Field(default=None)
+    scd_type: Optional[str] = Field(default=None)
+    write_mode: Optional[str] = Field(default=None)
+
+
+class PySparkSCD1JobDefinition(PySparkExtractJobDefinition):
+    """Validates PySpark SCD Type 1 template parameters."""
+    
+    primary_keys: List[str] = Field(default_factory=list)
+
+
+class PySparkSCD2JobDefinition(PySparkExtractJobDefinition):
+    """Validates PySpark SCD Type 2 template parameters."""
+    
+    primary_keys: List[str] = Field(default_factory=list)
+
+
 # =============================================================================
 # Generic Parameter Validator
 # =============================================================================
@@ -477,11 +631,15 @@ class TemplateParameterValidator:
     SCHEMA_MAP = {
         'sql/create_table.sql.j2': TableDefinition,
         'sql/create_index.sql.j2': IndexDefinition,
-        'sql/tenant_schema.sql.j2': SQLIdentifier,
+        'sql/tenant_schema.sql.j2': TenantSchemaDefinition,
         'dbt/model.sql.j2': DbtModelDefinition,
         'dbt/schema.yml.j2': DbtModelDefinition,
         'airflow/dag.py.j2': AirflowDagDefinition,
         'clickhouse/create_table.sql.j2': ClickHouseTableDefinition,
+        'clickhouse/tenant_database.sql.j2': ClickHouseTenantDatabaseDefinition,
+        'pyspark/extract_job.py.j2': PySparkExtractJobDefinition,
+        'pyspark/scd_type1.py.j2': PySparkSCD1JobDefinition,
+        'pyspark/scd_type2.py.j2': PySparkSCD2JobDefinition,
     }
     
     @classmethod

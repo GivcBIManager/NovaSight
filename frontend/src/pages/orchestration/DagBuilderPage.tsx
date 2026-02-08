@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactFlow, {
   Node,
@@ -15,8 +15,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useAuth } from '@/contexts/AuthContext'
 import { dagService, TaskConfig } from '@/services/dagService'
+import { pysparkApi } from '@/services/pysparkApi'
+import type { PySparkApp } from '@/types/pyspark'
 import {
   Save,
   Play,
@@ -28,6 +33,8 @@ import {
   Timer,
   Terminal,
   Loader2,
+  Sparkles,
+  Tag,
 } from 'lucide-react'
 
 const taskTypes = [
@@ -43,15 +50,94 @@ export function DagBuilderPage() {
   const { dagId } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { user } = useAuth()
   const isEditing = !!dagId
 
   const [dagName, setDagName] = useState(dagId || '')
   const [description, setDescription] = useState('')
+  const [dagTags, setDagTags] = useState<string[]>([])
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeploying, setIsDeploying] = useState(false)
+  
+  // Get tenant name for auto-tagging
+  const tenantName = user?.tenant_name || 'default'
+  const tenantSlug = tenantName.toLowerCase().replace(/\s+/g, '-')
+  
+  // PySpark apps for Spark Submit task configuration
+  const [pysparkApps, setPysparkApps] = useState<PySparkApp[]>([])
+  const [loadingApps, setLoadingApps] = useState(false)
+  const [taskConfigs, setTaskConfigs] = useState<Record<string, Record<string, unknown>>>({})
+  
+  // Default Spark master URL (can be configured via environment)
+  const defaultSparkMaster = 'spark://spark-master:7077'
+  
+  // Initialize tenant tag on mount
+  useEffect(() => {
+    if (tenantSlug && !dagTags.includes(tenantSlug)) {
+      setDagTags(prev => [...prev, tenantSlug])
+    }
+  }, [tenantSlug])
+  
+  // Load PySpark apps on component mount
+  useEffect(() => {
+    setLoadingApps(true)
+    pysparkApi.list({ per_page: 100 })
+      .then(response => {
+        console.log('[DagBuilder] PySpark apps loaded:', response)
+        setPysparkApps(response.apps || [])
+      })
+      .catch(err => {
+        console.error('Failed to load PySpark apps:', err)
+      })
+      .finally(() => setLoadingApps(false))
+  }, [])
+  
+  // Update task config and auto-fill fields when PySpark app is selected
+  const updateTaskConfig = (nodeId: string, key: string, value: unknown) => {
+    setTaskConfigs(prev => {
+      const updated = {
+        ...prev,
+        [nodeId]: {
+          ...(prev[nodeId] || {}),
+          [key]: value
+        }
+      }
+      
+      // If a PySpark app is selected, auto-fill the app path, spark master, and DAG name
+      if (key === 'pyspark_app_id' && value) {
+        const selectedApp = pysparkApps.find(app => app.id === value)
+        if (selectedApp) {
+          // Auto-fill application path based on generated code location
+          const appNameSlug = selectedApp.name.toLowerCase().replace(/\s+/g, '_')
+          const appPath = `/opt/spark/jobs/${appNameSlug}.py`
+          updated[nodeId] = {
+            ...updated[nodeId],
+            application_path: appPath,
+            spark_master: defaultSparkMaster,
+            app_name: selectedApp.name,
+          }
+          
+          // Auto-name the DAG based on PySpark app
+          const generatedDagName = `${appNameSlug}_pipeline`
+          setDagName(generatedDagName)
+          setDescription(`Data pipeline for ${selectedApp.name} - extracting from ${selectedApp.source_table} to ${selectedApp.target_table}`)
+          
+          // Add pyspark tag if not already present
+          setDagTags(prev => {
+            const newTags = [...prev]
+            if (!newTags.includes('pyspark')) newTags.push('pyspark')
+            if (!newTags.includes('etl')) newTags.push('etl')
+            return newTags
+          })
+        }
+      }
+      
+      return updated
+    })
+  }
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -131,7 +217,7 @@ export function DagBuilderPage() {
       return {
         task_id: node.id,
         task_type: node.data.taskType,
-        config: {},
+        config: taskConfigs[node.id] || {},
         timeout_minutes: 60,
         retries: 1,
         retry_delay_minutes: 5,
@@ -186,7 +272,7 @@ export function DagBuilderPage() {
           title: 'DAG Created',
           description: `Successfully created ${dag.dag_id}`,
         })
-        navigate(`/dags/${dag.id}/edit`)
+        navigate(`/app/dags/${dag.id}/edit`)
       }
     } catch (error) {
       toast({
@@ -255,7 +341,7 @@ export function DagBuilderPage() {
         {/* Toolbar */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/dags')}>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/app/dags')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
@@ -335,13 +421,104 @@ export function DagBuilderPage() {
                 <Label>Task Type</Label>
                 <Input value={selectedNode.data.taskType} disabled />
               </div>
+              
+              {/* Spark Submit specific config */}
+              {selectedNode.data.taskType === 'spark_submit' && (
+                <div className="space-y-4 border-t pt-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                    <Sparkles className="h-4 w-4" />
+                    PySpark App Configuration
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Select PySpark App</Label>
+                    {loadingApps ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading apps...
+                      </div>
+                    ) : (
+                      <Select
+                        value={taskConfigs[selectedNode.id]?.pyspark_app_id as string || ''}
+                        onValueChange={(value) => updateTaskConfig(selectedNode.id, 'pyspark_app_id', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a PySpark app..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pysparkApps.length === 0 ? (
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                              No PySpark apps available
+                            </div>
+                          ) : (
+                            pysparkApps.map(app => (
+                              <SelectItem key={app.id} value={app.id}>
+                                {app.name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Select an existing PySpark app or leave empty to configure manually.
+                    </p>
+                  </div>
+                  
+                  {/* Show selected app info */}
+                  {taskConfigs[selectedNode.id]?.pyspark_app_id && (
+                    <div className="rounded-md border p-3 bg-muted/50 text-xs space-y-1">
+                      {(() => {
+                        const app = pysparkApps.find(a => a.id === taskConfigs[selectedNode.id]?.pyspark_app_id)
+                        return app ? (
+                          <>
+                            <p><strong>App:</strong> {app.name}</p>
+                            <p><strong>Table:</strong> {app.source_table}</p>
+                            <p><strong>Target:</strong> {app.target_database}.{app.target_table}</p>
+                          </>
+                        ) : null
+                      })()}
+                    </div>
+                  )}
+                  
+                  {/* Always show Application Path and Spark Master */}
+                  <div className="space-y-2">
+                    <Label>Application Path</Label>
+                    <Input 
+                      placeholder="/opt/spark/jobs/my_job.py"
+                      value={taskConfigs[selectedNode.id]?.application_path as string || ''}
+                      onChange={(e) => updateTaskConfig(selectedNode.id, 'application_path', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {taskConfigs[selectedNode.id]?.pyspark_app_id ? 'Auto-filled from selected app' : 'Path to PySpark script'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Spark Master</Label>
+                    <Input 
+                      placeholder="spark://spark-master:7077"
+                      value={taskConfigs[selectedNode.id]?.spark_master as string || defaultSparkMaster}
+                      onChange={(e) => updateTaskConfig(selectedNode.id, 'spark_master', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+              
               <div className="space-y-2">
                 <Label>Timeout (minutes)</Label>
-                <Input type="number" defaultValue={60} />
+                <Input 
+                  type="number" 
+                  value={taskConfigs[selectedNode.id]?.timeout_minutes as number || 60}
+                  onChange={(e) => updateTaskConfig(selectedNode.id, 'timeout_minutes', parseInt(e.target.value))}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Retries</Label>
-                <Input type="number" defaultValue={1} />
+                <Input 
+                  type="number" 
+                  value={taskConfigs[selectedNode.id]?.retries as number || 1}
+                  onChange={(e) => updateTaskConfig(selectedNode.id, 'retries', parseInt(e.target.value))}
+                />
               </div>
             </div>
           ) : (
@@ -361,6 +538,25 @@ export function DagBuilderPage() {
               <div className="space-y-2">
                 <Label>Timezone</Label>
                 <Input defaultValue="UTC" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  <Label>Tags</Label>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {dagTags.map(tag => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {dagTags.length === 0 && (
+                    <span className="text-xs text-muted-foreground">No tags</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Auto-tagged with tenant: {tenantName}
+                </p>
               </div>
             </div>
           )}

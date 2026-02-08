@@ -293,6 +293,7 @@ services:
       OLLAMA_BASE_URL: http://ollama:11434
       SECRET_KEY: dev-secret-key-change-in-production
       JWT_SECRET_KEY: jwt-dev-secret-key-change-in-production
+      CREDENTIAL_ENCRYPTION_KEY: novasight-encryption-key-32byte!
     volumes:
       - ./backend:/app
     depends_on:

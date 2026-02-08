@@ -1,13 +1,21 @@
+/**
+ * AuthContext — thin React-Context wrapper over the Zustand authStore.
+ *
+ * This eliminates the previous dual-state problem where AuthContext and
+ * authStore independently managed auth state.  Now AuthContext delegates
+ * everything to the store, preserving the `useAuth()` hook API that
+ * Sidebar, Header, ProtectedRoute and other components already consume.
+ */
+
 import {
   createContext,
   useContext,
-  useState,
   useEffect,
   ReactNode,
-  useCallback,
 } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { authService, User, LoginCredentials } from '@/services/authService'
+import { useAuthStore } from '@/store/authStore'
+import type { User, LoginCredentials } from '@/services/authService'
 
 interface AuthContextType {
   user: User | null
@@ -21,52 +29,38 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const navigate = useNavigate()
   const location = useLocation()
 
-  const refreshUser = useCallback(async () => {
-    try {
-      const currentUser = await authService.getCurrentUser()
-      setUser(currentUser)
-    } catch (error) {
-      setUser(null)
-      authService.clearTokens()
+  const store = useAuthStore()
+
+  // Initialise auth from persisted tokens on first mount
+  useEffect(() => {
+    if (!store.isAuthenticated && !store.isLoading) {
+      store.initializeFromStorage()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => {
-    const initAuth = async () => {
-      const token = authService.getAccessToken()
-      if (token) {
-        await refreshUser()
-      }
-      setIsLoading(false)
-    }
-
-    initAuth()
-  }, [refreshUser])
-
   const login = async (credentials: LoginCredentials) => {
-    const response = await authService.login(credentials)
-    authService.setTokens(response.access_token, response.refresh_token)
-    setUser(response.user)
-    
-    const from = (location.state as { from?: string })?.from || '/dashboard'
+    await store.login(credentials.email, credentials.password)
+    const from = (location.state as { from?: string })?.from || '/app/dashboard'
     navigate(from, { replace: true })
   }
 
   const logout = () => {
-    authService.logout()
-    setUser(null)
+    store.logout()
     navigate('/login', { replace: true })
   }
 
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
+  const refreshUser = async () => {
+    await store.initializeFromStorage()
+  }
+
+  const value: AuthContextType = {
+    user: store.user,
+    isAuthenticated: store.isAuthenticated,
+    isLoading: store.isLoading,
     login,
     logout,
     refreshUser,

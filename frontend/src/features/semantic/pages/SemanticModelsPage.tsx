@@ -210,7 +210,7 @@ export function SemanticModelsPage() {
             : 'space-y-3'
         }>
           {filteredModels.map((model: SemanticModel) => (
-            <Link key={model.id} to={`/semantic/models/${model.id}`}>
+            <Link key={model.id} to={`/app/semantic/models/${model.id}`}>
               <ModelCard model={model} compact={viewMode === 'list'} />
             </Link>
           ))}

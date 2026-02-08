@@ -117,8 +117,8 @@ class TenantService:
         tenant = Tenant(
             name=name,
             slug=slug.lower().replace(" ", "_"),
-            plan=plan_enum,
-            status=TenantStatus.ACTIVE,
+            plan=plan_enum.value,  # Store string value, not Enum
+            status=TenantStatus.ACTIVE.value,  # Store string value, not Enum
             settings=settings or {},
         )
 
@@ -156,12 +156,12 @@ class TenantService:
                 continue
             if field == "status":
                 try:
-                    value = TenantStatus(value)
+                    value = TenantStatus(value).value  # Store string value
                 except ValueError:
                     continue
             elif field == "plan":
                 try:
-                    value = SubscriptionPlan(value)
+                    value = SubscriptionPlan(value).value  # Store string value
                 except ValueError:
                     continue
             setattr(tenant, field, value)
@@ -176,7 +176,7 @@ class TenantService:
         if not tenant:
             return False
 
-        tenant.status = TenantStatus.ARCHIVED
+        tenant.status = TenantStatus.ARCHIVED.value
         db.session.commit()
         logger.info("Archived tenant: %s", tenant.slug)
         return True
@@ -191,7 +191,7 @@ class TenantService:
         if not tenant:
             return None
 
-        tenant.status = TenantStatus.ACTIVE
+        tenant.status = TenantStatus.ACTIVE.value
         db.session.commit()
         logger.info("Activated tenant: %s", tenant.slug)
         return tenant
@@ -204,7 +204,7 @@ class TenantService:
         if not tenant:
             return None
 
-        tenant.status = TenantStatus.SUSPENDED
+        tenant.status = TenantStatus.SUSPENDED.value
 
         if reason:
             settings = tenant.settings or {}

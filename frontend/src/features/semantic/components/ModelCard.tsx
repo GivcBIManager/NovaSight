@@ -70,7 +70,7 @@ export function ModelCard({ model, compact = false, onEdit, onDelete, onDuplicat
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1 flex-1 min-w-0">
-            <Link to={`/semantic/models/${model.id}`}>
+            <Link to={`/app/semantic/models/${model.id}`}>
               <CardTitle className="text-lg hover:text-primary transition-colors truncate">
                 {model.label || model.name}
               </CardTitle>

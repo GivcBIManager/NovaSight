@@ -1,7 +1,6 @@
 import { ReactNode, useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { useAuthStore } from '@/store/authStore'
 import { Loader2 } from 'lucide-react'
 
 interface ProtectedRouteProps {
@@ -15,23 +14,10 @@ export function ProtectedRoute({
   requiredRoles,
   requiredPermissions,
 }: ProtectedRouteProps) {
-  // Support both context and store for backwards compatibility
-  const authContext = useAuth()
-  const authStore = useAuthStore()
-  
-  // Prefer store, fall back to context
-  const isAuthenticated = authStore.isAuthenticated || authContext.isAuthenticated
-  const isLoading = authStore.isLoading || authContext.isLoading
-  const user = authStore.user || authContext.user
-  
+  // AuthContext now delegates to the Zustand store,
+  // so there is a single source of truth.
+  const { isAuthenticated, isLoading, user } = useAuth()
   const location = useLocation()
-
-  // Initialize auth from storage on mount if using store
-  useEffect(() => {
-    if (!authStore.isAuthenticated && !authStore.isLoading) {
-      authStore.initializeFromStorage()
-    }
-  }, [])
 
   if (isLoading) {
     return (

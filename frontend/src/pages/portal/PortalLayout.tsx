@@ -23,26 +23,26 @@ import { Button } from '@/components/ui/button'
 const portalNav = [
   { 
     name: 'Overview', 
-    href: '/portal', 
+    href: '/app/portal', 
     icon: LayoutDashboard,
     description: 'Dashboard & statistics',
     exact: true,
   },
   { 
     name: 'Tenants', 
-    href: '/portal/tenants', 
+    href: '/app/portal/tenants', 
     icon: Building2,
     description: 'Manage organizations',
   },
   { 
     name: 'Users', 
-    href: '/portal/users', 
+    href: '/app/portal/users', 
     icon: Users,
     description: 'Cross-tenant user management',
   },
   { 
     name: 'Infrastructure', 
-    href: '/portal/infrastructure', 
+    href: '/app/portal/infrastructure', 
     icon: Server,
     description: 'Server configurations',
   },
@@ -53,9 +53,7 @@ export const PortalLayout: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const isSuperAdmin = user?.roles?.some(
-    (r) => r === 'super_admin' || (typeof r === 'object' && (r as { name?: string }).name === 'super_admin')
-  )
+  const isSuperAdmin = user?.roles?.includes('super_admin')
 
   if (!isSuperAdmin) {
     return (
@@ -66,7 +64,7 @@ export const PortalLayout: React.FC = () => {
           <p className="text-muted-foreground">
             Portal management is restricted to super administrators.
           </p>
-          <Button onClick={() => navigate('/dashboard')}>
+          <Button onClick={() => navigate('/app/dashboard')}>
             Return to Dashboard
           </Button>
         </div>
@@ -93,7 +91,7 @@ export const PortalLayout: React.FC = () => {
             variant="ghost"
             size="sm"
             className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/app/dashboard')}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Application

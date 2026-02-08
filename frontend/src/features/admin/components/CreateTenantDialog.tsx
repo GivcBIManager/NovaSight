@@ -37,7 +37,7 @@ const createTenantSchema = z.object({
   name: z.string()
     .min(2, 'Name must be at least 2 characters')
     .max(100, 'Name must be less than 100 characters'),
-  plan: z.enum(['starter', 'professional', 'enterprise']),
+  plan: z.enum(['basic', 'professional', 'enterprise']),
   admin_email: z.string().email('Invalid email address'),
   admin_name: z.string().min(1, 'Admin name is required'),
   admin_password: z.string()
@@ -51,7 +51,7 @@ const createTenantSchema = z.object({
 type FormData = z.infer<typeof createTenantSchema>
 
 const PLAN_DESCRIPTIONS = {
-  starter: 'Up to 5 users, 3 connections, 10 GB storage',
+  basic: 'Up to 5 users, 3 connections, 10 GB storage',
   professional: 'Up to 25 users, 10 connections, 100 GB storage',
   enterprise: 'Unlimited users & connections, 1 TB storage',
 }
@@ -65,7 +65,7 @@ export function CreateTenantDialog() {
     resolver: zodResolver(createTenantSchema),
     defaultValues: {
       name: '',
-      plan: 'starter',
+      plan: 'basic',
       admin_email: '',
       admin_name: '',
       admin_password: '',
@@ -142,7 +142,7 @@ export function CreateTenantDialog() {
               <Label htmlFor="plan">Plan</Label>
               <Select
                 value={form.watch('plan')}
-                onValueChange={(value: 'starter' | 'professional' | 'enterprise') => 
+                onValueChange={(value: 'basic' | 'professional' | 'enterprise') => 
                   form.setValue('plan', value)
                 }
               >
@@ -150,9 +150,9 @@ export function CreateTenantDialog() {
                   <SelectValue placeholder="Select a plan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="starter">
+                  <SelectItem value="basic">
                     <div className="flex flex-col">
-                      <span>Starter</span>
+                      <span>Basic</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="professional">

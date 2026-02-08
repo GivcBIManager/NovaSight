@@ -57,7 +57,7 @@ export function DataSourceCard({ datasource }: DataSourceCardProps) {
   return (
     <Card 
       className="hover:shadow-lg transition-shadow cursor-pointer"
-      onClick={() => navigate(`/datasources/${datasource.id}`)}
+      onClick={() => navigate(`/app/datasources/${datasource.id}`)}
     >
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <div className="flex items-start gap-3">

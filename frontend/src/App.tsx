@@ -16,6 +16,7 @@ import {
   PricingPage,
   AboutPage,
   ContactPage,
+  ComingSoonPage,
 } from '@/pages/marketing'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { DagsListPage } from '@/pages/orchestration/DagsListPage'
@@ -32,7 +33,7 @@ import { SemanticModelsPage, ModelDetailPage } from '@/features/semantic'
 import { DashboardsListPage, DashboardBuilderPage } from '@/features/dashboards'
 import { QueryPage } from '@/features/query'
 import { DocumentationPage } from '@/pages/documentation'
-import { InfrastructureConfigPage } from '@/pages/admin'
+import { InfrastructureConfigPage, AuditLogsPage, RolesManagementPage, DbtOperationsPage, BackupManagementPage } from '@/pages/admin'
 import { SettingsPage } from '@/pages/settings'
 import {
   PortalLayout,
@@ -40,6 +41,8 @@ import {
   TenantManagementPage,
   UserManagementPage,
 } from '@/pages/portal'
+
+import { UsersPage as AdminUsersPage } from '@/features/admin'
 
 function App() {
   return (
@@ -54,6 +57,24 @@ function App() {
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            
+            {/* Coming Soon marketing pages */}
+            <Route path="/integrations" element={<ComingSoonPage />} />
+            <Route path="/changelog" element={<ComingSoonPage />} />
+            <Route path="/roadmap" element={<ComingSoonPage />} />
+            <Route path="/solutions/startups" element={<ComingSoonPage />} />
+            <Route path="/solutions/enterprise" element={<ComingSoonPage />} />
+            <Route path="/solutions/data-teams" element={<ComingSoonPage />} />
+            <Route path="/solutions/analytics" element={<ComingSoonPage />} />
+            <Route path="/blog" element={<ComingSoonPage />} />
+            <Route path="/careers" element={<ComingSoonPage />} />
+            <Route path="/press" element={<ComingSoonPage />} />
+            <Route path="/docs/api" element={<ComingSoonPage />} />
+            <Route path="/community" element={<ComingSoonPage />} />
+            <Route path="/support" element={<ComingSoonPage />} />
+            <Route path="/status" element={<ComingSoonPage />} />
+            <Route path="/privacy" element={<ComingSoonPage />} />
+            <Route path="/terms" element={<ComingSoonPage />} />
           </Route>
 
           {/* Public routes - Authentication */}
@@ -104,8 +125,13 @@ function App() {
             {/* AI Query Interface */}
             <Route path="query" element={<QueryPage />} />
             
-            {/* Admin Pages (legacy route) */}
+            {/* Admin Pages */}
             <Route path="admin/infrastructure" element={<InfrastructureConfigPage />} />
+            <Route path="admin/users" element={<AdminUsersPage />} />
+            <Route path="admin/audit" element={<AuditLogsPage />} />
+            <Route path="admin/roles" element={<RolesManagementPage />} />
+            <Route path="admin/dbt" element={<DbtOperationsPage />} />
+            <Route path="admin/backups" element={<BackupManagementPage />} />
             
             {/* Portal Management (Super Admin) */}
             <Route path="portal" element={<PortalLayout />}>
@@ -124,6 +150,16 @@ function App() {
 
           {/* Legacy routes - redirect to new /app prefix */}
           <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+          <Route path="/connections" element={<Navigate to="/app/connections" replace />} />
+          <Route path="/datasources" element={<Navigate to="/app/datasources" replace />} />
+          <Route path="/dags" element={<Navigate to="/app/dags" replace />} />
+          <Route path="/pyspark" element={<Navigate to="/app/pyspark" replace />} />
+          <Route path="/semantic" element={<Navigate to="/app/semantic" replace />} />
+          <Route path="/dashboards" element={<Navigate to="/app/dashboards" replace />} />
+          <Route path="/query" element={<Navigate to="/app/query" replace />} />
+          <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
+          <Route path="/docs" element={<Navigate to="/app/docs" replace />} />
+          <Route path="/portal" element={<Navigate to="/app/portal" replace />} />
           
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,21 +1,31 @@
 """
-NovaSight Data Source Connectors
-=================================
+NovaSight Data Source Connectors — Re-export Shim
+===================================================
 
-Pluggable connector architecture for database integrations.
+.. deprecated::
+    Import from ``app.domains.datasources.infrastructure.connectors`` instead.
 """
 
-from app.connectors.base import (
+import warnings as _warnings
+
+_warnings.warn(
+    "Importing from 'app.connectors' is deprecated. "
+    "Use 'app.domains.datasources.infrastructure.connectors' instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from app.domains.datasources.infrastructure.connectors import (  # noqa: F401, E402
     BaseConnector,
     ConnectionConfig,
     ColumnInfo,
     TableInfo,
     ConnectorException,
-    ConnectionTestException
+    ConnectionTestException,
+    ConnectorRegistry,
+    PostgreSQLConnector,
+    MySQLConnector,
 )
-from app.connectors.registry import ConnectorRegistry
-from app.connectors.postgresql import PostgreSQLConnector
-from app.connectors.mysql import MySQLConnector
 
 __all__ = [
     "BaseConnector",

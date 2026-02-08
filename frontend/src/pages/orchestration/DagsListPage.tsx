@@ -69,7 +69,7 @@ export function DagsListPage() {
           </p>
         </div>
         <Button asChild>
-          <Link to="/dags/new">
+          <Link to="/app/dags/new">
             <Plus className="mr-2 h-4 w-4" />
             Create DAG
           </Link>
@@ -117,13 +117,13 @@ export function DagsListPage() {
 
                 <div className="mt-4 flex gap-2">
                   <Button variant="outline" size="sm" asChild>
-                    <Link to={`/dags/${dag.id}/edit`}>
+                    <Link to={`/app/dags/${dag.id}/edit`}>
                       <Settings className="mr-1 h-3 w-3" />
                       Edit
                     </Link>
                   </Button>
                   <Button variant="outline" size="sm" asChild>
-                    <Link to={`/dags/${dag.id}/monitor`}>
+                    <Link to={`/app/dags/${dag.id}/monitor`}>
                       <Eye className="mr-1 h-3 w-3" />
                       Monitor
                     </Link>
@@ -153,7 +153,7 @@ export function DagsListPage() {
               Create your first workflow to start orchestrating data pipelines.
             </p>
             <Button asChild>
-              <Link to="/dags/new">
+              <Link to="/app/dags/new">
                 <Plus className="mr-2 h-4 w-4" />
                 Create Your First DAG
               </Link>

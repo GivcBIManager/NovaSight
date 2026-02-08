@@ -55,7 +55,7 @@ export function DashboardsListPage() {
             <Card 
               key={dashboard.id}
               className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => navigate(`/dashboards/${dashboard.id}`)}
+              onClick={() => navigate(`/app/dashboards/${dashboard.id}`)}
             >
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -126,7 +126,7 @@ function CreateDashboardDialog({ open, onOpenChange }: CreateDashboardDialogProp
     onOpenChange(false)
     setName('')
     setDescription('')
-    navigate(`/dashboards/${dashboard.id}`)
+    navigate(`/app/dashboards/${dashboard.id}`)
   }
   
   return (

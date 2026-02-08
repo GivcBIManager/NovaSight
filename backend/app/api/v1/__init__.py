@@ -17,14 +17,26 @@ from app.domains.identity.api import role_routes   # noqa: F401
 # Tenants domain routes (canonical)
 from app.domains.tenants.api import tenant_routes  # noqa: F401
 
+# Data Sources domain routes (canonical)
+from app.domains.datasources.api import connection_routes  # noqa: F401
+
+# Orchestration domain routes (canonical)
+from app.domains.orchestration.api import dag_routes  # noqa: F401
+
+# Analytics domain routes (canonical)
+from app.domains.analytics.api import dashboard_routes  # noqa: F401
+
+# Transformation domain routes (canonical)
+from app.domains.transformation.api import semantic_routes  # noqa: F401
+from app.domains.transformation.api import dbt_routes  # noqa: F401
+
+# Compute domain routes (canonical)
+from app.domains.compute.api import pyspark_routes  # noqa: F401
+
+# AI domain routes (canonical)
+from app.domains.ai.api import assistant_routes  # noqa: F401
+
 # Other route modules
-from app.api.v1 import connections
-from app.api.v1 import dags
-from app.api.v1 import pyspark_apps
-from app.api.v1 import dbt
-from app.api.v1 import semantic
-from app.api.v1 import assistant
-from app.api.v1 import dashboards
 from app.api.v1 import audit
 
 # Register admin sub-blueprint

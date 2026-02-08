@@ -44,9 +44,13 @@ class ProvisioningService:
         try:
             from app.services.template_engine import template_engine
 
-            sql = template_engine.render(
+            engine = template_engine()  # Call to get the TemplateEngine instance
+            sql = engine.render(
                 "sql/tenant_schema.sql.j2",
-                {"tenant_slug": tenant.slug},
+                {
+                    "tenant_id": str(tenant.id),
+                    "tenant_slug": tenant.slug,
+                },
             )
             db.session.execute(text(sql))
             logger.info(
@@ -68,7 +72,8 @@ class ProvisioningService:
             from app.services.template_engine import template_engine
             from app.services.clickhouse_client import ClickHouseClient
 
-            sql = template_engine.render(
+            engine = template_engine()  # Call to get the TemplateEngine instance
+            sql = engine.render(
                 "clickhouse/tenant_database.sql.j2",
                 {
                     "tenant_id": str(tenant.id),

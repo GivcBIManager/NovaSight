@@ -57,7 +57,7 @@ def authenticated(f):
     return decorated
 
 
-def require_roles(allowed_roles: List[str]):
+def require_roles(*role_args, **_kw):
     """
     Decorator to require specific roles for endpoint access.
 
@@ -65,14 +65,24 @@ def require_roles(allowed_roles: List[str]):
     Super admin always bypasses role checks.
     Deprecated role names are automatically normalized.
 
+    Accepts both list and varargs style:
+        @require_roles(["data_engineer", "tenant_admin"])
+        @require_roles("data_engineer", "tenant_admin")
+
     Args:
-        allowed_roles: List of canonical role names.
+        *role_args: Either a single list of role names, or individual role strings.
 
     Usage:
         @require_roles(["data_engineer", "tenant_admin"])
         def my_endpoint():
             ...
     """
+    # Normalise call styles: require_roles(["a","b"]) vs require_roles("a","b")
+    if len(role_args) == 1 and isinstance(role_args[0], (list, tuple)):
+        allowed_roles = list(role_args[0])
+    else:
+        allowed_roles = list(role_args)
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):

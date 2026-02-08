@@ -16,8 +16,11 @@ services:
       FLASK_DEBUG: "1"
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
+      SEED_USERS: "true"
+      SEED_PASSWORD: "NovaSight@2026"
     volumes:
       - ./backend:/app
+      - ./docker/backend/entrypoint.sh:/entrypoint.sh
     command: flask run --host=0.0.0.0 --reload --debug
 
   # ============================================

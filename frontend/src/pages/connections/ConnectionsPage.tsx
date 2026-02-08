@@ -139,10 +139,10 @@ export function ConnectionsPage() {
                     )}
                   </Button>
                   <Button variant="outline" size="sm" asChild>
-                    <Link to={`/datasources/${conn.id}`}>Edit</Link>
+                    <Link to={`/app/datasources/${conn.id}`}>Edit</Link>
                   </Button>
                   <Button variant="outline" size="sm" asChild>
-                    <Link to={`/datasources/${conn.id}`}>Browse</Link>
+                    <Link to={`/app/datasources/${conn.id}`}>Browse</Link>
                   </Button>
                 </div>
               </CardContent>

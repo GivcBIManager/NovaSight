@@ -49,7 +49,7 @@ export function ResetPasswordPage() {
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/app/dashboard" replace />
   }
 
   // No token provided

@@ -92,7 +92,7 @@ export function PySparkAppBuilderPage() {
         description: `Successfully created "${app.name}" and generated code.`,
       })
       
-      navigate(`/pyspark/${app.id}`)
+      navigate(`/app/pyspark/${app.id}`)
     } catch (error) {
       toast({
         title: 'Error',
@@ -104,6 +104,7 @@ export function PySparkAppBuilderPage() {
   
   // Render current step content
   const renderStepContent = () => {
+    console.log('[PySparkAppBuilderPage] Current step:', currentStep.id, 'index:', currentStepIndex)
     switch (currentStep.id) {
       case 'source':
         return <SourceSelector state={state} onStateChange={handleStateChange} />
@@ -118,6 +119,7 @@ export function PySparkAppBuilderPage() {
       case 'preview':
         return <PySparkPreview state={state} />
       default:
+        console.error('[PySparkAppBuilderPage] Unknown step:', currentStep.id)
         return null
     }
   }

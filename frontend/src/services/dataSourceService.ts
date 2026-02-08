@@ -9,13 +9,15 @@ import type {
   SyncConfig,
   SyncJob,
 } from '@/types/datasource'
-import type { ApiResponse, PaginatedResponse } from '@/types/api'
+import type { PaginatedResponse, PaginationMeta } from '@/types/api'
 
 const BASE_PATH = '/api/v1/connections'
 
 export const dataSourceService = {
   /**
-   * Get all data sources
+   * Get all data sources.
+   * Backend returns { connections: [...], pagination: {...} }.
+   * We normalise into PaginatedResponse<DataSource>.
    */
   async getAll(params?: {
     page?: number
@@ -23,10 +25,19 @@ export const dataSourceService = {
     db_type?: string
     status?: string
   }): Promise<PaginatedResponse<DataSource>> {
-    const response = await apiClient.get<PaginatedResponse<DataSource>>(BASE_PATH, {
-      params,
-    })
-    return response.data
+    const response = await apiClient.get<{
+      connections: DataSource[]
+      pagination: PaginationMeta
+    }>(BASE_PATH, { params })
+    const { connections, pagination } = response.data
+    return {
+      items: connections,
+      pagination,
+      total: pagination.total,
+      page: pagination.page,
+      per_page: pagination.per_page,
+      pages: pagination.pages,
+    }
   },
 
   /**
@@ -86,17 +97,27 @@ export const dataSourceService = {
 
   /**
    * Get schema information for a data source
+  /**
+   * Get schema information for a data source
    */
   async getSchema(
     id: string,
     options?: {
       schema?: string
+      schema_name?: string
       include_columns?: boolean
     }
   ): Promise<DataSourceSchema> {
+    // Map schema to schema_name for backend compatibility
+    const params = {
+      ...options,
+      schema_name: options?.schema_name || options?.schema,
+    }
+    delete params.schema
+    
     const response = await apiClient.get<{ schema: DataSourceSchema }>(
       `${BASE_PATH}/${id}/schema`,
-      { params: options }
+      { params }
     )
     return response.data.schema
   },

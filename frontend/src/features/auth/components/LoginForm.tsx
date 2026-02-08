@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -46,6 +46,24 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
   const rememberMe = watch('rememberMe')
 
+  // Test user quick-login credentials (dev only)
+  const TEST_USERS = [
+    { label: 'Super Admin', email: 'superadmin@novasight.dev', color: 'text-red-600' },
+    { label: 'Tenant Admin', email: 'tenantadmin@novasight.dev', color: 'text-orange-600' },
+    { label: 'Data Engineer', email: 'engineer@novasight.dev', color: 'text-blue-600' },
+    { label: 'BI Developer', email: 'bideveloper@novasight.dev', color: 'text-purple-600' },
+    { label: 'Analyst', email: 'analyst@novasight.dev', color: 'text-green-600' },
+    { label: 'Viewer', email: 'viewer@novasight.dev', color: 'text-gray-600' },
+    { label: 'Auditor', email: 'auditor@novasight.dev', color: 'text-cyan-600' },
+  ]
+  const TEST_PASSWORD = 'NovaSight@2026'
+  const isDev = import.meta.env.DEV
+
+  const fillTestUser = (email: string) => {
+    setValue('email', email)
+    setValue('password', TEST_PASSWORD)
+  }
+
   const onSubmit = async (data: LoginFormData) => {
     setError(null)
     try {
@@ -54,7 +72,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       if (onSuccess) {
         onSuccess()
       } else {
-        const from = (location.state as { from?: string })?.from || '/dashboard'
+        const from = (location.state as { from?: string })?.from || '/app/dashboard'
         navigate(from, { replace: true })
       }
     } catch (err: unknown) {
@@ -138,6 +156,33 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           Create an account
         </Link>
       </p>
+
+      {/* Dev-only: Quick Login as Test User */}
+      {isDev && (
+        <div className="mt-6 rounded-lg border border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-950/20 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Users className="h-4 w-4 text-amber-600" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              Dev Quick Login
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {TEST_USERS.map((u) => (
+              <button
+                key={u.email}
+                type="button"
+                onClick={() => fillTestUser(u.email)}
+                className={`text-left text-xs px-2 py-1.5 rounded hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors ${u.color}`}
+              >
+                {u.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2">
+            Password: <code className="bg-muted px-1 rounded">NovaSight@2026</code>
+          </p>
+        </div>
+      )}
     </form>
   )
 }

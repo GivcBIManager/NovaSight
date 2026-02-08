@@ -18,9 +18,7 @@ export function Header() {
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
 
-  const isSuperAdmin = user?.roles?.some(
-    (r) => r === 'super_admin' || (typeof r === 'object' && (r as { name?: string }).name === 'super_admin')
-  )
+  const isSuperAdmin = user?.roles?.includes('super_admin')
 
   const initials = user?.name
     ? user.name
@@ -78,18 +76,18 @@ export function Header() {
             <DropdownMenuSeparator />
             {isSuperAdmin && (
               <>
-                <DropdownMenuItem onClick={() => navigate('/portal')}>
+                <DropdownMenuItem onClick={() => navigate('/app/portal')}>
                   <Shield className="mr-2 h-4 w-4" />
                   Portal Management
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
               </>
             )}
-            <DropdownMenuItem onClick={() => navigate('/settings')}>
+            <DropdownMenuItem onClick={() => navigate('/app/settings')}>
               <User className="mr-2 h-4 w-4" />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/settings')}>
+            <DropdownMenuItem onClick={() => navigate('/app/settings')}>
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </DropdownMenuItem>

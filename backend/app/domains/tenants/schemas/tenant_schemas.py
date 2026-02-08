@@ -13,17 +13,21 @@ from marshmallow import Schema, fields, validate, validates, ValidationError
 
 
 class TenantSchema(Schema):
-    """Schema for tenant response."""
+    """Schema for tenant response.
+    
+    Note: created_at/updated_at are Str because Tenant.to_dict() already
+    serializes them to ISO format strings.
+    """
 
-    id = fields.UUID(dump_only=True)
+    id = fields.Str(dump_only=True)  # UUID already serialized as string
     name = fields.Str()
     slug = fields.Str()
     plan = fields.Str()
     status = fields.Str()
     settings = fields.Dict()
     is_active = fields.Bool(dump_only=True)
-    created_at = fields.DateTime(dump_only=True)
-    updated_at = fields.DateTime(dump_only=True)
+    created_at = fields.Str(dump_only=True)  # Already ISO string from to_dict()
+    updated_at = fields.Str(dump_only=True)  # Already ISO string from to_dict()
 
 
 class TenantCreateSchema(Schema):

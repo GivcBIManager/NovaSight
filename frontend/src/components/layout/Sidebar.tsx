@@ -14,21 +14,32 @@ import {
   MessageSquare,
   Book,
   Shield,
+  Key,
+  FileText,
+  Layers,
+  HardDrive,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Ask Data', href: '/query', icon: MessageSquare },
-  { name: 'Connections', href: '/connections', icon: Database },
-  { name: 'DAGs', href: '/dags', icon: GitBranch },
-  { name: 'PySpark Apps', href: '/pyspark', icon: Sparkles },
-  { name: 'Semantic Layer', href: '/semantic', icon: Boxes },
-  { name: 'Dashboards', href: '/dashboards', icon: BarChart3 },
-  { name: 'Documentation', href: '/docs', icon: Book },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/app/dashboard', icon: LayoutDashboard },
+  { name: 'Ask Data', href: '/app/query', icon: MessageSquare },
+  { name: 'Connections', href: '/app/connections', icon: Database },
+  { name: 'DAGs', href: '/app/dags', icon: GitBranch },
+  { name: 'PySpark Apps', href: '/app/pyspark', icon: Sparkles },
+  { name: 'Semantic Layer', href: '/app/semantic', icon: Boxes },
+  { name: 'Dashboards', href: '/app/dashboards', icon: BarChart3 },
+  { name: 'Documentation', href: '/app/docs', icon: Book },
+  { name: 'Settings', href: '/app/settings', icon: Settings },
+]
+
+const adminNavigation = [
+  { name: 'dbt Operations', href: '/app/admin/dbt', icon: Layers },
+  { name: 'Audit Logs', href: '/app/admin/audit', icon: FileText },
+  { name: 'Roles & Permissions', href: '/app/admin/roles', icon: Key },
+  { name: 'Backup & Recovery', href: '/app/admin/backups', icon: HardDrive },
 ]
 
 export function Sidebar() {
@@ -36,9 +47,8 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const { user } = useAuth()
 
-  const isSuperAdmin = user?.roles?.some(
-    (r) => r === 'super_admin' || (typeof r === 'object' && (r as { name?: string }).name === 'super_admin')
-  )
+  const isSuperAdmin = user?.roles?.includes('super_admin')
+  const isAdmin = user?.roles?.includes('admin') || isSuperAdmin
 
   return (
     <div
@@ -81,14 +91,43 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Admin Navigation (Admin & Super Admin) */}
+      {isAdmin && (
+        <div className="border-t px-2 py-3">
+          {!collapsed && (
+            <p className="px-3 mb-2 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+              Administration
+            </p>
+          )}
+          {adminNavigation.map((item) => {
+            const isActive = location.pathname.startsWith(item.href)
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+              >
+                <item.icon className="h-5 w-5 shrink-0" />
+                {!collapsed && <span>{item.name}</span>}
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
       {/* Portal Management (Super Admin only) */}
       {isSuperAdmin && (
         <div className="border-t px-2 py-3">
           <Link
-            to="/portal"
+            to="/app/portal"
             className={cn(
               'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-              location.pathname.startsWith('/portal')
+              location.pathname.startsWith('/app/portal')
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
             )}

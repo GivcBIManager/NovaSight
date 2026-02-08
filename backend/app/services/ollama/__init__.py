@@ -3,14 +3,28 @@ NovaSight Ollama Integration
 =============================
 
 Local LLM integration for natural language processing.
-Implements ADR-002: No arbitrary code generation - LLM only generates
-validated parameters for templates.
+
+.. deprecated::
+    This module is a backward-compatibility shim.
+    Use `app.domains.ai.infrastructure.ollama` instead.
 """
 
-from app.services.ollama.client import OllamaClient, OllamaError, OllamaConnectionError
-from app.services.ollama.nl_to_params import NLToParametersService, QueryIntent
-from app.services.ollama.prompt_templates import PromptTemplates
-from app.services.ollama.query_classifier import (
+import warnings as _warnings
+
+_warnings.warn(
+    "app.services.ollama is deprecated. "
+    "Use app.domains.ai.infrastructure.ollama instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from app.domains.ai.infrastructure.ollama import (  # noqa: F401, E402
+    OllamaClient,
+    OllamaError,
+    OllamaConnectionError,
+    NLToParametersService,
+    QueryIntent,
+    PromptTemplates,
     QueryClassifier,
     QueryType,
     ClassifiedIntent,
@@ -19,18 +33,15 @@ from app.services.ollama.query_classifier import (
 )
 
 __all__ = [
-    # Client
-    'OllamaClient',
-    'OllamaError',
-    'OllamaConnectionError',
-    # NL-to-Parameters
-    'NLToParametersService',
-    'QueryIntent',
-    'PromptTemplates',
-    # Query Classifier
-    'QueryClassifier',
-    'QueryType',
-    'ClassifiedIntent',
-    'QueryEntities',
-    'TimeRange',
+    "OllamaClient",
+    "OllamaError",
+    "OllamaConnectionError",
+    "NLToParametersService",
+    "QueryIntent",
+    "PromptTemplates",
+    "QueryClassifier",
+    "QueryType",
+    "ClassifiedIntent",
+    "QueryEntities",
+    "TimeRange",
 ]

@@ -5,3 +5,7 @@
  */
 
 export { default as InfrastructureConfigPage } from './InfrastructureConfigPage';
+export { AuditLogsPage } from './AuditLogsPage';
+export { RolesManagementPage } from './RolesManagementPage';
+export { DbtOperationsPage } from './DbtOperationsPage';
+export { BackupManagementPage } from './BackupManagementPage';

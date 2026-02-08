@@ -22,7 +22,7 @@ export function ModelDetailPage() {
   
   // Redirect if no modelId
   if (!modelId) {
-    return <Navigate to="/semantic" replace />
+    return <Navigate to="/app/semantic" replace />
   }
   
   // Loading state

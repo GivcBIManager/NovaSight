@@ -57,6 +57,9 @@ def create_app(config_name: str = None) -> Flask:
     # Register CLI commands
     _register_commands(app)
     
+    # Auto-seed default users on first startup (dev/demo)
+    _auto_seed(app)
+    
     logger.info(f"NovaSight API initialized in {config_name} mode")
     
     return app
@@ -140,3 +143,35 @@ def _register_commands(app: Flask) -> None:
     """Register Flask CLI commands."""
     from app.commands import register_commands
     register_commands(app)
+
+
+def _auto_seed(app: Flask) -> None:
+    """
+    Automatically seed default test users on first startup.
+
+    Controlled by the ``SEED_USERS`` environment variable:
+        - ``true`` / ``1`` / ``yes`` (default in dev) → seed on startup
+        - ``false`` / ``0`` / ``no``                  → skip
+
+    Safe to call repeatedly — existing records are silently skipped.
+    """
+    seed_flag = os.getenv("SEED_USERS", "true").strip().lower()
+    if seed_flag not in ("true", "1", "yes"):
+        return
+
+    with app.app_context():
+        try:
+            from app.seed import seed_default_data
+            summary = seed_default_data()
+            created = summary.get("users_created", [])
+            if created:
+                logger.info(
+                    "Auto-seeded %d test user(s): %s",
+                    len(created),
+                    ", ".join(created),
+                )
+            else:
+                logger.debug("Seed users already present — nothing to do")
+        except Exception as exc:
+            # Never crash the app because seeding failed
+            logger.warning("Auto-seed skipped due to error: %s", exc)

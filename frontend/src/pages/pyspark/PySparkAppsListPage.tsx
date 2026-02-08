@@ -203,7 +203,7 @@ export function PySparkAppsListPage() {
           </p>
         </div>
         <Button asChild>
-          <Link to="/pyspark/new">
+          <Link to="/app/pyspark/new">
             <Plus className="h-4 w-4 mr-2" />
             New PySpark App
           </Link>
@@ -249,7 +249,7 @@ export function PySparkAppsListPage() {
               </p>
               {!searchQuery && (
                 <Button asChild>
-                  <Link to="/pyspark/new">
+                  <Link to="/app/pyspark/new">
                     <Plus className="h-4 w-4 mr-2" />
                     Create App
                   </Link>
@@ -279,7 +279,7 @@ export function PySparkAppsListPage() {
                       <TableCell>
                         <div>
                           <Link 
-                            to={`/pyspark/${app.id}`}
+                            to={`/app/pyspark/${app.id}`}
                             className="font-medium hover:underline"
                           >
                             {app.name}
@@ -341,11 +341,11 @@ export function PySparkAppsListPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/pyspark/${app.id}`)}>
+                            <DropdownMenuItem onClick={() => navigate(`/app/pyspark/${app.id}`)}>
                               <Code className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => navigate(`/pyspark/${app.id}/edit`)}>
+                            <DropdownMenuItem onClick={() => navigate(`/app/pyspark/${app.id}/edit`)}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>

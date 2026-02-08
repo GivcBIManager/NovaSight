@@ -5,7 +5,7 @@
  * Allows configuring SCD type and write mode.
  */
 
-import { RefreshCw, Database, AlertTriangle } from 'lucide-react'
+import { RefreshCw, Database, AlertTriangle, Circle } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -13,12 +13,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils'
 import type { PySparkWizardState, SCDType, WriteMode } from '@/types/pyspark'
 
+// Custom radio indicator that doesn't require RadioGroup parent
+function RadioIndicator({ checked, disabled }: { checked: boolean; disabled?: boolean }) {
+  return (
+    <div 
+      className={cn(
+        "h-4 w-4 rounded-full border flex items-center justify-center",
+        checked ? "border-primary" : "border-muted-foreground",
+        disabled && "opacity-50"
+      )}
+    >
+      {checked && <Circle className="h-2.5 w-2.5 fill-primary text-primary" />}
+    </div>
+  )
+}
+
 interface SCDConfigurationProps {
   state: PySparkWizardState
   onStateChange: (updates: Partial<PySparkWizardState>) => void
 }
 
 export function SCDConfiguration({ state, onStateChange }: SCDConfigurationProps) {
+  console.log('[SCDConfiguration] Rendering - state:', { 
+    scdType: state.scdType, 
+    writeMode: state.writeMode,
+    primaryKeyColumns: state.primaryKeyColumns 
+  })
+  
   const hasPrimaryKeys = state.primaryKeyColumns.length > 0
   
   // Handle SCD type change
@@ -65,11 +86,7 @@ export function SCDConfiguration({ state, onStateChange }: SCDConfigurationProps
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <RadioGroupItem
-                  value="none"
-                  checked={state.scdType === 'none'}
-                  className="pointer-events-none"
-                />
+                <RadioIndicator checked={state.scdType === 'none'} />
                 No SCD
               </CardTitle>
             </CardHeader>
@@ -91,12 +108,7 @@ export function SCDConfiguration({ state, onStateChange }: SCDConfigurationProps
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <RadioGroupItem
-                  value="type1"
-                  checked={state.scdType === 'type1'}
-                  disabled={!hasPrimaryKeys}
-                  className="pointer-events-none"
-                />
+                <RadioIndicator checked={state.scdType === 'type1'} disabled={!hasPrimaryKeys} />
                 SCD Type 1
               </CardTitle>
             </CardHeader>
@@ -123,12 +135,7 @@ export function SCDConfiguration({ state, onStateChange }: SCDConfigurationProps
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <RadioGroupItem
-                  value="type2"
-                  checked={state.scdType === 'type2'}
-                  disabled={!hasPrimaryKeys}
-                  className="pointer-events-none"
-                />
+                <RadioIndicator checked={state.scdType === 'type2'} disabled={!hasPrimaryKeys} />
                 SCD Type 2
               </CardTitle>
             </CardHeader>

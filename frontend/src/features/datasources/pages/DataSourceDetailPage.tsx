@@ -51,7 +51,7 @@ export function DataSourceDetailPage() {
   const handleDelete = () => {
     if (id && confirm(`Are you sure you want to delete "${datasource?.name}"?`)) {
       deleteDataSource.mutate(id, {
-        onSuccess: () => navigate('/datasources'),
+        onSuccess: () => navigate('/app/datasources'),
       })
     }
   }
@@ -78,7 +78,7 @@ export function DataSourceDetailPage() {
             Failed to load data source. It may have been deleted.
           </AlertDescription>
         </Alert>
-        <Button onClick={() => navigate('/datasources')} className="mt-4">
+        <Button onClick={() => navigate('/app/datasources')} className="mt-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Data Sources
         </Button>
@@ -103,7 +103,7 @@ export function DataSourceDetailPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/datasources')}
+            onClick={() => navigate('/app/datasources')}
             className="mb-2 -ml-2"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />

@@ -5,7 +5,8 @@
  * Allows selecting a connection and specifying source table or query.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Database, Table, Code, Loader2, CheckCircle } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useDataSources, useDataSourceSchema } from '@/features/datasources/hooks'
+import { dataSourceService } from '@/services/dataSourceService'
 import { useValidateQuery } from '../hooks'
 import type { SourceType, PySparkWizardState, ColumnConfig } from '@/types/pyspark'
 import type { DataSource, TableInfo } from '@/types/datasource'
@@ -29,19 +31,78 @@ export function SourceSelector({ state, onStateChange }: SourceSelectorProps) {
   // Fetch available connections
   const { data: connectionsData, isLoading: loadingConnections } = useDataSources()
   
-  // Fetch schema when connection is selected
+  // Fetch schema when connection is selected (without columns for speed)
   const { data: schemaData, isLoading: loadingSchema } = useDataSourceSchema(
     state.connectionId,
-    { include_columns: true }
+    { include_columns: false }
   )
+  
+  // Fetch columns for selected schema only (when schema is selected)
+  const shouldFetchTableSchema = !!state.connectionId && !!selectedSchema
+  const { data: tableSchemaData, isLoading: loadingTableSchema } = useQuery({
+    queryKey: ['datasources', 'schema', state.connectionId, selectedSchema, 'columns'],
+    queryFn: () => dataSourceService.getSchema(state.connectionId, { 
+      schema_name: selectedSchema,
+      include_columns: true 
+    }),
+    enabled: shouldFetchTableSchema,
+    staleTime: 60000,
+  })
   
   // Query validation mutation
   const validateQuery = useValidateQuery()
   
+  // Debug logging
+  console.log('SourceSelector Debug:', {
+    connectionId: state.connectionId,
+    loadingSchema,
+    schemaData,
+    schemas: schemaData?.schemas,
+    schemasLength: schemaData?.schemas?.length,
+    selectedSchema,
+    tableSchemaData,
+    loadingTableSchema,
+    shouldFetchTableSchema,
+  })
+  
   // Get available schemas from data
   const schemas = schemaData?.schemas || []
   const selectedSchemaData = schemas.find(s => s.name === selectedSchema)
-  const tables = selectedSchemaData?.tables || []
+  // Use table schema data (with columns) if available, otherwise fall back to basic schema
+  const tableSchemaWithCols = tableSchemaData?.schemas?.find(s => s.name === selectedSchema)
+  const tables = tableSchemaWithCols?.tables || selectedSchemaData?.tables || []
+  
+  // Debug tables
+  console.log('Tables Debug:', {
+    selectedSchemaData,
+    tableSchemaWithCols,
+    tables,
+    firstTableColumns: tables[0]?.columns,
+  })
+
+  // Update columns when tableSchemaData loads and a table is selected
+  useEffect(() => {
+    if (state.sourceTable && tableSchemaWithCols && !loadingTableSchema) {
+      const table = tableSchemaWithCols.tables.find(t => t.name === state.sourceTable)
+      if (table?.columns && table.columns.length > 0) {
+        const columns: ColumnConfig[] = table.columns.map(col => ({
+          name: col.name,
+          data_type: col.data_type,
+          include: true,
+          nullable: col.is_nullable ?? col.nullable ?? true,
+          comment: col.comment,
+        }))
+        // Only update if columns changed
+        if (state.availableColumns.length !== columns.length) {
+          console.log('Updating columns from useEffect:', columns.length)
+          onStateChange({
+            availableColumns: columns,
+            selectedColumns: columns,
+          })
+        }
+      }
+    }
+  }, [tableSchemaWithCols, state.sourceTable, loadingTableSchema])
   
   // Handle connection change
   const handleConnectionChange = (connectionId: string) => {

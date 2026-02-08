@@ -12,6 +12,7 @@ import {
   MoreVertical,
   Trash2,
   RefreshCw,
+  Copy,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useDeleteDashboard } from '../hooks/useDashboards'
+import { DashboardShareDialog } from './DashboardShareDialog'
 import type { Dashboard } from '@/types/dashboard'
 
 interface DashboardToolbarProps {
@@ -38,11 +40,12 @@ export function DashboardToolbar({
   const navigate = useNavigate()
   const deleteMutation = useDeleteDashboard()
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
   
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this dashboard?')) {
       await deleteMutation.mutateAsync(dashboard.id)
-      navigate('/dashboards')
+      navigate('/app/dashboards')
     }
   }
   
@@ -99,9 +102,13 @@ export function DashboardToolbar({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShareDialogOpen(true)}>
               <Share2 className="h-4 w-4 mr-2" />
               Share
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShareDialogOpen(true)}>
+              <Copy className="h-4 w-4 mr-2" />
+              Clone
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Settings className="h-4 w-4 mr-2" />
@@ -118,6 +125,13 @@ export function DashboardToolbar({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      
+      <DashboardShareDialog
+        dashboardId={dashboard.id}
+        dashboardName={dashboard.name}
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+      />
     </div>
   )
 }

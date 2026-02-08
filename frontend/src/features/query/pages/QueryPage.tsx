@@ -4,11 +4,18 @@
  */
 
 import { useState, useCallback } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { Send, Wand2, History, Sparkles } from 'lucide-react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { Send, Wand2, History, Sparkles, Activity, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { QueryResult } from '../components/QueryResult'
 import { QueryHistory } from '../components/QueryHistory'
 import { QuerySuggestions } from '../components/QuerySuggestions'
@@ -21,13 +28,32 @@ import type { QueryResult as QueryResultType } from '../types'
 export function QueryPage() {
   const [query, setQuery] = useState('')
   const [showHistory, setShowHistory] = useState(false)
+  const [selectedModel, setSelectedModel] = useState('')
   const { addToHistory } = useQueryHistory()
+
+  // AI Health & Models
+  const { data: healthData } = useQuery({
+    queryKey: ['assistant', 'health'],
+    queryFn: async () => {
+      const res = await api.get('/assistant/health')
+      return res.data as { status: string; ollama_available: boolean; model: string }
+    },
+    refetchInterval: 30000,
+  })
+
+  const { data: modelsData } = useQuery({
+    queryKey: ['assistant', 'models'],
+    queryFn: async () => {
+      const res = await api.get('/assistant/models')
+      return res.data as { models: Array<{ name: string; size: number; modified_at: string }> }
+    },
+  })
 
   const queryMutation = useMutation({
     mutationFn: async (q: string) => {
-      const response = await api.post<QueryResultType>('/assistant/query', { 
-        query: q 
-      })
+      const body: Record<string, string> = { query: q }
+      if (selectedModel) body.model = selectedModel
+      const response = await api.post<QueryResultType>('/assistant/query', body)
       return response.data
     },
     onSuccess: (data, variables) => {
@@ -83,14 +109,47 @@ export function QueryPage() {
             Ask questions in natural language to explore your data
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setShowHistory(!showHistory)}
-          className="gap-2"
-        >
-          <History className="h-4 w-4" />
-          History
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* AI Health Indicator */}
+          <Badge
+            variant={healthData?.ollama_available ? 'default' : 'destructive'}
+            className="gap-1"
+          >
+            <Activity className="h-3 w-3" />
+            {healthData?.ollama_available ? 'AI Online' : 'AI Offline'}
+          </Badge>
+
+          {/* Model Selector */}
+          {modelsData?.models && modelsData.models.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1">
+                  {selectedModel || healthData?.model || 'Default Model'}
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {modelsData.models.map((m) => (
+                  <DropdownMenuItem
+                    key={m.name}
+                    onClick={() => setSelectedModel(m.name)}
+                  >
+                    {m.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          <Button
+            variant="outline"
+            onClick={() => setShowHistory(!showHistory)}
+            className="gap-2"
+          >
+            <History className="h-4 w-4" />
+            History
+          </Button>
+        </div>
       </div>
 
       {/* Query Input */}

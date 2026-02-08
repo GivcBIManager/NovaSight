@@ -124,8 +124,9 @@ class TemplateEngine:
             auto_reload: Whether to auto-reload templates on change (dev only).
         """
         if template_dir is None:
-            # Default to backend/templates
-            template_dir = Path(__file__).parent.parent.parent / "templates"
+            # Default to backend/templates (4 parents up from engine.py: 
+            # engine.py -> template_engine/ -> services/ -> app/ -> backend/templates)
+            template_dir = Path(__file__).parent.parent.parent.parent / "templates"
         
         self.template_dir = Path(template_dir)
         

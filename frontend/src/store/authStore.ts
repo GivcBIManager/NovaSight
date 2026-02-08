@@ -6,7 +6,7 @@ export interface RegisterData {
   email: string
   password: string
   name: string
-  tenant_name?: string
+  tenant_slug: string
 }
 
 export interface AuthState {
@@ -74,18 +74,25 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Register action
+      // Backend returns { message, user } without tokens.
+      // We auto-login after successful registration.
       register: async (data: RegisterData) => {
         set({ isLoading: true, error: null })
         try {
-          const response = await authService.register(data)
-          
-          // Auto-login after registration
-          authService.setTokens(response.access_token, response.refresh_token)
-          
+          await authService.register(data)
+
+          // Backend register does NOT return tokens — login separately
+          const loginResponse: LoginResponse = await authService.login({
+            email: data.email,
+            password: data.password,
+          })
+
+          authService.setTokens(loginResponse.access_token, loginResponse.refresh_token)
+
           set({
-            user: response.user,
-            accessToken: response.access_token,
-            refreshToken: response.refresh_token,
+            user: loginResponse.user,
+            accessToken: loginResponse.access_token,
+            refreshToken: loginResponse.refresh_token,
             isAuthenticated: true,
             isLoading: false,
           })

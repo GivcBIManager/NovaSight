@@ -103,28 +103,28 @@ export function TenantActions({ tenant }: TenantActionsProps) {
           <DropdownMenuSeparator />
           
           <DropdownMenuItem
-            onClick={() => navigate(`/admin/tenants/${tenant.id}`)}
+            onClick={() => navigate(`/app/portal/tenants`)}
           >
             <Eye className="h-4 w-4 mr-2" />
             View Details
           </DropdownMenuItem>
           
           <DropdownMenuItem
-            onClick={() => navigate(`/admin/tenants/${tenant.id}/edit`)}
+            onClick={() => navigate(`/app/portal/tenants`)}
           >
             <Pencil className="h-4 w-4 mr-2" />
             Edit Tenant
           </DropdownMenuItem>
           
           <DropdownMenuItem
-            onClick={() => navigate(`/admin/tenants/${tenant.id}/users`)}
+            onClick={() => navigate(`/app/portal/users`)}
           >
             <Users className="h-4 w-4 mr-2" />
             Manage Users
           </DropdownMenuItem>
           
           <DropdownMenuItem
-            onClick={() => navigate(`/admin/tenants/${tenant.id}/settings`)}
+            onClick={() => navigate(`/app/portal/tenants`)}
           >
             <Settings className="h-4 w-4 mr-2" />
             Settings

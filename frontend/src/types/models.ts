@@ -1,34 +1,47 @@
 /**
  * Domain model type definitions
+ *
+ * Aligned with the backend modular-monolith contracts.
+ * Field names use snake_case to match backend JSON responses.
  */
 
-// Connection types
+// ============================================================
+// Connection types (mirrors backend datasources domain)
+// ============================================================
+
 export interface Connection {
   id: string
   name: string
-  type: ConnectionType
+  db_type: ConnectionType
   host: string
   port: number
   database: string
   username: string
   status: ConnectionStatus
-  lastTestedAt?: string
-  createdAt: string
-  updatedAt: string
+  ssl_mode?: string
+  last_tested_at?: string
+  created_at: string
+  updated_at: string
+  created_by?: string
+  tenant_id?: string
+  extra_params?: Record<string, unknown>
 }
 
-export type ConnectionType = 
+/** Supported database types (backend: DatabaseTypeEnum) */
+export type ConnectionType =
   | 'postgresql'
   | 'mysql'
+  | 'oracle'
   | 'sqlserver'
   | 'clickhouse'
-  | 'snowflake'
-  | 'bigquery'
-  | 'redshift'
 
-export type ConnectionStatus = 'connected' | 'disconnected' | 'error' | 'testing'
+/** Connection status (backend: ConnectionStatusEnum) */
+export type ConnectionStatus = 'active' | 'inactive' | 'error' | 'testing'
 
+// ============================================================
 // DAG types
+// ============================================================
+
 export interface Dag {
   id: string
   name: string
@@ -37,9 +50,9 @@ export interface Dag {
   status: DagStatus
   nodes: DagNode[]
   edges: DagEdge[]
-  createdAt: string
-  updatedAt: string
-  lastRunAt?: string
+  created_at: string
+  updated_at: string
+  last_run_at?: string
 }
 
 export type DagStatus = 'active' | 'paused' | 'draft' | 'error'
@@ -51,7 +64,7 @@ export interface DagNode {
   data: Record<string, unknown>
 }
 
-export type DagNodeType = 
+export type DagNodeType =
   | 'source'
   | 'transformation'
   | 'destination'
@@ -67,14 +80,17 @@ export interface DagEdge {
   targetHandle?: string
 }
 
-// Dashboard types
+// ============================================================
+// Dashboard types (simple model; detailed types in types/dashboard.ts)
+// ============================================================
+
 export interface Dashboard {
   id: string
   name: string
   description?: string
   widgets: Widget[]
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
 }
 
 export interface Widget {
@@ -85,29 +101,37 @@ export interface Widget {
   config: Record<string, unknown>
 }
 
-export type WidgetType = 
+export type WidgetType =
   | 'chart'
   | 'table'
   | 'kpi'
   | 'text'
   | 'filter'
 
-// Tenant types
+// ============================================================
+// Tenant types (backend plans: basic, professional, enterprise)
+// ============================================================
+
 export interface Tenant {
   id: string
   name: string
   slug: string
   plan: TenantPlan
-  quotas: TenantQuotas
-  createdAt: string
+  is_active: boolean
+  quotas?: TenantQuotas
+  created_at: string
+  updated_at?: string
 }
 
-export type TenantPlan = 'free' | 'starter' | 'professional' | 'enterprise'
+export type TenantPlan = 'basic' | 'professional' | 'enterprise'
 
 export interface TenantQuotas {
-  maxUsers: number
-  maxConnections: number
-  maxDags: number
-  maxDashboards: number
-  storageGb: number
+  max_users: number
+  max_connections: number
+  max_pipelines: number
+  max_storage_gb: number
+  max_queries_per_day: number
+  used_storage_gb?: number
+  queries_today?: number
 }
+

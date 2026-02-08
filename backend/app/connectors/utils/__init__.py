@@ -1,14 +1,23 @@
 """
-NovaSight Connector Utilities
-=============================
+NovaSight Connector Utilities — Re-export Shim
+================================================
 
-Utility functions for connectors.
+.. deprecated::
+    Import from ``app.domains.datasources.infrastructure.connectors.utils`` instead.
 """
 
-from app.connectors.utils.type_mapping import TypeMapper
-from app.connectors.utils.connection_pool import ConnectionPool
+import warnings as _warnings
 
-__all__ = [
-    "TypeMapper",
-    "ConnectionPool",
-]
+_warnings.warn(
+    "Importing from 'app.connectors.utils' is deprecated. "
+    "Use 'app.domains.datasources.infrastructure.connectors.utils' instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from app.domains.datasources.infrastructure.connectors.utils import (  # noqa: F401, E402
+    TypeMapper,
+    ConnectionPool,
+)
+
+__all__ = ["TypeMapper", "ConnectionPool"]

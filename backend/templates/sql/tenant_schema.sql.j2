@@ -19,6 +19,15 @@ Generated: {{ _generated_at | default(now().isoformat()) }}
 
 {% set schema_name = 'tenant_' ~ (tenant_slug | default(tenant_id | replace('-', '_'))) | sql_safe %}
 
+-- Create application role if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'novasight_app') THEN
+        CREATE ROLE novasight_app WITH LOGIN;
+    END IF;
+END
+$$;
+
 -- Create tenant schema
 CREATE SCHEMA IF NOT EXISTS {{ schema_name }};
 

@@ -51,7 +51,7 @@ export function ModelBuilder({ model, availableColumns = [] }: ModelBuilderProps
         description: `Semantic model "${model.name}" has been deleted.`,
       })
       
-      navigate('/semantic')
+      navigate('/app/semantic')
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -66,7 +66,7 @@ export function ModelBuilder({ model, availableColumns = [] }: ModelBuilderProps
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <Link to="/semantic">
+          <Link to="/app/semantic">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
             </Button>

@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 @api_v1_bp.route("/auth/register", methods=["POST"])
-@limiter.limit("5 per minute")
+@limiter.limit("30 per minute")
 def register():
     """Register a new user."""
     data = request.get_json()
@@ -71,7 +71,7 @@ def register():
 
 
 @api_v1_bp.route("/auth/login", methods=["POST"])
-@limiter.limit("5 per minute")
+@limiter.limit("60 per minute")
 def login():
     """Authenticate user and return JWT tokens."""
     data = request.get_json()
