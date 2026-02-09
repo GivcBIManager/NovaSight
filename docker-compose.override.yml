@@ -41,7 +41,7 @@ services:
   # ============================================
   # Airflow - Debug Mode
   # ============================================
-  airflow-webserver:
+  airflow-api-server:
     environment:
       AIRFLOW__WEBSERVER__RELOAD_ON_PLUGIN_CHANGE: "true"
       AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG

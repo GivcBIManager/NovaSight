@@ -1,0 +1,95 @@
+{#
+NovaSight PySpark Job DAG Template (Refactored)
+===============================================
+
+Generates an Airflow DAG for running a single PySpark application.
+Uses modular components for cleaner code generation.
+
+Template Variables:
+- tenant_id: str - Tenant identifier
+- tenant_slug: str - Tenant slug for naming
+- tenant_database: str - Target database name
+- pyspark_app_id: str - PySpark app identifier
+- pyspark_app_name: str - Human-readable name
+- pyspark_app_description: str - Description
+- spark_app_path: str - Path to PySpark application
+- schedule: str - Cron schedule
+- spark_conf: dict - Spark configuration
+- notifications: dict - Notification settings
+- scd_type: str - SCD type for the job
+- write_mode: str - Write mode (append, overwrite, etc.)
+- template_version: str - Template version
+#}
+{% from 'components/base.py.j2' import header, imports, spark_config, default_args as default_args_macro, tenant_context %}
+{% from 'components/spark.py.j2' import spark_submit_hybrid %}
+{% from 'components/tasks.py.j2' import log_completion_task %}
+
+{{ header(dag_id, template_version | default('1.0'), tenant_slug | default(tenant_id, true) | default('novasight', true), pyspark_app_description | default('PySpark data pipeline')) }}
+
+{{ imports(use_spark=true) }}
+
+{{ spark_config() }}
+
+{{ tenant_context(tenant_id, tenant_slug, tenant_database) }}
+
+{{ default_args_macro(
+    owner=tenant_slug | default(tenant_id, true) | default('novasight', true),
+    retries=retries | default(2),
+    retry_delay_minutes=retry_delay_minutes | default(5),
+    email=[notifications.email] if notifications.get('email') else none,
+    email_on_failure=notifications.get('email_on_failure', false)
+) }}
+
+# DAG definition
+with DAG(
+    dag_id='{{ dag_id }}',
+    default_args=default_args,
+    description='{{ pyspark_app_description | default("PySpark data pipeline", true) }}',
+    schedule='{{ schedule }}',
+    catchup=False,
+    max_active_runs=1,
+    tags=[
+        'pyspark',
+        f'tenant_{TENANT_SLUG}',
+        '{{ scd_type }}',
+        '{{ write_mode }}',
+        {% if source_type %}'source_{{ source_type }}',{% endif %}
+    ],
+) as dag:
+    
+    # PySpark job task with hybrid execution (native or docker fallback)
+{{ spark_submit_hybrid(
+    task_id='run_' ~ (pyspark_app_name | lower | replace(' ', '_') | replace('-', '_')),
+    application=spark_app_path,
+    executor_memory=spark_conf.get('spark.executor.memory', '2g'),
+    executor_cores=spark_conf.get('spark.executor.cores', 2),
+    driver_memory=spark_conf.get('spark.driver.memory', '1g'),
+    spark_conf=spark_conf,
+    env_vars={
+        'TENANT_ID': 'TENANT_ID',
+        'TENANT_DATABASE': 'TENANT_DATABASE',
+        'TARGET_DATABASE': target_database
+    },
+    timeout_minutes=timeout_minutes | default(60),
+    retries=retries | default(2),
+    retry_delay_minutes=retry_delay_minutes | default(5)
+) }}
+    run_pyspark = run_{{ pyspark_app_name | lower | replace(' ', '_') | replace('-', '_') }}
+    
+    # Log completion
+    def log_completion(**context):
+        """Log completion of PySpark job."""
+        ti = context['ti']
+        print(f"PySpark job completed: {{ pyspark_app_name }}")
+        print(f"Tenant: {TENANT_SLUG} (Database: {TENANT_DATABASE})")
+        print(f"Target: {{ target_database }}.{{ target_table }}")
+        print(f"SCD Type: {{ scd_type }}, Write Mode: {{ write_mode }}")
+        print(f"Template Version: {{ template_version }}")
+    
+    log_task = PythonOperator(
+        task_id='log_completion',
+        python_callable=log_completion,
+    )
+    
+    # Task dependencies
+    run_pyspark >> log_task

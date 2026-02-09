@@ -203,10 +203,10 @@ class TestDagGenerator:
         
         # Verify DAG content
         assert "ingest_test-tenant-123_datasource-456" in dag_content
-        assert "SparkSubmitOperator" in dag_content
+        assert "BashOperator" in dag_content  # Uses docker exec instead of SparkSubmitOperator
+        assert "docker exec" in dag_content
         assert "@daily" in dag_content
         assert "Test PostgreSQL DB" in dag_content
-        assert "spark_default" in dag_content
         assert "ingest_to_clickhouse.py" in dag_content
     
     @patch('pathlib.Path.unlink')

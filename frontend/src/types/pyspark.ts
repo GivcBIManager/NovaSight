@@ -112,6 +112,8 @@ export interface PySparkAppUpdate {
   description?: string
   status?: PySparkAppStatus
   
+  connection_id?: string
+  
   source_type?: SourceType
   source_schema?: string
   source_table?: string

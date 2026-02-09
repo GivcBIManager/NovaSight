@@ -125,6 +125,40 @@ def update_tenant(tenant_id: str):
     return jsonify({"tenant": tenant.to_dict()})
 
 
+@api_v1_bp.route("/tenants/current/database", methods=["GET"])
+@jwt_required()
+def get_current_tenant_database():
+    """
+    Get the current tenant's database configuration.
+    
+    Returns database names for ClickHouse (analytics) and PostgreSQL (metadata).
+    This endpoint is useful for configuring PySpark apps and dbt models.
+    """
+    identity = get_jwt_identity_dict()
+    tenant_id = identity.get("tenant_id")
+    
+    if not tenant_id:
+        raise NotFoundError("No tenant context")
+    
+    svc = TenantService()
+    tenant = svc.get_tenant(tenant_id)
+    
+    if not tenant:
+        raise NotFoundError("Tenant not found")
+    
+    from app.platform.tenant.isolation import TenantIsolationService
+    isolation = TenantIsolationService(tenant_id, tenant.slug)
+    
+    return jsonify({
+        "tenant_id": tenant_id,
+        "tenant_slug": tenant.slug,
+        "clickhouse_database": isolation.tenant_database,
+        "postgresql_schema": isolation.tenant_schema,
+        "dbt_folder": isolation.tenant_dbt_folder,
+        "dag_folder": isolation.tenant_dag_folder,
+    })
+
+
 # =====================================================================
 # Admin tenant endpoints  (on admin_bp: /api/v1/admin/tenants)
 # =====================================================================
@@ -250,24 +284,48 @@ def admin_update_tenant(tenant_id):
 @jwt_required()
 @_require_permission("admin.tenants.delete")
 def admin_deactivate_tenant(tenant_id):
-    """Deactivate (archive) a tenant (admin)."""
+    """
+    Deactivate (archive) or permanently delete a tenant.
+    
+    Query Parameters:
+        - hard_delete: If "true", permanently delete tenant and all resources
+        - force: If "true" (with hard_delete), drop databases even with data
+    """
     from app.domains.tenants.schemas.tenant_schemas import TenantSchema
 
+    hard_delete = request.args.get("hard_delete", "false").lower() == "true"
+    force = request.args.get("force", "false").lower() == "true"
+
     svc = TenantService()
-    tenant = svc.delete_tenant(str(tenant_id))
+    
+    if hard_delete:
+        try:
+            result = svc.delete_tenant(str(tenant_id), hard_delete=True, force=force)
+        except ValueError as e:
+            raise ValidationError(str(e))
+        
+        if not result:
+            raise NotFoundError("Tenant not found")
+        
+        return jsonify({
+            "message": "Tenant permanently deleted with all resources",
+            "deleted": True,
+        })
+    else:
+        tenant = svc.delete_tenant(str(tenant_id))
 
-    if not tenant:
-        raise NotFoundError("Tenant not found")
+        if not tenant:
+            raise NotFoundError("Tenant not found")
 
-    # delete_tenant returns bool; re-fetch for serialisation
-    tenant_obj = svc.get_tenant(str(tenant_id))
+        # delete_tenant returns bool; re-fetch for serialisation
+        tenant_obj = svc.get_tenant(str(tenant_id))
 
-    return jsonify({
-        "tenant": TenantSchema().dump(
-            tenant_obj.to_dict() if tenant_obj else {}
-        ),
-        "message": "Tenant deactivated successfully",
-    })
+        return jsonify({
+            "tenant": TenantSchema().dump(
+                tenant_obj.to_dict() if tenant_obj else {}
+            ),
+            "message": "Tenant deactivated successfully",
+        })
 
 
 @admin_bp.route("/tenants/<uuid:tenant_id>/usage", methods=["GET"])
@@ -308,6 +366,46 @@ def admin_activate_tenant(tenant_id):
         "tenant": TenantSchema().dump(tenant.to_dict()),
         "message": "Tenant activated successfully",
     })
+
+
+@admin_bp.route("/tenants/<uuid:tenant_id>/database", methods=["GET"])
+@jwt_required()
+@_require_permission("admin.tenants.view")
+def admin_get_tenant_database_info(tenant_id):
+    """
+    Get tenant's ClickHouse database information.
+    
+    Returns the database name, existence status, and basic stats.
+    """
+    from app.domains.tenants.infrastructure.provisioning import ProvisioningService
+    
+    svc = TenantService()
+    tenant = svc.get_tenant(str(tenant_id))
+
+    if not tenant:
+        raise NotFoundError("Tenant not found")
+
+    provisioning = ProvisioningService()
+    db_name = provisioning.get_tenant_database_name(tenant)
+    exists = provisioning.database_exists(tenant)
+    
+    result = {
+        "tenant_id": str(tenant_id),
+        "tenant_slug": tenant.slug,
+        "database_name": db_name,
+        "database_exists": exists,
+        "postgresql_schema": f"tenant_{tenant.slug}",
+    }
+    
+    # If database exists, try to get stats
+    if exists:
+        try:
+            usage = svc.get_usage(str(tenant_id))
+            result["storage_gb"] = usage.get("storage_gb", 0)
+        except Exception:
+            result["storage_gb"] = None
+    
+    return jsonify(result)
 
 
 @admin_bp.route("/tenants/<uuid:tenant_id>/suspend", methods=["POST"])

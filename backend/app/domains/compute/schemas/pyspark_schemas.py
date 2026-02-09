@@ -146,6 +146,9 @@ class PySparkAppUpdateSchema(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     status: Optional[PySparkAppStatusEnum] = None
     
+    # Connection (allows changing the data source)
+    connection_id: Optional[str] = Field(None, max_length=36)
+    
     # Source configuration
     source_type: Optional[SourceTypeEnum] = None
     source_schema: Optional[str] = Field(None, max_length=255)

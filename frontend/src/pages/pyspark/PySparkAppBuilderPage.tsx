@@ -1,11 +1,11 @@
 /**
  * PySpark App Builder Page
  * 
- * Multi-step wizard for creating PySpark applications.
+ * Multi-step wizard for creating and editing PySpark applications.
  */
 
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Save, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -18,22 +18,101 @@ import {
   TargetConfiguration,
   PySparkPreview,
 } from '@/features/pyspark/components'
-import { useCreatePySparkApp, useGeneratePySparkCode } from '@/features/pyspark/hooks'
+import { 
+  useCreatePySparkApp, 
+  useUpdatePySparkApp,
+  useGeneratePySparkCode,
+  usePySparkApp 
+} from '@/features/pyspark/hooks'
 import {
   PySparkWizardState,
   INITIAL_WIZARD_STATE,
   WIZARD_STEPS,
+  PySparkApp,
 } from '@/types/pyspark'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/contexts/AuthContext'
+
+/**
+ * Convert a PySparkApp to wizard state for editing
+ */
+function appToWizardState(app: PySparkApp): PySparkWizardState {
+  return {
+    currentStep: 'source',
+    connectionId: app.connection_id,
+    sourceType: app.source_type,
+    sourceSchema: app.source_schema || '',
+    sourceTable: app.source_table || '',
+    sourceQuery: app.source_query || '',
+    availableColumns: app.columns_config || [],
+    selectedColumns: app.columns_config || [],
+    primaryKeyColumns: app.primary_key_columns || [],
+    cdcType: app.cdc_type || 'none',
+    cdcColumn: app.cdc_column || '',
+    partitionColumns: app.partition_columns || [],
+    scdType: app.scd_type || 'none',
+    writeMode: app.write_mode || 'append',
+    targetDatabase: app.target_database || '',
+    targetTable: app.target_table || '',
+    targetEngine: app.target_engine || 'MergeTree',
+    name: app.name,
+    description: app.description || '',
+    options: app.options || {},
+  }
+}
 
 export function PySparkAppBuilderPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { user } = useAuth()
+  const { id: appId } = useParams<{ id: string }>()
+  
+  // Determine if we're in edit mode
+  const isEditMode = !!appId
+  
+  // Fetch existing app data when in edit mode
+  const { data: existingApp, isLoading: isLoadingApp } = usePySparkApp(appId || '', false)
+  
+  // Derive the tenant database name from user's tenant
+  // Convention: tenant_{slug} where slug is lowercase with underscores
+  const tenantDatabase = useMemo(() => {
+    if (user?.tenant_name) {
+      const slug = user.tenant_name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+      return `tenant_${slug}`
+    }
+    return ''
+  }, [user?.tenant_name])
   
   const [state, setState] = useState<PySparkWizardState>(INITIAL_WIZARD_STATE)
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
+  const [isInitialized, setIsInitialized] = useState(false)
+  
+  // Initialize state from existing app when in edit mode
+  useEffect(() => {
+    if (isEditMode && existingApp && !isInitialized) {
+      console.log('[PySparkAppBuilderPage] Initializing edit mode with existing app:', existingApp)
+      setState(appToWizardState(existingApp))
+      setIsInitialized(true)
+    }
+  }, [isEditMode, existingApp, isInitialized])
+  
+  // Set default target database to tenant database when user info is available (only for new apps)
+  useEffect(() => {
+    if (!isEditMode && tenantDatabase && !state.targetDatabase) {
+      setState(prev => ({ ...prev, targetDatabase: tenantDatabase }))
+    }
+  }, [isEditMode, tenantDatabase, state.targetDatabase])
+  
+  // Set default app name to source table name when table is selected (only for new apps)
+  useEffect(() => {
+    if (!isEditMode && state.sourceTable && !state.name) {
+      const appName = `extract_${state.sourceTable.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+      setState(prev => ({ ...prev, name: appName }))
+    }
+  }, [isEditMode, state.sourceTable, state.name])
   
   const createApp = useCreatePySparkApp()
+  const updateApp = useUpdatePySparkApp()
   const generateCode = useGeneratePySparkCode()
   
   const currentStep = WIZARD_STEPS[currentStepIndex]
@@ -60,10 +139,10 @@ export function PySparkAppBuilderPage() {
     }
   }
   
-  // Save the PySpark app
+  // Save the PySpark app (create or update)
   const handleSave = async () => {
     try {
-      const app = await createApp.mutateAsync({
+      const appData = {
         name: state.name,
         connection_id: state.connectionId,
         description: state.description || undefined,
@@ -82,21 +161,41 @@ export function PySparkAppBuilderPage() {
         target_table: state.targetTable || undefined,
         target_engine: state.targetEngine,
         options: state.options,
-      })
+      }
       
-      // Generate code after creating
-      await generateCode.mutateAsync(app.id)
+      let savedAppId: string
       
-      toast({
-        title: 'PySpark App Created',
-        description: `Successfully created "${app.name}" and generated code.`,
-      })
+      if (isEditMode && appId) {
+        // Update existing app
+        await updateApp.mutateAsync({ appId, data: appData })
+        savedAppId = appId
+        
+        // Regenerate code after update
+        await generateCode.mutateAsync(savedAppId)
+        
+        toast({
+          title: 'PySpark App Updated',
+          description: `Successfully updated "${state.name}" and regenerated code.`,
+        })
+      } else {
+        // Create new app
+        const app = await createApp.mutateAsync(appData)
+        savedAppId = app.id
+        
+        // Generate code after creating
+        await generateCode.mutateAsync(savedAppId)
+        
+        toast({
+          title: 'PySpark App Created',
+          description: `Successfully created "${app.name}" and generated code.`,
+        })
+      }
       
-      navigate(`/app/pyspark/${app.id}`)
+      navigate(`/app/pyspark/${savedAppId}`)
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to create PySpark app. Please try again.',
+        description: `Failed to ${isEditMode ? 'update' : 'create'} PySpark app. Please try again.`,
         variant: 'destructive',
       })
     }
@@ -124,17 +223,35 @@ export function PySparkAppBuilderPage() {
     }
   }
   
+  // Show loading state when fetching existing app in edit mode
+  if (isEditMode && isLoadingApp) {
+    return (
+      <div className="container max-w-5xl py-8">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Loading PySpark App...</span>
+        </div>
+      </div>
+    )
+  }
+  
+  // Mutation states
+  const isSaving = createApp.isPending || updateApp.isPending || generateCode.isPending
+  
   return (
     <div className="container max-w-5xl py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Create PySpark App</h1>
+        <h1 className="text-3xl font-bold">{isEditMode ? 'Edit' : 'Create'} PySpark App</h1>
         <p className="text-muted-foreground mt-2">
-          Configure a PySpark extraction job step by step
+          {isEditMode 
+            ? `Modify the configuration for "${state.name}"`
+            : 'Configure a PySpark extraction job step by step'
+          }
         </p>
       </div>
       
-      {/* Progress Steps */}
+      {/* Progress Steps - In edit mode, allow clicking on any step */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
           {WIZARD_STEPS.map((step, index) => (
@@ -149,17 +266,26 @@ export function PySparkAppBuilderPage() {
                 type="button"
                 className={cn(
                   "flex flex-col items-center",
-                  index <= currentStepIndex ? "cursor-pointer" : "cursor-not-allowed"
+                  // In edit mode, all steps are clickable; in create mode, only completed steps
+                  isEditMode || index <= currentStepIndex ? "cursor-pointer" : "cursor-not-allowed"
                 )}
-                onClick={() => index < currentStepIndex && setCurrentStepIndex(index)}
-                disabled={index > currentStepIndex}
+                onClick={() => {
+                  // In edit mode, allow navigating to any step
+                  // In create mode, only allow navigating to previous steps
+                  if (isEditMode || index < currentStepIndex) {
+                    setCurrentStepIndex(index)
+                  }
+                }}
+                disabled={!isEditMode && index > currentStepIndex}
               >
                 <div
                   className={cn(
                     "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
                     index < currentStepIndex && "bg-primary text-primary-foreground",
                     index === currentStepIndex && "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2",
-                    index > currentStepIndex && "bg-muted text-muted-foreground"
+                    // In edit mode, show future steps as accessible
+                    index > currentStepIndex && isEditMode && "bg-muted text-muted-foreground hover:bg-muted/80",
+                    index > currentStepIndex && !isEditMode && "bg-muted text-muted-foreground"
                   )}
                 >
                   {index + 1}
@@ -214,14 +340,14 @@ export function PySparkAppBuilderPage() {
             <Button
               type="button"
               onClick={handleSave}
-              disabled={!canProceed || createApp.isPending || generateCode.isPending}
+              disabled={!canProceed || isSaving}
             >
-              {(createApp.isPending || generateCode.isPending) ? (
+              {isSaving ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
-              Save PySpark App
+              {isEditMode ? 'Update' : 'Save'} PySpark App
             </Button>
           ) : (
             <Button

@@ -77,17 +77,17 @@ class DagService {
 
   async get(dagId: string): Promise<DagConfig & { tasks: TaskConfig[] }> {
     const response = await apiClient.get(`${this.baseUrl}/${dagId}`)
-    return response.data
+    return response.data.dag
   }
 
   async create(data: CreateDagRequest): Promise<DagConfig> {
     const response = await apiClient.post(this.baseUrl, data)
-    return response.data
+    return response.data.dag
   }
 
   async update(dagId: string, data: Partial<CreateDagRequest>): Promise<DagConfig> {
     const response = await apiClient.put(`${this.baseUrl}/${dagId}`, data)
-    return response.data
+    return response.data.dag
   }
 
   async delete(dagId: string): Promise<void> {

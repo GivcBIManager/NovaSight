@@ -44,16 +44,35 @@ class PySparkAppService:
         SCDType.TYPE2: "pyspark/scd_type2.py.j2",
     }
     
-    def __init__(self, tenant_id: str):
+    def __init__(self, tenant_id: str, tenant_slug: Optional[str] = None):
         """
         Initialize service for a specific tenant.
         
         Args:
             tenant_id: Tenant UUID
+            tenant_slug: Optional tenant slug for database naming
         """
         self.tenant_id = tenant_id
+        self._tenant_slug = tenant_slug
         self.connection_service = ConnectionService(tenant_id)
         self.template_engine = TemplateEngine()
+    
+    @property
+    def tenant_database(self) -> str:
+        """Get the default ClickHouse database name for this tenant."""
+        if self._tenant_slug:
+            return f"tenant_{self._tenant_slug}"
+        # Fallback to fetching tenant slug from database
+        return self._get_tenant_database()
+    
+    def _get_tenant_database(self) -> str:
+        """Fetch tenant slug and return database name."""
+        from app.domains.tenants.domain.models import Tenant
+        tenant = Tenant.query.filter(Tenant.id == self.tenant_id).first()
+        if tenant:
+            self._tenant_slug = tenant.slug
+            return f"tenant_{tenant.slug}"
+        return f"tenant_{self.tenant_id}"
     
     def list_apps(
         self,
@@ -198,6 +217,10 @@ class PySparkAppService:
         except ValueError:
             raise ValidationError(f"Invalid write_mode: {write_mode}")
         
+        # Default target_database to tenant's ClickHouse database
+        # This enforces tenant isolation at the destination level
+        effective_target_database = target_database or self.tenant_database
+        
         # Create app
         app = PySparkApp(
             tenant_id=self.tenant_id,
@@ -216,7 +239,7 @@ class PySparkAppService:
             partition_columns=partition_columns or [],
             scd_type=scd_type_enum,
             write_mode=write_mode_enum,
-            target_database=target_database,
+            target_database=effective_target_database,
             target_table=target_table,
             target_engine=target_engine,
             options=options or {},
@@ -284,7 +307,7 @@ class PySparkAppService:
         
         # Clear generated code if configuration changed
         config_fields = [
-            "source_type", "source_schema", "source_table", "source_query",
+            "connection_id", "source_type", "source_schema", "source_table", "source_query",
             "columns_config", "primary_key_columns", "cdc_type", "cdc_column",
             "partition_columns", "scd_type", "write_mode", "target_database",
             "target_table", "target_engine"
@@ -413,9 +436,18 @@ class PySparkAppService:
         except ValueError as e:
             raise ValidationError(str(e))
         
+        # Default target_database to tenant's ClickHouse database
+        effective_target_database = target_database or self.tenant_database
+        
+        # Generate a preview app_id
+        import uuid
+        preview_app_id = f"preview_{uuid.uuid4().hex[:8]}"
+        
         # Build params
         params = {
             "app_name": "preview_app",
+            "app_id": preview_app_id,
+            "tenant_id": self.tenant_id,
             "connection": {
                 "db_type": connection.db_type.value,
                 "host": connection.host,
@@ -442,7 +474,7 @@ class PySparkAppService:
             "scd_type": scd_type,
             "write_mode": write_mode,
             "target": {
-                "database": target_database,
+                "database": effective_target_database,
                 "table": target_table,
                 "engine": target_engine,
             },

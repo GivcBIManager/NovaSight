@@ -21,11 +21,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext'
 import { dagService, TaskConfig } from '@/services/dagService'
 import { pysparkApi } from '@/services/pysparkApi'
+import { CronBuilder } from '@/components/ui/cron-builder'
+import { DagCodePreview } from '@/components/ui/dag-code-preview'
 import type { PySparkApp } from '@/types/pyspark'
 import {
-  Save,
   Play,
-  Upload,
   ArrowLeft,
   Database,
   Code2,
@@ -35,6 +35,8 @@ import {
   Loader2,
   Sparkles,
   Tag,
+  Trash2,
+  Eye,
 } from 'lucide-react'
 
 const taskTypes = [
@@ -56,11 +58,20 @@ export function DagBuilderPage() {
   const [dagName, setDagName] = useState(dagId || '')
   const [description, setDescription] = useState('')
   const [dagTags, setDagTags] = useState<string[]>([])
+  const [cronExpression, setCronExpression] = useState('')
+  const [timezone, setTimezone] = useState('UTC')
+  
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [isDeploying, setIsDeploying] = useState(false)
+  const [isTriggering, setIsTriggering] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewCode, setPreviewCode] = useState('')
+  const [validationResult, setValidationResult] = useState<{
+    valid: boolean
+    errors: string[]
+  }>({ valid: true, errors: [] })
   
   // Get tenant name for auto-tagging
   const tenantName = user?.tenant_name || 'default'
@@ -206,6 +217,27 @@ export function DagBuilderPage() {
     setSelectedNode(node)
   }, [])
 
+  // Click on canvas (not on node) to deselect and show DAG config
+  const onPaneClick = useCallback(() => {
+    setSelectedNode(null)
+  }, [])
+
+  // Delete a task node
+  const deleteTask = (nodeId: string) => {
+    setNodes(nds => nds.filter(n => n.id !== nodeId))
+    setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId))
+    setTaskConfigs(prev => {
+      const updated = { ...prev }
+      delete updated[nodeId]
+      return updated
+    })
+    setSelectedNode(null)
+    toast({
+      title: 'Task Removed',
+      description: 'Task has been removed from the DAG',
+    })
+  }
+
   // Convert ReactFlow nodes to TaskConfig format
   const nodesToTasks = (): TaskConfig[] => {
     return nodes.map((node) => {
@@ -214,12 +246,14 @@ export function DagBuilderPage() {
         .filter((edge) => edge.target === node.id)
         .map((edge) => edge.source)
 
+      const config = taskConfigs[node.id] || {}
+
       return {
         task_id: node.id,
         task_type: node.data.taskType,
-        config: taskConfigs[node.id] || {},
-        timeout_minutes: 60,
-        retries: 1,
+        config: config,
+        timeout_minutes: (config.timeout_minutes as number) || 60,
+        retries: (config.retries as number) || 1,
         retry_delay_minutes: 5,
         trigger_rule: 'all_success',
         depends_on: dependencies,
@@ -229,55 +263,336 @@ export function DagBuilderPage() {
     })
   }
 
-  const handleSave = async () => {
+  // Validate DAG configuration
+  const validateDag = (): { valid: boolean; errors: string[] } => {
+    const errors: string[] = []
+
     if (!dagName.trim()) {
-      toast({
-        title: 'Validation Error',
-        description: 'DAG name is required',
-        variant: 'destructive',
-      })
-      return
+      errors.push('DAG name is required')
+    } else if (!/^[a-z][a-z0-9_]*$/.test(dagName)) {
+      errors.push('DAG name must start with a letter and contain only lowercase letters, numbers, and underscores')
     }
 
     if (nodes.length === 0) {
+      errors.push('Add at least one task to the DAG')
+    }
+
+    // Validate each task
+    nodes.forEach((node) => {
+      const config = taskConfigs[node.id] || {}
+      
+      if (node.data.taskType === 'spark_submit') {
+        if (!config.application_path && !config.pyspark_app_id) {
+          errors.push(`Task "${node.id}": Application path is required for Spark Submit`)
+        }
+      }
+    })
+
+    // Check for circular dependencies
+    const visited = new Set<string>()
+    const recursionStack = new Set<string>()
+    
+    const hasCycle = (nodeId: string): boolean => {
+      visited.add(nodeId)
+      recursionStack.add(nodeId)
+      
+      const outEdges = edges.filter(e => e.source === nodeId)
+      for (const edge of outEdges) {
+        if (!visited.has(edge.target)) {
+          if (hasCycle(edge.target)) return true
+        } else if (recursionStack.has(edge.target)) {
+          return true
+        }
+      }
+      
+      recursionStack.delete(nodeId)
+      return false
+    }
+    
+    for (const node of nodes) {
+      if (!visited.has(node.id) && hasCycle(node.id)) {
+        errors.push('DAG contains circular dependencies')
+        break
+      }
+    }
+
+    return { valid: errors.length === 0, errors }
+  }
+
+  // Generate DAG code preview
+  const generateDagCode = (): string => {
+    const tasks = nodesToTasks()
+    const imports = new Set<string>([
+      'from __future__ import annotations',
+      'from datetime import datetime, timedelta',
+      'import pendulum',
+      'from airflow.models.dag import DAG',
+      'from airflow.operators.empty import EmptyOperator',
+    ])
+
+    // Add task-specific imports
+    let hasSparkSubmit = false
+    tasks.forEach(task => {
+      switch (task.task_type) {
+        case 'spark_submit':
+          imports.add('from airflow.operators.bash import BashOperator')
+          imports.add('import os')
+          hasSparkSubmit = true
+          break
+        case 'dbt_run':
+        case 'dbt_test':
+          imports.add('from airflow.operators.bash import BashOperator')
+          break
+        case 'email':
+          imports.add('from airflow.providers.smtp.operators.smtp import EmailOperator')
+          break
+        case 'http_sensor':
+          imports.add('from airflow.providers.http.sensors.http import HttpSensor')
+          break
+        case 'bash_operator':
+          imports.add('from airflow.operators.bash import BashOperator')
+          break
+      }
+    })
+
+    const taskCode = tasks.map(task => generateTaskCode(task)).join('\n\n')
+    const depCode = generateDependencyCode(tasks)
+
+    // Use tenant slug for owner
+    const ownerName = tenantSlug || 'novasight'
+    
+    const dagCode = `"""
+Auto-generated DAG: ${dagName}
+Description: ${description || 'No description'}
+Generated by NovaSight DAG Builder
+Owner: ${ownerName}
+Tags: ${dagTags.join(', ')}
+"""
+
+${Array.from(imports).join('\n')}
+
+default_args = {
+    'owner': '${ownerName}',
+    'depends_on_past': False,
+    'email_on_failure': True,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+}
+
+with DAG(
+    dag_id='${dagName}',
+    default_args=default_args,
+    description='${description || ''}',
+    schedule=${cronExpression ? `'${cronExpression}'` : 'None'},
+    start_date=pendulum.datetime(2024, 1, 1, tz='${timezone}'),
+    catchup=False,
+    tags=${JSON.stringify(dagTags)},
+) as dag:
+    
+    # Start task
+    start = EmptyOperator(task_id='start')
+    
+    # End task  
+    end = EmptyOperator(task_id='end')
+    
+${taskCode}
+    
+    # Task dependencies
+${depCode}
+`
+    return dagCode
+  }
+
+  const generateTaskCode = (task: TaskConfig): string => {
+    const indent = '    '
+    const config = task.config as Record<string, unknown>
+    
+    switch (task.task_type) {
+      case 'spark_submit': {
+        const appPath = config.application_path || '/opt/spark/jobs/job.py'
+        return `${indent}# Spark submit via docker exec to spark-master container
+${indent}SPARK_MASTER_CONTAINER = os.environ.get('SPARK_MASTER_CONTAINER', 'novasight-spark-master')
+${indent}${task.task_id}_cmd = f"""
+${indent}docker exec {SPARK_MASTER_CONTAINER} /opt/spark/bin/spark-submit \\
+${indent}    --master spark://spark-master:7077 \\
+${indent}    --deploy-mode client \\
+${indent}    --driver-memory 1g \\
+${indent}    --executor-memory 2g \\
+${indent}    --executor-cores 2 \\
+${indent}    --jars /opt/spark/jars/custom/postgresql-42.7.4.jar,/opt/spark/jars/custom/clickhouse-jdbc-0.6.3.jar \\
+${indent}    ${appPath}
+${indent}"""
+${indent}${task.task_id} = BashOperator(
+${indent}    task_id='${task.task_id}',
+${indent}    bash_command=${task.task_id}_cmd,
+${indent}    execution_timeout=timedelta(minutes=${task.timeout_minutes}),
+${indent})`
+      }
+
+      case 'dbt_run':
+        return `${indent}${task.task_id} = BashOperator(
+${indent}    task_id='${task.task_id}',
+${indent}    bash_command='cd /opt/dbt && dbt run',
+${indent}    execution_timeout=timedelta(minutes=${task.timeout_minutes}),
+${indent})`
+
+      case 'dbt_test':
+        return `${indent}${task.task_id} = BashOperator(
+${indent}    task_id='${task.task_id}',
+${indent}    bash_command='cd /opt/dbt && dbt test',
+${indent}    execution_timeout=timedelta(minutes=${task.timeout_minutes}),
+${indent})`
+
+      case 'email':
+        return `${indent}${task.task_id} = EmailOperator(
+${indent}    task_id='${task.task_id}',
+${indent}    to='${config.to || 'admin@example.com'}',
+${indent}    subject='${config.subject || 'DAG Notification'}',
+${indent}    html_content='${config.html_content || 'DAG task completed.'}',
+${indent})`
+
+      case 'http_sensor':
+        return `${indent}${task.task_id} = HttpSensor(
+${indent}    task_id='${task.task_id}',
+${indent}    http_conn_id='${config.http_conn_id || 'http_default'}',
+${indent}    endpoint='${config.endpoint || '/health'}',
+${indent}    poke_interval=60,
+${indent}    timeout=${task.timeout_minutes * 60},
+${indent})`
+
+      case 'bash_operator':
+        return `${indent}${task.task_id} = BashOperator(
+${indent}    task_id='${task.task_id}',
+${indent}    bash_command='${config.bash_command || 'echo "Hello World"'}',
+${indent}    execution_timeout=timedelta(minutes=${task.timeout_minutes}),
+${indent})`
+
+      default:
+        return `${indent}# Unknown task type: ${task.task_type}`
+    }
+  }
+
+  const generateDependencyCode = (tasks: TaskConfig[]): string => {
+    const indent = '    '
+    const lines: string[] = []
+    
+    // Find root tasks (no dependencies)
+    const rootTasks = tasks.filter(t => t.depends_on.length === 0)
+    const leafTasks = tasks.filter(t => {
+      // A task is a leaf if no other task depends on it
+      return !tasks.some(other => other.depends_on.includes(t.task_id))
+    })
+    
+    // Connect start to root tasks
+    if (rootTasks.length > 0) {
+      lines.push(`${indent}start >> [${rootTasks.map(t => t.task_id).join(', ')}]`)
+    }
+    
+    // Add explicit dependencies
+    tasks.forEach(task => {
+      if (task.depends_on.length > 0) {
+        task.depends_on.forEach(dep => {
+          lines.push(`${indent}${dep} >> ${task.task_id}`)
+        })
+      }
+    })
+    
+    // Connect leaf tasks to end
+    if (leafTasks.length > 0) {
+      lines.push(`${indent}[${leafTasks.map(t => t.task_id).join(', ')}] >> end`)
+    }
+    
+    return lines.join('\n')
+  }
+
+  // Handle Save with Preview
+  const handleSaveWithPreview = async () => {
+    const validation = validateDag()
+    setValidationResult(validation)
+    
+    if (!validation.valid) {
       toast({
-        title: 'Validation Error',
-        description: 'Add at least one task to the DAG',
+        title: 'Validation Failed',
+        description: validation.errors[0],
         variant: 'destructive',
       })
       return
     }
+    
+    const code = generateDagCode()
+    setPreviewCode(code)
+    setShowPreview(true)
+  }
 
+  // Confirm save and deploy
+  const handleConfirmSave = async () => {
     setIsSaving(true)
     try {
       const tasks = nodesToTasks()
       
+      const dagData = {
+        dag_id: dagName,
+        description,
+        schedule_type: cronExpression ? 'cron' as const : 'manual' as const,
+        schedule_cron: cronExpression || undefined,
+        timezone,
+        tags: dagTags,
+        tasks,
+      }
+
+      let dagIdToUse = dagId
+      let wasUpdated = false
+
       if (isEditing && dagId) {
-        await dagService.update(dagId, {
-          description,
-          tasks,
-        })
+        // Editing mode - use update
+        await dagService.update(dagId, dagData)
+        dagIdToUse = dagId
+        wasUpdated = true
+      } else {
+        // Creating mode - but first check if DAG with same name already exists
+        try {
+          const existingDag = await dagService.get(dagName)
+          if (existingDag) {
+            // DAG already exists, update it instead
+            await dagService.update(existingDag.id, dagData)
+            dagIdToUse = existingDag.id
+            wasUpdated = true
+          }
+        } catch {
+          // DAG doesn't exist (404), create a new one
+          const dag = await dagService.create(dagData)
+          dagIdToUse = dag.id
+        }
+      }
+
+      // Deploy after create/update
+      await dagService.deploy(dagIdToUse!)
+      
+      if (wasUpdated) {
         toast({
-          title: 'DAG Updated',
-          description: `Successfully updated ${dagName}`,
+          title: 'DAG Updated & Deployed',
+          description: `Successfully updated and deployed ${dagName} to Airflow`,
         })
       } else {
-        const dag = await dagService.create({
-          dag_id: dagName,
-          description,
-          schedule_type: 'manual',
-          tasks,
-        })
         toast({
-          title: 'DAG Created',
-          description: `Successfully created ${dag.dag_id}`,
+          title: 'DAG Created & Deployed',
+          description: `Successfully created and deployed ${dagName} to Airflow`,
         })
-        navigate(`/app/dags/${dag.id}/edit`)
       }
+      
+      // Navigate to edit mode if we weren't already
+      if (!isEditing && dagIdToUse) {
+        navigate(`/app/dags/${dagIdToUse}/edit`)
+      }
+      
+      setShowPreview(false)
     } catch (error) {
+      console.error('Save error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       toast({
         title: 'Error',
-        description: 'Failed to save DAG. Please try again.',
+        description: `Failed to save DAG: ${errorMessage}`,
         variant: 'destructive',
       })
     } finally {
@@ -285,31 +600,33 @@ export function DagBuilderPage() {
     }
   }
 
-  const handleDeploy = async () => {
+  // Trigger DAG run
+  const handleTriggerRun = async () => {
     if (!dagId && !isEditing) {
       toast({
         title: 'Save Required',
-        description: 'Please save the DAG before deploying',
+        description: 'Please save the DAG before triggering a run',
         variant: 'destructive',
       })
       return
     }
 
-    setIsDeploying(true)
+    setIsTriggering(true)
     try {
-      const result = await dagService.deploy(dagId || dagName)
+      const run = await dagService.trigger(dagId || dagName)
       toast({
-        title: 'DAG Deployed',
-        description: result.message || 'DAG successfully deployed to Airflow',
+        title: 'DAG Triggered',
+        description: `Run ${run.run_id} started successfully`,
       })
     } catch (error) {
+      console.error('Trigger error:', error)
       toast({
-        title: 'Deploy Failed',
-        description: 'Failed to deploy DAG. Please try again.',
+        title: 'Trigger Failed',
+        description: 'Failed to trigger DAG run. Make sure it is deployed to Airflow.',
         variant: 'destructive',
       })
     } finally {
-      setIsDeploying(false)
+      setIsTriggering(false)
     }
   }
 
@@ -350,32 +667,31 @@ export function DagBuilderPage() {
             </span>
             <div className="flex items-center gap-2">
               <Input
-                placeholder="DAG Name"
+                placeholder="dag_name"
                 value={dagName}
-                onChange={(e) => setDagName(e.target.value)}
-                className="w-48"
+                onChange={(e) => setDagName(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
+                className="w-48 font-mono"
               />
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleSave} disabled={isSaving}>
+            <Button variant="outline" onClick={handleSaveWithPreview} disabled={isSaving}>
               {isSaving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Save className="mr-2 h-4 w-4" />
+                <Eye className="mr-2 h-4 w-4" />
               )}
-              {isSaving ? 'Saving...' : 'Save'}
+              Preview & Save
             </Button>
-            <Button variant="outline" onClick={handleDeploy} disabled={isDeploying || !isEditing}>
-              {isDeploying ? (
+            <Button 
+              onClick={handleTriggerRun} 
+              disabled={isTriggering || (!isEditing && nodes.length === 0)}
+            >
+              {isTriggering ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Upload className="mr-2 h-4 w-4" />
+                <Play className="mr-2 h-4 w-4" />
               )}
-              {isDeploying ? 'Deploying...' : 'Deploy'}
-            </Button>
-            <Button>
-              <Play className="mr-2 h-4 w-4" />
               Trigger Run
             </Button>
           </div>
@@ -394,6 +710,7 @@ export function DagBuilderPage() {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
             fitView
           >
             <Controls />
@@ -404,10 +721,20 @@ export function DagBuilderPage() {
       </div>
 
       {/* Properties Panel */}
-      <Card className="w-80 shrink-0">
+      <Card className="w-80 shrink-0 overflow-y-auto">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">
+          <CardTitle className="text-sm flex items-center justify-between">
             {selectedNode ? 'Task Properties' : 'DAG Properties'}
+            {selectedNode && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                onClick={() => deleteTask(selectedNode.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -415,7 +742,7 @@ export function DagBuilderPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Task ID</Label>
-                <Input value={selectedNode.id} disabled />
+                <Input value={selectedNode.id} disabled className="font-mono text-xs" />
               </div>
               <div className="space-y-2">
                 <Label>Task Type</Label>
@@ -460,9 +787,6 @@ export function DagBuilderPage() {
                         </SelectContent>
                       </Select>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      Select an existing PySpark app or leave empty to configure manually.
-                    </p>
                   </div>
                   
                   {/* Show selected app info */}
@@ -481,17 +805,15 @@ export function DagBuilderPage() {
                     </div>
                   )}
                   
-                  {/* Always show Application Path and Spark Master */}
+                  {/* Application Path and Spark Master */}
                   <div className="space-y-2">
                     <Label>Application Path</Label>
                     <Input 
                       placeholder="/opt/spark/jobs/my_job.py"
                       value={taskConfigs[selectedNode.id]?.application_path as string || ''}
                       onChange={(e) => updateTaskConfig(selectedNode.id, 'application_path', e.target.value)}
+                      className="font-mono text-xs"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      {taskConfigs[selectedNode.id]?.pyspark_app_id ? 'Auto-filled from selected app' : 'Path to PySpark script'}
-                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Spark Master</Label>
@@ -499,6 +821,7 @@ export function DagBuilderPage() {
                       placeholder="spark://spark-master:7077"
                       value={taskConfigs[selectedNode.id]?.spark_master as string || defaultSparkMaster}
                       onChange={(e) => updateTaskConfig(selectedNode.id, 'spark_master', e.target.value)}
+                      className="font-mono text-xs"
                     />
                   </div>
                 </div>
@@ -520,6 +843,17 @@ export function DagBuilderPage() {
                   onChange={(e) => updateTaskConfig(selectedNode.id, 'retries', parseInt(e.target.value))}
                 />
               </div>
+              
+              {/* Delete task button at bottom */}
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full mt-4"
+                onClick={() => deleteTask(selectedNode.id)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Remove Task
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">
@@ -531,14 +865,31 @@ export function DagBuilderPage() {
                   onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Schedule</Label>
-                <Input placeholder="0 0 * * *" />
+              
+              {/* Cron Builder */}
+              <div className="border-t pt-4">
+                <CronBuilder value={cronExpression} onChange={setCronExpression} />
               </div>
+              
               <div className="space-y-2">
                 <Label>Timezone</Label>
-                <Input defaultValue="UTC" />
+                <Select value={timezone} onValueChange={setTimezone}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UTC">UTC</SelectItem>
+                    <SelectItem value="America/New_York">America/New_York</SelectItem>
+                    <SelectItem value="America/Los_Angeles">America/Los_Angeles</SelectItem>
+                    <SelectItem value="Europe/London">Europe/London</SelectItem>
+                    <SelectItem value="Europe/Paris">Europe/Paris</SelectItem>
+                    <SelectItem value="Asia/Tokyo">Asia/Tokyo</SelectItem>
+                    <SelectItem value="Asia/Shanghai">Asia/Shanghai</SelectItem>
+                    <SelectItem value="Asia/Riyadh">Asia/Riyadh</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Tag className="h-4 w-4" />
@@ -562,6 +913,17 @@ export function DagBuilderPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Code Preview Dialog */}
+      <DagCodePreview
+        open={showPreview}
+        onOpenChange={setShowPreview}
+        dagName={dagName}
+        code={previewCode}
+        validation={validationResult}
+        onConfirmSave={handleConfirmSave}
+        isSaving={isSaving}
+      />
     </div>
   )
 }

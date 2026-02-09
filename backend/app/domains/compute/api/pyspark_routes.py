@@ -200,21 +200,21 @@ def update_pyspark_app(app_id: str):
         raise ValidationError("Validation failed", details={"errors": errors})
     
     # Convert schema to dict, excluding None values
-    update_data = {k: v for k, v in schema.dict().items() if v is not None}
+    # Use model_dump() for Pydantic v2 compatibility
+    update_data = {k: v for k, v in schema.model_dump().items() if v is not None}
     
     # Convert enums to values
     if "source_type" in update_data:
-        update_data["source_type"] = update_data["source_type"].value
+        update_data["source_type"] = update_data["source_type"].value if hasattr(update_data["source_type"], 'value') else update_data["source_type"]
     if "cdc_type" in update_data:
-        update_data["cdc_type"] = update_data["cdc_type"].value
+        update_data["cdc_type"] = update_data["cdc_type"].value if hasattr(update_data["cdc_type"], 'value') else update_data["cdc_type"]
     if "scd_type" in update_data:
-        update_data["scd_type"] = update_data["scd_type"].value
+        update_data["scd_type"] = update_data["scd_type"].value if hasattr(update_data["scd_type"], 'value') else update_data["scd_type"]
     if "write_mode" in update_data:
-        update_data["write_mode"] = update_data["write_mode"].value
+        update_data["write_mode"] = update_data["write_mode"].value if hasattr(update_data["write_mode"], 'value') else update_data["write_mode"]
     if "status" in update_data:
-        update_data["status"] = update_data["status"].value
-    if "columns_config" in update_data:
-        update_data["columns_config"] = [col.dict() for col in update_data["columns_config"]]
+        update_data["status"] = update_data["status"].value if hasattr(update_data["status"], 'value') else update_data["status"]
+    # columns_config is already a list of dicts from model_dump()
     
     service = PySparkAppService(tenant_id)
     app = service.update_app(app_id, **update_data)

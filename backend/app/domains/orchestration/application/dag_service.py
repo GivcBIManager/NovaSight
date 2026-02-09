@@ -9,6 +9,8 @@ Canonical location: ``app.domains.orchestration.application.dag_service``
 
 from typing import Optional, Dict, Any, List
 from datetime import datetime
+from uuid import UUID as PyUUID
+from pathlib import Path
 
 from app.extensions import db
 from app.domains.orchestration.domain.models import (
@@ -48,6 +50,7 @@ class DagService:
         per_page: int = 20,
         status: Optional[str] = None,
         tag: Optional[str] = None,
+        include_archived: bool = False,
     ) -> Dict[str, Any]:
         """
         List DAG configurations in the tenant.
@@ -57,11 +60,16 @@ class DagService:
             per_page: Items per page
             status: Filter by status
             tag: Filter by tag
+            include_archived: Whether to include archived (deleted) DAGs
 
         Returns:
             Paginated list of DAGs
         """
         query = DagConfig.query.filter(DagConfig.tenant_id == self.tenant_id)
+
+        # Exclude archived DAGs by default (they are soft-deleted)
+        if not include_archived:
+            query = query.filter(DagConfig.status != DagStatus.ARCHIVED)
 
         if status:
             try:
@@ -94,16 +102,35 @@ class DagService:
         Get DAG configuration by ID.
 
         Args:
-            dag_id: DAG identifier
+            dag_id: DAG identifier (can be UUID primary key or string dag_id)
             include_runs: Include recent run history from Airflow
 
         Returns:
             DagConfig object or None
         """
-        dag = DagConfig.query.filter(
-            DagConfig.dag_id == dag_id,
-            DagConfig.tenant_id == self.tenant_id,
-        ).first()
+        logger.info(f"get_dag called with dag_id='{dag_id}', tenant_id='{self.tenant_id}'")
+        
+        # Try to parse as UUID first (for lookups by primary key)
+        dag = None
+        try:
+            uuid_id = PyUUID(dag_id)
+            logger.info(f"Parsed as UUID: {uuid_id}")
+            dag = DagConfig.query.filter(
+                DagConfig.id == uuid_id,
+                DagConfig.tenant_id == self.tenant_id,
+            ).first()
+            logger.info(f"UUID lookup result: {dag}")
+        except (ValueError, AttributeError) as e:
+            logger.info(f"Not a UUID: {e}")
+        
+        # If not found by UUID, try by dag_id string
+        if not dag:
+            logger.info(f"Trying string lookup for dag_id='{dag_id}'")
+            dag = DagConfig.query.filter(
+                DagConfig.dag_id == dag_id,
+                DagConfig.tenant_id == self.tenant_id,
+            ).first()
+            logger.info(f"String lookup result: {dag}")
 
         if dag and include_runs:
             try:
@@ -285,12 +312,19 @@ class DagService:
         logger.info(f"Updated DAG: {dag_id} to version {dag_config.current_version}")
         return dag_config
 
-    def delete_dag(self, dag_id: str) -> bool:
+    def delete_dag(self, dag_id: str, hard_delete: bool = False) -> bool:
         """
-        Delete (archive) a DAG configuration.
+        Delete a DAG configuration.
+
+        Performs full cleanup:
+        1. Pauses the DAG in Airflow
+        2. Deletes the DAG from Airflow API
+        3. Removes the generated DAG file
+        4. Archives (soft) or removes (hard) from the database
 
         Args:
             dag_id: DAG identifier
+            hard_delete: If True, permanently remove from DB; otherwise archive
 
         Returns:
             True if successful
@@ -299,10 +333,34 @@ class DagService:
         if not dag_config:
             return False
 
-        dag_config.status = DagStatus.ARCHIVED
-        db.session.commit()
+        # --- Airflow cleanup (best-effort) ---
+        if dag_config.status in (DagStatus.ACTIVE, DagStatus.PAUSED, DagStatus.ERROR):
+            try:
+                self.airflow_client.pause_dag(dag_config.full_dag_id)
+            except Exception as e:
+                logger.warning(f"Failed to pause DAG in Airflow during delete: {e}")
 
-        logger.info(f"Archived DAG: {dag_id}")
+            try:
+                self.airflow_client.delete_dag(dag_config.full_dag_id)
+            except Exception as e:
+                logger.warning(f"Failed to delete DAG from Airflow API: {e}")
+
+        # --- Remove generated DAG file ---
+        try:
+            self.generator.delete_dag(dag_config.full_dag_id)
+        except Exception as e:
+            logger.warning(f"Failed to delete DAG file: {e}")
+
+        if hard_delete:
+            # Permanently remove from database
+            db.session.delete(dag_config)
+            db.session.commit()
+            logger.info(f"Hard-deleted DAG: {dag_id}")
+        else:
+            dag_config.status = DagStatus.ARCHIVED
+            db.session.commit()
+            logger.info(f"Archived DAG: {dag_id}")
+
         return True
 
     # ------------------------------------------------------------------
@@ -333,6 +391,16 @@ class DagService:
         try:
             dag_file_content = self.generator.generate(dag_config)
 
+            # Write DAG file to Airflow dags directory
+            dags_dir = self.generator.dags_path
+            dags_dir.mkdir(parents=True, exist_ok=True)
+            
+            dag_filename = f"{dag_config.full_dag_id}.py"
+            dag_file_path = dags_dir / dag_filename
+            
+            dag_file_path.write_text(dag_file_content, encoding='utf-8')
+            logger.info(f"Wrote DAG file to: {dag_file_path}")
+
             dag_config.deployed_at = datetime.utcnow()
             dag_config.deployed_version = dag_config.current_version
             dag_config.status = DagStatus.ACTIVE
@@ -344,6 +412,7 @@ class DagService:
                 "success": True,
                 "dag_id": dag_config.full_dag_id,
                 "version": dag_config.deployed_version,
+                "file_path": str(dag_file_path),
             }
 
         except Exception as e:
@@ -372,33 +441,55 @@ class DagService:
             return {"success": False, "error": str(e)}
 
     def pause_dag(self, dag_id: str) -> Optional[Dict[str, Any]]:
-        """Pause DAG scheduling."""
+        """Pause DAG scheduling in Airflow."""
         dag_config = self.get_dag(dag_id)
         if not dag_config:
             return None
 
         try:
-            self.airflow_client.pause_dag(dag_config.full_dag_id)
-            dag_config.status = DagStatus.PAUSED
-            db.session.commit()
-            return {"success": True, "status": "paused"}
+            # Call Airflow API to pause the DAG
+            response = self.airflow_client.pause_dag(dag_config.full_dag_id)
+            
+            # Verify Airflow confirmed the DAG is paused
+            if response.get("is_paused") is True:
+                dag_config.status = DagStatus.PAUSED
+                db.session.commit()
+                logger.info(f"DAG '{dag_config.full_dag_id}' paused successfully in Airflow")
+                return {"success": True, "status": "paused"}
+            else:
+                # Airflow didn't confirm pause - log warning but still update local state
+                logger.warning(f"Airflow response did not confirm pause for '{dag_config.full_dag_id}': {response}")
+                dag_config.status = DagStatus.PAUSED
+                db.session.commit()
+                return {"success": True, "status": "paused", "warning": "Airflow response not confirmed"}
         except Exception as e:
-            logger.error(f"Failed to pause DAG: {e}")
+            logger.error(f"Failed to pause DAG '{dag_config.full_dag_id}' in Airflow: {e}")
             return {"success": False, "error": str(e)}
 
     def unpause_dag(self, dag_id: str) -> Optional[Dict[str, Any]]:
-        """Resume DAG scheduling."""
+        """Resume DAG scheduling in Airflow."""
         dag_config = self.get_dag(dag_id)
         if not dag_config:
             return None
 
         try:
-            self.airflow_client.unpause_dag(dag_config.full_dag_id)
-            dag_config.status = DagStatus.ACTIVE
-            db.session.commit()
-            return {"success": True, "status": "active"}
+            # Call Airflow API to unpause the DAG
+            response = self.airflow_client.unpause_dag(dag_config.full_dag_id)
+            
+            # Verify Airflow confirmed the DAG is unpaused
+            if response.get("is_paused") is False:
+                dag_config.status = DagStatus.ACTIVE
+                db.session.commit()
+                logger.info(f"DAG '{dag_config.full_dag_id}' unpaused successfully in Airflow")
+                return {"success": True, "status": "active"}
+            else:
+                # Airflow didn't confirm unpause - log warning but still update local state
+                logger.warning(f"Airflow response did not confirm unpause for '{dag_config.full_dag_id}': {response}")
+                dag_config.status = DagStatus.ACTIVE
+                db.session.commit()
+                return {"success": True, "status": "active", "warning": "Airflow response not confirmed"}
         except Exception as e:
-            logger.error(f"Failed to unpause DAG: {e}")
+            logger.error(f"Failed to unpause DAG '{dag_config.full_dag_id}' in Airflow: {e}")
             return {"success": False, "error": str(e)}
 
     # ------------------------------------------------------------------

@@ -398,12 +398,13 @@ class DbtService:
             "description": model_node.get('description', ''),
         }
     
-    def _build_env(self, tenant_id: str) -> Dict[str, str]:
+    def _build_env(self, tenant_id: str, tenant_slug: Optional[str] = None) -> Dict[str, str]:
         """
         Build environment variables for dbt execution.
         
         Args:
             tenant_id: Tenant identifier
+            tenant_slug: Optional tenant slug for database naming
             
         Returns:
             Environment dictionary
@@ -412,7 +413,23 @@ class DbtService:
         
         # Tenant context
         env['TENANT_ID'] = tenant_id
-        env['TENANT_DATABASE'] = f'tenant_{tenant_id}'
+        
+        # Get tenant slug for database name if not provided
+        if tenant_slug:
+            db_name = f'tenant_{tenant_slug}'
+        else:
+            # Try to fetch tenant slug from database
+            try:
+                from app.domains.tenants.domain.models import Tenant
+                tenant = Tenant.query.filter(Tenant.id == tenant_id).first()
+                if tenant:
+                    db_name = f'tenant_{tenant.slug}'
+                else:
+                    db_name = f'tenant_{tenant_id}'
+            except Exception:
+                db_name = f'tenant_{tenant_id}'
+        
+        env['TENANT_DATABASE'] = db_name
         
         # ClickHouse connection (use existing env vars or defaults)
         if 'CLICKHOUSE_HOST' not in env:

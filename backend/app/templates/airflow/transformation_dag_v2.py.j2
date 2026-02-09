@@ -1,0 +1,126 @@
+{#
+NovaSight Transformation DAG Template (Refactored)
+===================================================
+
+Generates an Airflow DAG for data transformation using dbt.
+Uses modular components for cleaner code generation.
+
+Template Variables:
+- tenant_id: str - Tenant identifier
+- project_name: str - dbt project name
+- schedule: str - Cron expression or preset
+- dbt_models: List[DbtModelConfig] - Models to run in order
+- run_tests: bool - Run dbt tests after models (default: true)
+- notify_on_failure: bool - Send email on failure
+- upstream_dag_id: str - Optional upstream DAG to wait for
+#}
+{% from 'components/base.py.j2' import header, imports, default_args as default_args_macro, dbt_config, tenant_context %}
+{% from 'components/dbt.py.j2' import dbt_deps, dbt_run, dbt_test, dbt_build %}
+{% from 'components/tasks.py.j2' import start_task, end_task, external_task_sensor, email_task %}
+
+{{ header(
+    'transform_' ~ tenant_id ~ '_' ~ (project_name | default('dbt')),
+    _template_version | default('2.0.0'),
+    tenant_name | default(tenant_id, true) | default('novasight', true),
+    'Data transformation for tenant ' ~ tenant_id ~ ' using dbt'
+) }}
+
+{{ imports(use_spark=false, use_dbt=true, use_email=notify_on_failure, use_external_task=upstream_dag_id is defined) }}
+
+{{ dbt_config(dbt_project_dir, dbt_profiles_dir, dbt_target | default('prod')) }}
+
+{% if tenant_id %}
+{{ tenant_context(tenant_id, tenant_slug, tenant_database) }}
+{% endif %}
+
+{{ default_args_macro(
+    owner=tenant_name | default(tenant_id, true) | default('novasight', true),
+    retries=retries | default(2),
+    retry_delay_minutes=retry_delay_minutes | default(5),
+    email_on_failure=notify_on_failure | default(true),
+    execution_timeout_hours=execution_timeout_hours | default(3)
+) }}
+
+with DAG(
+    dag_id='transform_{{ tenant_id }}_{{ project_name | default('dbt') }}',
+    description='Data transformation for tenant {{ tenant_id }} using dbt',
+    schedule='{{ schedule | default('@daily') }}',
+    start_date=datetime({{ start_date | default('2024-01-01') | replace('-', ', ') }}),
+    catchup={{ catchup | default(false) | lower | capitalize }},
+    default_args=default_args,
+    tags=['transformation', 'dbt', 'tenant_{{ tenant_id }}'],
+    max_active_runs={{ max_active_runs | default(1) }},
+) as dag:
+    
+    # Start marker
+{{ start_task() }}
+    
+{% if upstream_dag_id is defined and upstream_dag_id %}
+    # Wait for upstream DAG to complete
+{{ external_task_sensor(
+    task_id='wait_for_ingestion',
+    external_dag_id=upstream_dag_id,
+    external_task_id='end',
+    timeout_seconds=upstream_timeout | default(3600),
+    poke_interval_seconds=upstream_poke_interval | default(60)
+) }}
+{% endif %}
+    
+    # Install dbt packages
+{{ dbt_deps() }}
+    
+{% if dbt_models is defined and dbt_models | length > 0 %}
+    # Run models by stage
+    with TaskGroup('run_models', tooltip='Execute dbt models') as run_models_group:
+{% for stage in dbt_models %}
+{% if stage.name is defined %}
+        # Stage: {{ stage.name }}
+{% if stage.models is defined %}
+{{ dbt_run(
+    task_id='run_' ~ stage.name | lower | replace(' ', '_'),
+    select=stage.select | default(none),
+    models=stage.models,
+    full_refresh=stage.full_refresh | default(false),
+    timeout_minutes=stage.timeout_minutes | default(60),
+    retries=stage.retries | default(2)
+) }}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% else %}
+    # Run all models
+{{ dbt_run(task_id='dbt_run_all') }}
+{% endif %}
+    
+{% if run_tests | default(true) %}
+    # Run dbt tests
+{{ dbt_test(
+    task_id='dbt_test',
+    timeout_minutes=test_timeout_minutes | default(30)
+) }}
+{% endif %}
+    
+    # End marker
+{{ end_task() }}
+    
+    # Task dependencies
+{% if upstream_dag_id is defined and upstream_dag_id %}
+    start >> wait_for_ingestion >> dbt_deps
+{% else %}
+    start >> dbt_deps
+{% endif %}
+{% if dbt_models is defined and dbt_models | length > 0 %}
+    dbt_deps >> run_models_group
+{% if run_tests | default(true) %}
+    run_models_group >> dbt_test >> end
+{% else %}
+    run_models_group >> end
+{% endif %}
+{% else %}
+    dbt_deps >> dbt_run_all
+{% if run_tests | default(true) %}
+    dbt_run_all >> dbt_test >> end
+{% else %}
+    dbt_run_all >> end
+{% endif %}
+{% endif %}

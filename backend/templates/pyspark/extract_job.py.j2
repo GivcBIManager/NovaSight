@@ -42,12 +42,20 @@ class ExtractJob:
     Source: {{ connection.db_type }} - {{ connection.host }}:{{ connection.port }}/{{ connection.database }}
     Target: {{ target.database }}.{{ target.table }}
     Write Mode: {{ write_mode }}
+    Tenant: {{ tenant_id }}
+    
+    SECURITY: This job is scoped to tenant database only.
     """
+    
+    # Tenant isolation constants
+    TENANT_ID = "{{ tenant_id }}"
+    TENANT_DATABASE = os.getenv("TENANT_DATABASE", "{{ target.database }}")
     
     def __init__(self, spark: SparkSession):
         self.spark = spark
         self.app_name = "{{ app_name }}"
-        self.app_id = "{{ app_id }}"
+        self.app_id = "{{ app_id | default('unknown', true) }}"
+        self.tenant_id = self.TENANT_ID
         
         # Source configuration
         self.source_config = {
@@ -60,16 +68,31 @@ class ExtractJob:
             "password": os.getenv("SOURCE_DB_PASSWORD"),  # Always from env
         }
         
-        # Target configuration
+        # Target configuration - always use tenant database
         self.target_config = {
-            "database": "{{ target.database }}",
+            "database": os.getenv("TARGET_DATABASE", self.TENANT_DATABASE),
             "table": "{{ target.table }}",
             "engine": "{{ target.engine | default('MergeTree', true) }}",
         }
         
+        # Validate target database belongs to tenant
+        self._validate_target_database()
+        
         # Job configuration
         self.write_mode = "{{ write_mode }}"
         self.batch_size = {{ options.batch_size | default(10000, true) }}
+    
+    def _validate_target_database(self):
+        """Validate that target database belongs to this tenant."""
+        import re
+        target_db = self.target_config["database"]
+        
+        # Check if trying to access another tenant's database
+        if target_db.startswith("tenant_") and target_db != self.TENANT_DATABASE:
+            raise ValueError(
+                f"Security violation: Cannot write to database '{target_db}'. "
+                f"This job can only write to '{self.TENANT_DATABASE}'."
+            )
         
     def get_jdbc_url(self) -> str:
         """Build JDBC URL based on database type."""

@@ -28,6 +28,8 @@ from pyspark.sql.functions import col, lit, current_timestamp, when, coalesce
 from pyspark.sql.types import *
 import logging
 import os
+import urllib.request
+import urllib.parse
 from datetime import datetime
 
 # Configure logging
@@ -204,11 +206,77 @@ class SCDType1Job:
         logger.info(f"Read {row_count} rows from source")
         return df
     
-    def read_target(self) -> DataFrame:
-        """Read existing data from target for comparison."""
-        target_url = os.getenv("CLICKHOUSE_URL", "jdbc:clickhouse://localhost:8123")
+    def get_clickhouse_connection(self) -> tuple:
+        """Get ClickHouse connection details."""
+        target_url = os.getenv("CLICKHOUSE_URL", "jdbc:clickhouse://clickhouse:8123")
+        target_host = os.getenv("CLICKHOUSE_HOST", "clickhouse")
+        target_port = os.getenv("CLICKHOUSE_PORT", "8123")
         target_user = os.getenv("CLICKHOUSE_USER", "default")
         target_password = os.getenv("CLICKHOUSE_PASSWORD", "")
+        return target_url, target_host, target_port, target_user, target_password
+    
+    def ensure_target_table_exists(self):
+        """Create target table in ClickHouse if it doesn't exist."""
+        _, target_host, target_port, target_user, target_password = self.get_clickhouse_connection()
+        target_table = f"{self.target_config['database']}.{self.target_config['table']}"
+        
+        # Build column definitions
+        column_defs = []
+{% for col in columns %}
+{% if col.name in primary_keys %}
+        column_defs.append("{{ col.name }} {{ col.clickhouse_type | default('String', true) }}")
+{% else %}
+        column_defs.append("{{ col.name }} Nullable({{ col.clickhouse_type | default('String', true) }})")
+{% endif %}
+{% endfor %}
+        
+        # Add metadata columns
+        column_defs.extend([
+            "_novasight_app_id String",
+            "_novasight_tenant_id String",
+            "_novasight_loaded_at DateTime64(6) DEFAULT now64()",
+            "_novasight_updated_at Nullable(DateTime64(6))"
+        ])
+        
+        columns_sql = ",\n    ".join(column_defs)
+        
+        # Build ORDER BY from primary keys
+        order_by_cols = ", ".join(self.primary_keys)
+        
+        # Use ReplacingMergeTree for SCD Type 1 (overwrites)
+        create_sql = f"""
+        CREATE TABLE IF NOT EXISTS {target_table} (
+            {columns_sql}
+        ) ENGINE = ReplacingMergeTree(_novasight_loaded_at)
+        ORDER BY ({order_by_cols})
+        PRIMARY KEY ({order_by_cols})
+        """
+        
+        logger.info(f"Ensuring target table exists: {target_table}")
+        
+        try:
+            # Use ClickHouse HTTP interface to execute DDL
+            params = {"query": create_sql}
+            if target_user:
+                params["user"] = target_user
+            if target_password:
+                params["password"] = target_password
+            
+            query_string = urllib.parse.urlencode(params)
+            http_url = f"http://{target_host}:{target_port}/?{query_string}"
+            
+            req = urllib.request.Request(http_url, method='POST')
+            with urllib.request.urlopen(req, timeout=30) as response:
+                if response.status == 200:
+                    logger.info(f"Table {target_table} is ready")
+                else:
+                    logger.warning(f"Table creation response: {response.read().decode()}")
+        except Exception as e:
+            logger.warning(f"Could not create table via HTTP, will try JDBC: {e}")
+    
+    def read_target(self) -> DataFrame:
+        """Read existing data from target for comparison."""
+        target_url, _, _, target_user, target_password = self.get_clickhouse_connection()
         
         connection_props = {
             "user": target_user,
@@ -288,9 +356,7 @@ class SCDType1Job:
         """Write data to ClickHouse target using ReplacingMergeTree."""
         logger.info(f"Writing to target: {self.target_config['database']}.{self.target_config['table']}")
         
-        target_url = os.getenv("CLICKHOUSE_URL", "jdbc:clickhouse://localhost:8123")
-        target_user = os.getenv("CLICKHOUSE_USER", "default")
-        target_password = os.getenv("CLICKHOUSE_PASSWORD", "")
+        target_url, _, _, target_user, target_password = self.get_clickhouse_connection()
         
         connection_props = {
             "user": target_user,
@@ -326,6 +392,9 @@ class SCDType1Job:
         start_time = datetime.now()
         
         try:
+            # Ensure target table exists in ClickHouse
+            self.ensure_target_table_exists()
+            
             # Read source data
             source_df = self.read_source()
             
@@ -380,7 +449,8 @@ def main():
     spark = SparkSession.builder \
         .appName("{{ app_name }}") \
         .config("spark.sql.adaptive.enabled", "true") \
-        .config("spark.sql.shuffle.partitions", "auto") \
+        .config("spark.sql.adaptive.coalescePartitions.enabled", "true") \
+        .config("spark.sql.shuffle.partitions", "200") \
         .getOrCreate()
     
     try:

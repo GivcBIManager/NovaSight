@@ -10,6 +10,8 @@ Canonical location: ``app.domains.orchestration.infrastructure.dag_generator``
 This module provides:
 - ``DagGenerator`` — legacy DAG generation for data sources
 - ``PySparkDAGGenerator`` — DAG generation for PySpark apps (Prompt 016)
+
+All DAG files are stored in tenant-specific folders for isolation (ADR-003).
 """
 
 from typing import Dict, Any, List, Optional
@@ -24,6 +26,7 @@ from app.domains.orchestration.domain.models import (
     DagConfig, TaskConfig, ScheduleType,
 )
 from app.domains.orchestration.infrastructure.airflow_client import AirflowClient
+from app.platform.tenant.isolation import TenantIsolationService
 from app.errors import NotFoundError, ValidationError
 import logging
 
@@ -31,17 +34,24 @@ logger = logging.getLogger(__name__)
 
 
 class DagGenerator:
-    """Generates Airflow DAG files from configuration."""
+    """Generates Airflow DAG files from configuration with tenant isolation."""
 
     def __init__(
         self,
         tenant_id: str,
+        tenant_slug: Optional[str] = None,
         airflow_client: Optional[AirflowClient] = None,
     ):
         self.tenant_id = tenant_id
+        self._tenant_slug = tenant_slug
         self.airflow_client = airflow_client or AirflowClient()
-        self.dags_path = Path("/opt/airflow/dags")
-        self.spark_apps_path = Path("/opt/airflow/spark_apps")
+        
+        # Initialize tenant isolation service
+        self._isolation = TenantIsolationService(tenant_id, tenant_slug)
+        
+        # Tenant-scoped paths for file isolation
+        self.dags_path = Path("/opt/airflow/dags") / self._isolation.tenant_dag_folder
+        self.spark_apps_path = Path("/opt/airflow/spark_apps") / self._isolation.tenant_dag_folder
 
         self.env = Environment(
             loader=PackageLoader("app", "templates/airflow"),
@@ -50,9 +60,18 @@ class DagGenerator:
             lstrip_blocks=True,
         )
 
+    @property
+    def tenant_database(self) -> str:
+        """Get the tenant's ClickHouse database name."""
+        return self._isolation.tenant_database
+
     def generate(self, dag_config: DagConfig) -> str:
         """Generate Airflow DAG file content from config."""
         template = self.env.get_template("dag_template.py.j2")
+        
+        # Add tenant isolation context
+        tenant_context = self._isolation.get_template_context()
+        
         context = {
             "dag_id": dag_config.full_dag_id,
             "description": dag_config.description or "",
@@ -71,6 +90,8 @@ class DagGenerator:
             "tasks": [self._prepare_task(t) for t in dag_config.tasks],
             "generated_at": datetime.utcnow().isoformat(),
             "version": dag_config.current_version,
+            # Tenant isolation context
+            **tenant_context,
         }
         return template.render(**context)
 
@@ -224,6 +245,9 @@ class PySparkDAGGenerator:
 
     Does NOT generate PySpark code — only DAG orchestration wrappers.
     All PySpark code comes from pre-approved templates (ADR-002 compliant).
+    
+    DAG files and PySpark jobs are stored in tenant-specific folders 
+    for isolation (ADR-003 compliant).
     """
 
     DEFAULT_SPARK_CONFIG = {
@@ -237,11 +261,16 @@ class PySparkDAGGenerator:
     def __init__(
         self,
         tenant_id: str,
+        tenant_slug: Optional[str] = None,
         template_engine=None,
         airflow_client: Optional[AirflowClient] = None,
         pyspark_service=None,
     ):
         self.tenant_id = tenant_id
+        
+        # Initialize tenant isolation service
+        self._isolation = TenantIsolationService(tenant_id, tenant_slug)
+        
         # Lazy imports to avoid circular deps at module level
         if template_engine is None:
             from app.services.template_engine import TemplateEngine
@@ -253,8 +282,15 @@ class PySparkDAGGenerator:
         self.template_engine = template_engine
         self.airflow_client = airflow_client or AirflowClient()
         self.pyspark_service = pyspark_service
-        self.dags_path = Path("/opt/airflow/dags")
-        self.spark_apps_path = Path("/opt/airflow/spark_apps")
+        
+        # Tenant-scoped paths for file isolation
+        self.dags_path = Path("/opt/airflow/dags") / self._isolation.tenant_dag_folder
+        self.spark_apps_path = Path("/opt/airflow/spark_apps") / self._isolation.tenant_dag_folder
+    
+    @property
+    def tenant_database(self) -> str:
+        """Get the tenant's ClickHouse database name."""
+        return self._isolation.tenant_database
 
     def generate_dag_for_pyspark_app(
         self,
@@ -265,6 +301,15 @@ class PySparkDAGGenerator:
         retries: int = 2,
         retry_delay_minutes: int = 5,
     ) -> str:
+        """
+        Generate DAG for a single PySpark app.
+        
+        The DAG and PySpark job files are stored in tenant-specific folders
+        for isolation per ADR-003.
+        """
+        # Validate ownership
+        self._isolation.validate_pyspark_app_ownership(pyspark_app_id)
+        
         pyspark_app = self.pyspark_service.get_app(pyspark_app_id)
         if not pyspark_app:
             raise NotFoundError(f"PySpark app {pyspark_app_id} not found")
@@ -276,7 +321,12 @@ class PySparkDAGGenerator:
 
         final_spark_config = {**self.DEFAULT_SPARK_CONFIG, **(spark_config or {})}
         dag_id = f"pyspark_{self.tenant_id}_{pyspark_app.id}"
-        spark_app_path = f"/opt/airflow/spark_apps/jobs/{dag_id}.py"
+        
+        # Use tenant-scoped path for PySpark job
+        spark_app_path = str(self.spark_apps_path / "jobs" / f"{dag_id}.py")
+        
+        # Get tenant isolation context
+        tenant_context = self._isolation.get_template_context()
 
         context = {
             "dag_id": dag_id,
@@ -290,17 +340,21 @@ class PySparkDAGGenerator:
             "scd_type": pyspark_app.scd_type.value,
             "write_mode": pyspark_app.write_mode.value,
             "source_type": pyspark_app.source_type.value,
-            "target_database": pyspark_app.target_database or "",
+            # Use tenant database as default
+            "target_database": pyspark_app.target_database or self.tenant_database,
             "target_table": pyspark_app.target_table or "",
             "notifications": notifications or {},
             "generated_at": datetime.utcnow().isoformat(),
             "template_version": pyspark_app.template_version or "1.0.0",
             "retries": retries,
             "retry_delay_minutes": retry_delay_minutes,
+            # Add tenant context
+            **tenant_context,
         }
 
         dag_content = self.template_engine.render("airflow/pyspark_job_dag.py.j2", context)
 
+        # Create tenant-scoped directories
         self.dags_path.mkdir(parents=True, exist_ok=True)
         (self.spark_apps_path / "jobs").mkdir(parents=True, exist_ok=True)
 

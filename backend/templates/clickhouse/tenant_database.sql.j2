@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS {{ db_name }}.ingestion_audit
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(started_at)
 ORDER BY (job_name, started_at, audit_id)
-TTL started_at + INTERVAL {{ retention }} DAY
+TTL toDate(started_at) + INTERVAL {{ retention }} DAY
 SETTINGS index_granularity = 8192;
 
 -- =============================================================================
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS {{ db_name }}.data_quality_metrics
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(checked_at)
 ORDER BY (table_name, check_name, checked_at)
-TTL checked_at + INTERVAL {{ retention }} DAY
+TTL toDate(checked_at) + INTERVAL {{ retention }} DAY
 SETTINGS index_granularity = 8192;
 
 -- =============================================================================

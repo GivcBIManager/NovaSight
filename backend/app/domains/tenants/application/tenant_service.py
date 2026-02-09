@@ -102,9 +102,21 @@ class TenantService:
         slug: str,
         plan: str = "basic",
         settings: Optional[Dict[str, Any]] = None,
-        provision_resources: bool = False,
+        provision_resources: bool = True,
     ) -> Tenant:
-        """Create a new tenant, optionally provisioning PG + CH."""
+        """
+        Create a new tenant, provisioning PG schema + ClickHouse database.
+        
+        Args:
+            name: Tenant display name
+            slug: URL-safe identifier
+            plan: Subscription plan (basic, professional, enterprise)
+            settings: Custom tenant settings
+            provision_resources: If True (default), create PG schema and CH database
+        
+        Returns:
+            Created Tenant
+        """
         existing = self.get_tenant_by_slug(slug)
         if existing:
             raise ValueError(f"Tenant with slug '{slug}' already exists")
@@ -170,15 +182,46 @@ class TenantService:
         logger.info("Updated tenant: %s", tenant.slug)
         return tenant
 
-    def delete_tenant(self, tenant_id: str) -> bool:
-        """Archive a tenant (soft-delete)."""
+    def delete_tenant(self, tenant_id: str, hard_delete: bool = False, force: bool = False) -> bool:
+        """
+        Delete a tenant.
+        
+        Args:
+            tenant_id: The tenant ID to delete
+            hard_delete: If True, permanently delete tenant and all resources
+            force: If True (with hard_delete), drop databases even with data
+        
+        Returns:
+            True if successful
+        """
         tenant = self.get_tenant(tenant_id)
         if not tenant:
             return False
 
-        tenant.status = TenantStatus.ARCHIVED.value
-        db.session.commit()
-        logger.info("Archived tenant: %s", tenant.slug)
+        if hard_delete:
+            try:
+                # Deprovision infrastructure resources
+                self._provisioning.deprovision(tenant, force=force)
+            except Exception as e:
+                logger.error(
+                    "Failed to deprovision tenant %s: %s", tenant.slug, e
+                )
+                if not force:
+                    raise ValueError(
+                        f"Failed to deprovision tenant resources: {e}. "
+                        "Use force=True to delete anyway."
+                    )
+            
+            # Hard delete the tenant record
+            db.session.delete(tenant)
+            db.session.commit()
+            logger.info("Hard deleted tenant: %s", tenant.slug)
+        else:
+            # Soft delete (archive)
+            tenant.status = TenantStatus.ARCHIVED.value
+            db.session.commit()
+            logger.info("Archived tenant: %s", tenant.slug)
+        
         return True
 
     # ------------------------------------------------------------------

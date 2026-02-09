@@ -1,0 +1,161 @@
+{#
+NovaSight Common Tasks Component
+================================
+
+Reusable macros for common task types in Airflow DAGs.
+
+Usage:
+  {% from 'components/tasks.py.j2' import email_task, http_sensor_task, bash_task %}
+#}
+
+{#
+Email notification task
+#}
+{% macro email_task(
+    task_id,
+    recipients,
+    subject,
+    html_content,
+    trigger_rule='all_success'
+) %}
+    {{ task_id }} = EmailOperator(
+        task_id='{{ task_id }}',
+        to={{ recipients | tojson }},
+        subject='{{ subject | replace("'", "\\'") }}',
+        html_content='{{ html_content | replace("'", "\\'") }}',
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+    )
+{% endmacro %}
+
+{#
+HTTP sensor for waiting on external services
+#}
+{% macro http_sensor_task(
+    task_id,
+    connection_id,
+    endpoint,
+    method='GET',
+    expected_status=200,
+    poke_interval_seconds=60,
+    timeout_seconds=3600,
+    trigger_rule='all_success'
+) %}
+    {{ task_id }} = HttpSensor(
+        task_id='{{ task_id }}',
+        http_conn_id='{{ connection_id }}',
+        endpoint='{{ endpoint }}',
+        method='{{ method }}',
+        response_check=lambda response: response.status_code == {{ expected_status }},
+        poke_interval={{ poke_interval_seconds }},
+        timeout={{ timeout_seconds }},
+        mode='poke',
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+    )
+{% endmacro %}
+
+{#
+Bash command task
+#}
+{% macro bash_task(
+    task_id,
+    command,
+    timeout_minutes=60,
+    retries=1,
+    retry_delay_minutes=5,
+    trigger_rule='all_success',
+    env_vars=none
+) %}
+    {{ task_id }} = BashOperator(
+        task_id='{{ task_id }}',
+        bash_command='{{ command | replace("'", "\\'") }}',
+{% if env_vars %}
+        env={{ env_vars | tojson }},
+{% endif %}
+        execution_timeout=timedelta(minutes={{ timeout_minutes }}),
+        retries={{ retries }},
+        retry_delay=timedelta(minutes={{ retry_delay_minutes }}),
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+    )
+{% endmacro %}
+
+{#
+Python callable task
+#}
+{% macro python_task(
+    task_id,
+    python_callable,
+    op_kwargs=none,
+    timeout_minutes=60,
+    retries=1,
+    retry_delay_minutes=5,
+    trigger_rule='all_success'
+) %}
+    {{ task_id }} = PythonOperator(
+        task_id='{{ task_id }}',
+        python_callable={{ python_callable }},
+{% if op_kwargs %}
+        op_kwargs={{ op_kwargs | tojson }},
+{% endif %}
+        execution_timeout=timedelta(minutes={{ timeout_minutes }}),
+        retries={{ retries }},
+        retry_delay=timedelta(minutes={{ retry_delay_minutes }}),
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+    )
+{% endmacro %}
+
+{#
+External task sensor for waiting on other DAGs
+#}
+{% macro external_task_sensor(
+    task_id,
+    external_dag_id,
+    external_task_id='end',
+    timeout_seconds=3600,
+    poke_interval_seconds=60,
+    mode='reschedule'
+) %}
+    {{ task_id }} = ExternalTaskSensor(
+        task_id='{{ task_id }}',
+        external_dag_id='{{ external_dag_id }}',
+        external_task_id='{{ external_task_id }}',
+        mode='{{ mode }}',
+        timeout={{ timeout_seconds }},
+        poke_interval={{ poke_interval_seconds }},
+    )
+{% endmacro %}
+
+{#
+Start/End marker tasks
+#}
+{% macro start_task(task_id='start') %}
+    {{ task_id }} = EmptyOperator(task_id='{{ task_id }}')
+{% endmacro %}
+
+{% macro end_task(task_id='end', trigger_rule='all_done') %}
+    {{ task_id }} = EmptyOperator(
+        task_id='{{ task_id }}',
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+    )
+{% endmacro %}
+
+{#
+Log completion task
+#}
+{% macro log_completion_task(task_id='log_completion', message='Pipeline completed successfully', extra_info=none) %}
+    def _{{ task_id }}_callable(**context):
+        """Log pipeline completion."""
+        print('{{ message }}')
+        print(f"DAG: {context['dag'].dag_id}")
+        print(f"Run ID: {context['run_id']}")
+        print(f"Execution Date: {context['logical_date']}")
+{% if extra_info %}
+{% for line in extra_info %}
+        print('{{ line }}')
+{% endfor %}
+{% endif %}
+    
+    {{ task_id }} = PythonOperator(
+        task_id='{{ task_id }}',
+        python_callable=_{{ task_id }}_callable,
+    )
+{% endmacro %}

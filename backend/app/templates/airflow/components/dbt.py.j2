@@ -1,0 +1,198 @@
+{#
+NovaSight dbt Task Component
+============================
+
+Reusable macros for generating dbt tasks in Airflow DAGs.
+
+Usage:
+  {% from 'components/dbt.py.j2' import dbt_run, dbt_test, dbt_deps, dbt_build %}
+#}
+
+{#
+Run dbt deps to install packages
+#}
+{% macro dbt_deps(task_id='dbt_deps', project_dir='DBT_PROJECT_DIR', profiles_dir='DBT_PROFILES_DIR', timeout_minutes=10) %}
+    {{ task_id }} = BashOperator(
+        task_id='{{ task_id }}',
+        bash_command=f'''
+            set -e
+            cd {{ '{' }}{{ project_dir }}{{ '}' }} && \
+            dbt deps --profiles-dir {{ '{' }}{{ profiles_dir }}{{ '}' }}
+        ''',
+        execution_timeout=timedelta(minutes={{ timeout_minutes }}),
+    )
+{% endmacro %}
+
+{#
+Run dbt models
+#}
+{% macro dbt_run(
+    task_id,
+    models=none,
+    select=none,
+    exclude=none,
+    full_refresh=false,
+    target=none,
+    vars=none,
+    project_dir='DBT_PROJECT_DIR',
+    profiles_dir='DBT_PROFILES_DIR',
+    timeout_minutes=60,
+    retries=2,
+    retry_delay_minutes=5,
+    trigger_rule='all_success'
+) %}
+    {{ task_id }} = BashOperator(
+        task_id='{{ task_id }}',
+        bash_command=f'''
+            set -e
+            cd {{ '{' }}{{ project_dir }}{{ '}' }} && \
+            dbt run --profiles-dir {{ '{' }}{{ profiles_dir }}{{ '}' }} \
+{% if target %}
+                --target {{ target }} \
+{% else %}
+                --target {{ '{' }}DBT_TARGET{{ '}' }} \
+{% endif %}
+{% if models %}
+                --models {{ models | join(' ') }} \
+{% endif %}
+{% if select %}
+                --select {{ select }} \
+{% endif %}
+{% if exclude %}
+                --exclude {{ exclude }} \
+{% endif %}
+{% if full_refresh %}
+                --full-refresh \
+{% endif %}
+{% if vars %}
+                --vars '{{ vars | tojson }}' \
+{% endif %}
+
+        ''',
+        execution_timeout=timedelta(minutes={{ timeout_minutes }}),
+        retries={{ retries }},
+        retry_delay=timedelta(minutes={{ retry_delay_minutes }}),
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+    )
+{% endmacro %}
+
+{#
+Run dbt tests
+#}
+{% macro dbt_test(
+    task_id,
+    models=none,
+    select=none,
+    exclude=none,
+    target=none,
+    project_dir='DBT_PROJECT_DIR',
+    profiles_dir='DBT_PROFILES_DIR',
+    timeout_minutes=30,
+    retries=1,
+    retry_delay_minutes=5,
+    trigger_rule='all_success'
+) %}
+    {{ task_id }} = BashOperator(
+        task_id='{{ task_id }}',
+        bash_command=f'''
+            set -e
+            cd {{ '{' }}{{ project_dir }}{{ '}' }} && \
+            dbt test --profiles-dir {{ '{' }}{{ profiles_dir }}{{ '}' }} \
+{% if target %}
+                --target {{ target }} \
+{% else %}
+                --target {{ '{' }}DBT_TARGET{{ '}' }} \
+{% endif %}
+{% if models %}
+                --models {{ models | join(' ') }} \
+{% endif %}
+{% if select %}
+                --select {{ select }} \
+{% endif %}
+{% if exclude %}
+                --exclude {{ exclude }} \
+{% endif %}
+
+        ''',
+        execution_timeout=timedelta(minutes={{ timeout_minutes }}),
+        retries={{ retries }},
+        retry_delay=timedelta(minutes={{ retry_delay_minutes }}),
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+    )
+{% endmacro %}
+
+{#
+Run dbt build (run + test)
+#}
+{% macro dbt_build(
+    task_id,
+    select=none,
+    exclude=none,
+    full_refresh=false,
+    target=none,
+    vars=none,
+    project_dir='DBT_PROJECT_DIR',
+    profiles_dir='DBT_PROFILES_DIR',
+    timeout_minutes=90,
+    retries=2,
+    retry_delay_minutes=5,
+    trigger_rule='all_success'
+) %}
+    {{ task_id }} = BashOperator(
+        task_id='{{ task_id }}',
+        bash_command=f'''
+            set -e
+            cd {{ '{' }}{{ project_dir }}{{ '}' }} && \
+            dbt build --profiles-dir {{ '{' }}{{ profiles_dir }}{{ '}' }} \
+{% if target %}
+                --target {{ target }} \
+{% else %}
+                --target {{ '{' }}DBT_TARGET{{ '}' }} \
+{% endif %}
+{% if select %}
+                --select {{ select }} \
+{% endif %}
+{% if exclude %}
+                --exclude {{ exclude }} \
+{% endif %}
+{% if full_refresh %}
+                --full-refresh \
+{% endif %}
+{% if vars %}
+                --vars '{{ vars | tojson }}' \
+{% endif %}
+
+        ''',
+        execution_timeout=timedelta(minutes={{ timeout_minutes }}),
+        retries={{ retries }},
+        retry_delay=timedelta(minutes={{ retry_delay_minutes }}),
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+    )
+{% endmacro %}
+
+{#
+Run dbt source freshness check
+#}
+{% macro dbt_freshness(
+    task_id='check_source_freshness',
+    select=none,
+    project_dir='DBT_PROJECT_DIR',
+    profiles_dir='DBT_PROFILES_DIR',
+    timeout_minutes=15,
+    trigger_rule='all_success'
+) %}
+    {{ task_id }} = BashOperator(
+        task_id='{{ task_id }}',
+        bash_command=f'''
+            set -e
+            cd {{ '{' }}{{ project_dir }}{{ '}' }} && \
+            dbt source freshness --profiles-dir {{ '{' }}{{ profiles_dir }}{{ '}' }} \
+{% if select %}
+                --select {{ select }} \
+{% endif %}
+
+        ''',
+        execution_timeout=timedelta(minutes={{ timeout_minutes }}),
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+    )
+{% endmacro %}

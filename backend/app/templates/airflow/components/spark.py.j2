@@ -1,0 +1,205 @@
+{#
+NovaSight Spark Task Component
+==============================
+
+Reusable macros for generating Spark submit tasks.
+Supports both native SparkSubmitOperator and Docker exec fallback.
+
+Usage:
+  {% from 'components/spark.py.j2' import spark_submit_task, spark_submit_hybrid %}
+#}
+
+{# 
+Native SparkSubmitOperator task - uses Airflow's Spark provider
+Requires Spark binaries installed in Airflow container
+#}
+{% macro spark_submit_native(
+    task_id,
+    application,
+    executor_memory='2g',
+    executor_cores=2,
+    driver_memory='1g',
+    num_executors=none,
+    spark_conf=none,
+    application_args=none,
+    timeout_minutes=60,
+    retries=2,
+    retry_delay_minutes=5,
+    trigger_rule='all_success',
+    env_vars=none
+) %}
+    {{ task_id }} = SparkSubmitOperator(
+        task_id='{{ task_id }}',
+        application='{{ application }}',
+        conn_id='spark_default',
+        jars=JDBC_JARS_STR,
+        executor_memory='{{ executor_memory }}',
+        executor_cores={{ executor_cores }},
+        driver_memory='{{ driver_memory }}',
+{% if num_executors %}
+        num_executors={{ num_executors }},
+{% endif %}
+        conf={
+{% if spark_conf %}
+{% for key, value in spark_conf.items() %}
+            '{{ key }}': '{{ value }}',
+{% endfor %}
+{% endif %}
+        },
+{% if application_args %}
+        application_args={{ application_args | tojson }},
+{% endif %}
+{% if env_vars %}
+        env_vars={{ env_vars | tojson }},
+{% endif %}
+        execution_timeout=timedelta(minutes={{ timeout_minutes }}),
+        retries={{ retries }},
+        retry_delay=timedelta(minutes={{ retry_delay_minutes }}),
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+    )
+{% endmacro %}
+
+{# 
+Docker exec fallback for Spark submit
+Uses docker exec to run spark-submit in spark-master container
+#}
+{% macro spark_submit_docker(
+    task_id,
+    application,
+    executor_memory='2g',
+    executor_cores=2,
+    driver_memory='1g',
+    spark_conf=none,
+    timeout_minutes=60,
+    retries=2,
+    retry_delay_minutes=5,
+    trigger_rule='all_success',
+    env_vars=none
+) %}
+    {{ task_id }}_cmd = f"""
+docker exec {SPARK_MASTER_CONTAINER} /opt/spark/bin/spark-submit \\
+    --master spark://spark-master:7077 \\
+    --deploy-mode client \\
+    --driver-memory {{ driver_memory }} \\
+    --executor-memory {{ executor_memory }} \\
+    --executor-cores {{ executor_cores }} \\
+    --jars /opt/spark/jars/custom/postgresql-42.7.4.jar,/opt/spark/jars/custom/clickhouse-jdbc-0.6.3.jar \\
+{% if spark_conf %}
+{% for key, value in spark_conf.items() %}
+    --conf "{{ key }}={{ value }}" \\
+{% endfor %}
+{% endif %}
+    {{ application }}
+"""
+    {{ task_id }} = BashOperator(
+        task_id='{{ task_id }}',
+        bash_command={{ task_id }}_cmd,
+{% if env_vars %}
+        env={{ env_vars | tojson }},
+{% endif %}
+        execution_timeout=timedelta(minutes={{ timeout_minutes }}),
+        retries={{ retries }},
+        retry_delay=timedelta(minutes={{ retry_delay_minutes }}),
+        trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+    )
+{% endmacro %}
+
+{#
+Hybrid Spark submit - automatically selects native or docker based on availability
+Preferred method for production use
+#}
+{% macro spark_submit_hybrid(
+    task_id,
+    application,
+    executor_memory='2g',
+    executor_cores=2,
+    driver_memory='1g',
+    num_executors=none,
+    spark_conf=none,
+    application_args=none,
+    timeout_minutes=60,
+    retries=2,
+    retry_delay_minutes=5,
+    trigger_rule='all_success',
+    env_vars=none
+) %}
+    if SPARK_NATIVE_AVAILABLE:
+        # Use native SparkSubmitOperator (preferred)
+        {{ task_id }} = SparkSubmitOperator(
+            task_id='{{ task_id }}',
+            application='{{ application }}',
+            conn_id='spark_default',
+            jars=JDBC_JARS_STR,
+            executor_memory='{{ executor_memory }}',
+            executor_cores={{ executor_cores }},
+            driver_memory='{{ driver_memory }}',
+{% if num_executors %}
+            num_executors={{ num_executors }},
+{% endif %}
+            conf={
+{% if spark_conf %}
+{% for key, value in spark_conf.items() %}
+                '{{ key }}': '{{ value }}',
+{% endfor %}
+{% endif %}
+            },
+{% if application_args %}
+            application_args={{ application_args | tojson }},
+{% endif %}
+{% if env_vars %}
+            env_vars={{ env_vars | tojson }},
+{% endif %}
+            execution_timeout=timedelta(minutes={{ timeout_minutes }}),
+            retries={{ retries }},
+            retry_delay=timedelta(minutes={{ retry_delay_minutes }}),
+            trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+        )
+    else:
+        # Fallback to docker exec
+        {{ task_id }}_cmd = f"""
+docker exec {SPARK_MASTER_CONTAINER} /opt/spark/bin/spark-submit \\
+    --master spark://spark-master:7077 \\
+    --deploy-mode client \\
+    --driver-memory {{ driver_memory }} \\
+    --executor-memory {{ executor_memory }} \\
+    --executor-cores {{ executor_cores }} \\
+    --jars /opt/spark/jars/custom/postgresql-42.7.4.jar,/opt/spark/jars/custom/clickhouse-jdbc-0.6.3.jar \\
+{% if spark_conf %}
+{% for key, value in spark_conf.items() %}
+    --conf "{{ key }}={{ value }}" \\
+{% endfor %}
+{% endif %}
+    {{ application }}{% if application_args %} {{ application_args | join(' ') }}{% endif %}
+"""
+        {{ task_id }} = BashOperator(
+            task_id='{{ task_id }}',
+            bash_command={{ task_id }}_cmd,
+{% if env_vars %}
+            env={{ env_vars | tojson }},
+{% endif %}
+            execution_timeout=timedelta(minutes={{ timeout_minutes }}),
+            retries={{ retries }},
+            retry_delay=timedelta(minutes={{ retry_delay_minutes }}),
+            trigger_rule=TriggerRule.{{ trigger_rule | upper }},
+        )
+{% endmacro %}
+
+{#
+Simplified spark task factory - generates task based on config object
+#}
+{% macro spark_task_from_config(task_config) %}
+{{ spark_submit_hybrid(
+    task_id=task_config.task_id,
+    application=task_config.config.get('application_path') or task_config.config.get('application', '/opt/spark/jobs/job.py'),
+    executor_memory=task_config.config.get('executor_memory', '2g'),
+    executor_cores=task_config.config.get('executor_cores', 2),
+    driver_memory=task_config.config.get('driver_memory', '1g'),
+    spark_conf=task_config.config.get('spark_conf'),
+    application_args=task_config.config.get('application_args'),
+    timeout_minutes=task_config.timeout_minutes | default(60),
+    retries=task_config.retries | default(2),
+    retry_delay_minutes=task_config.retry_delay_minutes | default(5),
+    trigger_rule=task_config.trigger_rule | default('all_success'),
+    env_vars=task_config.config.get('env_vars')
+) }}
+{% endmacro %}

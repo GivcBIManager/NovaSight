@@ -1,19 +1,42 @@
 """
 Auto-generated Airflow DAG for ingesting data from {{ datasource_name }}
 Generated for tenant: {{ tenant_id }}
+Owner: {{ tenant_name | default(tenant_id, true) | default('novasight', true) }}
 Datasource ID: {{ datasource_id }}
+
+Spark submission: Uses native SparkSubmitOperator (preferred) or docker exec fallback.
 """
+from __future__ import annotations
+
+import os
 from datetime import datetime, timedelta
-from airflow import DAG
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+import pendulum
+from airflow.models.dag import DAG
+from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
-from airflow.utils.dates import days_ago
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+
+# ============================================
+# Spark Configuration
+# ============================================
+SPARK_HOME = os.environ.get('SPARK_HOME', '/opt/spark')
+SPARK_MASTER = os.environ.get('SPARK_MASTER', 'spark://spark-master:7077')
+SPARK_MASTER_CONTAINER = os.environ.get('SPARK_MASTER_CONTAINER', 'novasight-spark-master')
+
+# Check if native Spark is available (preferred)
+SPARK_NATIVE_AVAILABLE = os.path.exists(f'{SPARK_HOME}/bin/spark-submit')
+
+# JDBC JARs for database connectivity
+JDBC_JARS = ','.join([
+    f'{SPARK_HOME}/jars/custom/postgresql-42.7.4.jar',
+    f'{SPARK_HOME}/jars/custom/clickhouse-jdbc-0.6.3.jar',
+])
 
 # Default arguments for the DAG
 default_args = {
-    'owner': 'novasight',
+    'owner': '{{ tenant_name | default(tenant_id, true) | default("novasight", true) }}',
     'depends_on_past': False,
-    'start_date': days_ago(1),
+    'start_date': pendulum.datetime(2024, 1, 1, tz='{{ timezone | default("UTC") }}'),
     'email_on_failure': True,
     'email_on_retry': False,
     'retries': 2,
@@ -25,38 +48,55 @@ with DAG(
     dag_id='{{ dag_id }}',
     default_args=default_args,
     description='Ingest data from {{ datasource_name }} ({{ datasource_type }}) to ClickHouse',
-    schedule_interval='{{ schedule }}',
+    schedule='{{ schedule }}',
     catchup=False,
     max_active_runs=1,
     tags=['ingestion', '{{ datasource_type }}', 'tenant_{{ tenant_id }}'],
 ) as dag:
     
-    # Task to submit PySpark job to Spark cluster
-    ingest_data = SparkSubmitOperator(
-        task_id='ingest_{{ datasource_type }}_data',
-        application='{{ spark_app_path }}',
-        name='ingest_{{ datasource_id }}',
-        conn_id='spark_default',  # Airflow connection to Spark cluster
-        application_args=[
-            '/opt/airflow/spark_apps/configs/{{ dag_id }}_config.json'
-        ],
-        conf={
-            {% for key, value in spark_conf.items() %}
-            '{{ key }}': '{{ value }}',
-            {% endfor %}
-        },
-        jars='/opt/spark/jars/postgresql-42.6.0.jar,/opt/spark/jars/clickhouse-jdbc-0.4.6-all.jar',
-        driver_memory='1g',
-        executor_memory='{{ spark_conf.get("spark.executor.memory", "2g") }}',
-        executor_cores={{ spark_conf.get("spark.executor.cores", "2") }},
-        num_executors=None,  # Dynamic allocation enabled
-        verbose=True,
-    )
+    # Ingest data task with hybrid execution (native or docker fallback)
+    if SPARK_NATIVE_AVAILABLE:
+        # Use native SparkSubmitOperator (preferred)
+        ingest_data = SparkSubmitOperator(
+            task_id='ingest_{{ datasource_type }}_data',
+            application='{{ spark_app_path }}',
+            application_args=['/opt/airflow/spark_apps/configs/{{ dag_id }}_config.json'],
+            conn_id='spark_default',
+            jars=JDBC_JARS,
+            executor_memory='{{ spark_conf.get("spark.executor.memory", "2g") }}',
+            executor_cores={{ spark_conf.get("spark.executor.cores", 2) }},
+            driver_memory='{{ spark_conf.get("spark.driver.memory", "1g") }}',
+            conf={
+                {% for key, value in spark_conf.items() %}
+                '{{ key }}': '{{ value }}',
+                {% endfor %}
+            },
+        )
+    else:
+        # Fallback to docker exec
+        SPARK_SUBMIT_CMD = f"""
+docker exec {SPARK_MASTER_CONTAINER} /opt/spark/bin/spark-submit \\
+    --master spark://spark-master:7077 \\
+    --deploy-mode client \\
+    --driver-memory {{ spark_conf.get('spark.driver.memory', '1g') }} \\
+    --executor-memory {{ spark_conf.get('spark.executor.memory', '2g') }} \\
+    --executor-cores {{ spark_conf.get('spark.executor.cores', '2') }} \\
+    --jars /opt/spark/jars/custom/postgresql-42.7.4.jar,/opt/spark/jars/custom/clickhouse-jdbc-0.6.3.jar \\
+    {% for key, value in spark_conf.items() %}
+    --conf "{{ key }}={{ value }}" \\
+    {% endfor %}
+    {{ spark_app_path }} /opt/airflow/spark_apps/configs/{{ dag_id }}_config.json
+"""
+        ingest_data = BashOperator(
+            task_id='ingest_{{ datasource_type }}_data',
+            bash_command=SPARK_SUBMIT_CMD,
+        )
     
     def log_completion(**context):
         """Log completion of ingestion."""
         print(f"Ingestion completed for {{ datasource_name }}")
         print(f"Processed {{ num_tables }} tables")
+        print(f"Spark Mode: {'Native SparkSubmitOperator' if SPARK_NATIVE_AVAILABLE else 'Docker exec fallback'}")
     
     log_task = PythonOperator(
         task_id='log_completion',

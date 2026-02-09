@@ -319,10 +319,72 @@ def list_infrastructure_configs():
         click.echo()
 
 
+# ── Tenant management commands ───────────────────────────────────────────
+tenant_cli = AppGroup('tenant', help='Tenant management commands')
+
+
+@tenant_cli.command('provision-ch')
+@click.argument('slug')
+@with_appcontext
+def provision_ch(slug):
+    """(Re-)provision ClickHouse database for an existing tenant.
+
+    SLUG is the tenant slug (e.g. "acme").
+    Useful when the tenant record exists but the CH database was never created.
+    """
+    from app.domains.tenants.application.tenant_service import TenantService
+    from app.domains.tenants.infrastructure.provisioning import ProvisioningService
+
+    svc = TenantService()
+    tenant = svc.get_tenant_by_slug(slug)
+    if tenant is None:
+        click.echo(f'✗ Tenant with slug "{slug}" not found.', err=True)
+        raise SystemExit(1)
+
+    click.echo(f'Provisioning ClickHouse database for tenant: {tenant.slug} ...')
+    provisioning = ProvisioningService()
+    try:
+        provisioning.create_ch_database(tenant)
+        click.echo(f'✓ ClickHouse database created for tenant: {tenant.slug}')
+    except Exception as exc:
+        click.echo(f'✗ Failed: {exc}', err=True)
+        raise SystemExit(1)
+
+
+@tenant_cli.command('provision-ch-all')
+@with_appcontext
+def provision_ch_all():
+    """(Re-)provision ClickHouse databases for ALL existing tenants.
+
+    Safe to run repeatedly — all DDL uses IF NOT EXISTS.
+    """
+    from app.domains.tenants.domain.models import Tenant
+    from app.domains.tenants.infrastructure.provisioning import ProvisioningService
+
+    tenants = Tenant.query.all()
+    if not tenants:
+        click.echo('No tenants found.')
+        return
+
+    provisioning = ProvisioningService()
+    ok, fail = 0, 0
+    for tenant in tenants:
+        try:
+            provisioning.create_ch_database(tenant)
+            click.echo(f'  ✓ {tenant.slug}')
+            ok += 1
+        except Exception as exc:
+            click.echo(f'  ✗ {tenant.slug}: {exc}', err=True)
+            fail += 1
+
+    click.echo(f'\nDone. {ok} succeeded, {fail} failed.')
+
+
 def register_commands(app):
     """Register CLI commands with the Flask app."""
     app.cli.add_command(docs_cli)
     app.cli.add_command(infra_cli)
+    app.cli.add_command(tenant_cli)
 
     # Database seeding commands
     from app.seed import seed_cli

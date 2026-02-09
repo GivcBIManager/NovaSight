@@ -38,6 +38,7 @@ def list_dags():
         - per_page: Items per page (default: 20)
         - status: Filter by status (active, paused, draft)
         - tag: Filter by tag
+        - include_archived: Include archived (deleted) DAGs (default: false)
 
     Returns:
         Paginated list of DAG configurations
@@ -49,9 +50,16 @@ def list_dags():
     per_page = request.args.get("per_page", 20, type=int)
     status = request.args.get("status")
     tag = request.args.get("tag")
+    include_archived = request.args.get("include_archived", "false").lower() == "true"
 
     dag_service = DagService(tenant_id)
-    result = dag_service.list_dags(page=page, per_page=per_page, status=status, tag=tag)
+    result = dag_service.list_dags(
+        page=page,
+        per_page=per_page,
+        status=status,
+        tag=tag,
+        include_archived=include_archived,
+    )
 
     return jsonify(result)
 
@@ -157,6 +165,9 @@ def update_dag(dag_id: str):
     if not data:
         raise ValidationError("Request body required")
 
+    # Remove dag_id from data if present (it's already in URL)
+    data.pop("dag_id", None)
+
     dag_service = DagService(tenant_id)
     dag_config = dag_service.update_dag(dag_id, updated_by=user_id, **data)
 
@@ -172,18 +183,30 @@ def update_dag(dag_id: str):
 @require_tenant_context
 @require_roles(["data_engineer", "tenant_admin"])
 def delete_dag(dag_id: str):
-    """Delete DAG configuration."""
+    """
+    Delete DAG configuration.
+
+    Performs full cleanup: pauses in Airflow, deletes from Airflow API,
+    removes the generated DAG file, and archives or hard-deletes from DB.
+
+    Query Parameters:
+        - hard: If "true", permanently removes the DAG from the database.
+                Otherwise the DAG is archived (soft-delete).
+    """
     identity = get_current_identity()
     tenant_id = identity.tenant_id
 
+    hard_delete = request.args.get("hard", "false").lower() == "true"
+
     dag_service = DagService(tenant_id)
-    success = dag_service.delete_dag(dag_id)
+    success = dag_service.delete_dag(dag_id, hard_delete=hard_delete)
 
     if not success:
         raise NotFoundError("DAG not found")
 
-    logger.info(f"DAG '{dag_id}' deleted from tenant {tenant_id}")
-    return jsonify({"message": "DAG deleted successfully"})
+    action = "permanently deleted" if hard_delete else "archived"
+    logger.info(f"DAG '{dag_id}' {action} from tenant {tenant_id}")
+    return jsonify({"message": f"DAG {action} successfully"})
 
 
 @api_v1_bp.route("/dags/<dag_id>/validate", methods=["POST"])
@@ -214,9 +237,13 @@ def deploy_dag(dag_id: str):
     tenant_id = identity.tenant_id
     user_id = identity.user_id
 
+    logger.info(f"Deploy request for dag_id='{dag_id}' in tenant={tenant_id}")
+    
     dag_service = DagService(tenant_id)
     result = dag_service.deploy_dag(dag_id, deployed_by=user_id)
 
+    logger.info(f"Deploy result for dag_id='{dag_id}': {result}")
+    
     if result is None:
         raise NotFoundError("DAG not found")
 
@@ -255,7 +282,7 @@ def trigger_dag(dag_id: str):
 @require_tenant_context
 @require_roles(["data_engineer", "tenant_admin"])
 def pause_dag(dag_id: str):
-    """Pause DAG scheduling."""
+    """Pause DAG scheduling in Airflow."""
     identity = get_current_identity()
     tenant_id = identity.tenant_id
 
@@ -264,6 +291,9 @@ def pause_dag(dag_id: str):
 
     if result is None:
         raise NotFoundError("DAG not found")
+
+    if not result.get("success"):
+        raise AirflowAPIError(result.get("error", "Failed to pause DAG in Airflow"))
 
     logger.info(f"DAG '{dag_id}' paused in tenant {tenant_id}")
     return jsonify(result)
@@ -274,7 +304,7 @@ def pause_dag(dag_id: str):
 @require_tenant_context
 @require_roles(["data_engineer", "tenant_admin"])
 def unpause_dag(dag_id: str):
-    """Resume DAG scheduling."""
+    """Resume DAG scheduling in Airflow."""
     identity = get_current_identity()
     tenant_id = identity.tenant_id
 
@@ -283,6 +313,9 @@ def unpause_dag(dag_id: str):
 
     if result is None:
         raise NotFoundError("DAG not found")
+
+    if not result.get("success"):
+        raise AirflowAPIError(result.get("error", "Failed to unpause DAG in Airflow"))
 
     logger.info(f"DAG '{dag_id}' unpaused in tenant {tenant_id}")
     return jsonify(result)

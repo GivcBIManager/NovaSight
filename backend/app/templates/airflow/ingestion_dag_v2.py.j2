@@ -1,0 +1,99 @@
+{#
+NovaSight Ingestion DAG Template (Refactored)
+=============================================
+
+Generates an Airflow DAG for data ingestion using PySpark.
+Uses modular components for cleaner code generation.
+
+Template Variables:
+- tenant_id: str - Tenant identifier
+- datasource_id: str - Datasource identifier
+- datasource_type: str - Type of datasource (postgres, mysql, etc.)
+- datasource_name: str - Human-readable name
+- connection_id: str - Airflow connection ID
+- table_mappings: List[dict] - Source to target table mappings
+- schedule: str - Cron expression
+- spark_conf: dict - Spark configuration
+#}
+{% from 'components/base.py.j2' import header, imports, spark_config, default_args as default_args_macro, tenant_context %}
+{% from 'components/spark.py.j2' import spark_submit_hybrid %}
+{% from 'components/tasks.py.j2' import start_task, end_task, log_completion_task %}
+
+{{ header(
+    'ingest_' ~ tenant_id ~ '_' ~ datasource_id,
+    _template_version | default('2.0.0'),
+    tenant_name | default(tenant_id, true) | default('novasight', true),
+    'Ingest data from ' ~ datasource_name ~ ' (' ~ datasource_type ~ ') to ClickHouse'
+) }}
+
+{{ imports(use_spark=true) }}
+
+{{ spark_config() }}
+
+{{ tenant_context(tenant_id, tenant_slug, tenant_database) }}
+
+{{ default_args_macro(
+    owner=tenant_name | default(tenant_id, true) | default('novasight', true),
+    retries=retries | default(3),
+    retry_delay_minutes=retry_delay_minutes | default(5),
+    email_on_failure=email_on_failure | default(true),
+    execution_timeout_hours=execution_timeout_hours | default(2)
+) }}
+
+# DAG definition
+with DAG(
+    dag_id='ingest_{{ tenant_id }}_{{ datasource_id }}',
+    description='Ingest data from {{ datasource_name }} ({{ datasource_type }}) for tenant {{ tenant_id }}',
+    schedule='{{ schedule | default("@daily") }}',
+    start_date=datetime({{ start_date | default('2024-01-01') | replace('-', ', ') }}),
+    catchup={{ catchup | default(false) | lower | capitalize }},
+    default_args=default_args,
+    tags=['ingestion', 'tenant_{{ tenant_id }}', '{{ datasource_type }}', 'spark'],
+    max_active_runs={{ max_active_runs | default(1) }},
+) as dag:
+    
+    # Start marker
+{{ start_task() }}
+    
+    # Ingest data using PySpark
+{{ spark_submit_hybrid(
+    task_id='ingest_' ~ datasource_type ~ '_data',
+    application=spark_app_path | default('/opt/spark/jobs/ingestion.py'),
+    executor_memory=spark_conf.get('spark.executor.memory', '2g') if spark_conf else '2g',
+    executor_cores=spark_conf.get('spark.executor.cores', 2) if spark_conf else 2,
+    spark_conf=spark_conf,
+    application_args=['/opt/airflow/spark_apps/configs/' ~ dag_id ~ '_config.json'],
+    env_vars={
+        'TENANT_ID': 'TENANT_ID',
+        'TENANT_DATABASE': 'TENANT_DATABASE',
+        'DATASOURCE_ID': datasource_id,
+        'DATASOURCE_TYPE': datasource_type
+    },
+    timeout_minutes=ingestion_timeout_minutes | default(120),
+    retries=retries | default(3)
+) }}
+    ingest_data = ingest_{{ datasource_type }}_data
+    
+    # Log completion
+    def log_completion(**context):
+        """Log completion of ingestion."""
+        print(f"Ingestion completed for {{ datasource_name }}")
+        print(f"Datasource: {{ datasource_type }} (ID: {{ datasource_id }})")
+        print(f"Tenant: {TENANT_SLUG}")
+        print(f"Tables processed: {{ table_mappings | length if table_mappings else 'N/A' }}")
+{% if table_mappings %}
+{% for mapping in table_mappings %}
+        print(f"  - {{ mapping.source_table }} -> {{ mapping.target_table }}")
+{% endfor %}
+{% endif %}
+    
+    log_task = PythonOperator(
+        task_id='log_completion',
+        python_callable=log_completion,
+    )
+    
+    # End marker
+{{ end_task() }}
+    
+    # Task dependencies
+    start >> ingest_data >> log_task >> end
