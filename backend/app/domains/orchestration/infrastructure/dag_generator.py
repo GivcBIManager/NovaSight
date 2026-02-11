@@ -285,7 +285,8 @@ class PySparkDAGGenerator:
         
         # Tenant-scoped paths for file isolation
         self.dags_path = Path("/opt/airflow/dags") / self._isolation.tenant_dag_folder
-        self.spark_apps_path = Path("/opt/airflow/spark_apps") / self._isolation.tenant_dag_folder
+        # Use /opt/spark/jobs which is the shared volume between Airflow and Spark containers
+        self.spark_jobs_path = Path("/opt/spark/jobs")
     
     @property
     def tenant_database(self) -> str:
@@ -322,8 +323,11 @@ class PySparkDAGGenerator:
         final_spark_config = {**self.DEFAULT_SPARK_CONFIG, **(spark_config or {})}
         dag_id = f"pyspark_{self.tenant_id}_{pyspark_app.id}"
         
-        # Use tenant-scoped path for PySpark job
-        spark_app_path = str(self.spark_apps_path / "jobs" / f"{dag_id}.py")
+        # Use the shared /opt/spark/jobs path for PySpark job file
+        # Generate a safe filename from the app name
+        import re
+        safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', pyspark_app.name.lower())
+        spark_app_path = f"/opt/spark/jobs/{safe_name}.py"
         
         # Get tenant isolation context
         tenant_context = self._isolation.get_template_context()
@@ -354,15 +358,17 @@ class PySparkDAGGenerator:
 
         dag_content = self.template_engine.render("airflow/pyspark_job_dag.py.j2", context)
 
-        # Create tenant-scoped directories
+        # Create tenant-scoped DAGs directory
         self.dags_path.mkdir(parents=True, exist_ok=True)
-        (self.spark_apps_path / "jobs").mkdir(parents=True, exist_ok=True)
+        # Create spark jobs directory
+        self.spark_jobs_path.mkdir(parents=True, exist_ok=True)
 
         dag_file = self.dags_path / f"{dag_id}.py"
         dag_file.write_text(dag_content)
         logger.info(f"Generated DAG file: {dag_file}")
 
-        spark_app_file = self.spark_apps_path / "jobs" / f"{dag_id}.py"
+        # Write PySpark job to the shared /opt/spark/jobs directory
+        spark_app_file = self.spark_jobs_path / f"{safe_name}.py"
         spark_app_file.write_text(pyspark_app.generated_code)
         logger.info(f"Wrote PySpark job file: {spark_app_file}")
 
@@ -405,19 +411,21 @@ class PySparkDAGGenerator:
         dag_id = f"pipeline_{self.tenant_id}_{safe_dag_name}"
 
         self.dags_path.mkdir(parents=True, exist_ok=True)
-        (self.spark_apps_path / "jobs").mkdir(parents=True, exist_ok=True)
+        self.spark_jobs_path.mkdir(parents=True, exist_ok=True)
 
         app_contexts = []
         for app in apps:
-            app_file = f"{dag_id}_{app.id}.py"
+            # Generate safe filename from app name
+            safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', app.name.lower())
+            app_file = f"{safe_name}.py"
             task_id = f'run_{re.sub(r"[^a-z0-9_]", "_", app.name.lower())}'
             app_contexts.append({
                 "app_id": str(app.id),
                 "app_name": app.name,
                 "task_id": task_id,
-                "spark_app_path": f"/opt/airflow/spark_apps/jobs/{app_file}",
+                "spark_app_path": f"/opt/spark/jobs/{app_file}",
             })
-            spark_app_file = self.spark_apps_path / "jobs" / app_file
+            spark_app_file = self.spark_jobs_path / app_file
             spark_app_file.write_text(app.generated_code)
             logger.info(f"Wrote PySpark job file: {spark_app_file}")
 
@@ -475,11 +483,8 @@ class PySparkDAGGenerator:
         if dag_file.exists():
             dag_file.unlink()
             logger.info(f"Deleted DAG file: {dag_file}")
-        jobs_dir = self.spark_apps_path / "jobs"
-        if jobs_dir.exists():
-            for job_file in jobs_dir.glob(f"{dag_id}*.py"):
-                job_file.unlink()
-                logger.info(f"Deleted PySpark job file: {job_file}")
+        # Note: We don't delete job files from spark_jobs_path here
+        # because they may be shared by multiple DAGs or managed by PySparkAppService
         try:
             self.airflow_client.pause_dag(dag_id)
             self.airflow_client.delete_dag(dag_id)
@@ -512,8 +517,8 @@ class PySparkDAGGenerator:
         content = dag_file.read_text()
         schedule_match = re.search(r"schedule_interval='([^']*)'", content)
         schedule = schedule_match.group(1) if schedule_match else None
-        jobs_dir = self.spark_apps_path / "jobs"
-        job_count = len(list(jobs_dir.glob(f"{dag_id}*.py"))) if jobs_dir.exists() else 0
+        # Count job files in the shared spark jobs directory
+        job_count = len(list(self.spark_jobs_path.glob("*.py"))) if self.spark_jobs_path.exists() else 0
         return {
             "dag_id": dag_id,
             "file_path": str(dag_file),

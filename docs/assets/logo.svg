@@ -1,0 +1,263 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 480" width="512" height="480">
+  <defs>
+    <!--
+      NOVASIGHT MÖBIUS STRIP — CORRECT TOPOLOGY
+      
+      A real Möbius strip: one continuous band that makes a loop
+      with a single 180° twist. The twist creates a crossing where
+      one part of the band passes OVER the other. This is the
+      defining visual feature — you must see the over/under.
+      
+      Construction:
+        - Band travels clockwise around an elliptical loop
+        - At the right side, the band twists 180°
+        - The twist causes the outer edge to become the inner edge
+        - At the crossing, the front part covers the back part
+        - Color transitions from teal (front/lit) through the twist
+          to deep blue (back/shadow face)
+    -->
+
+    <!-- Front face — lit, teal -->
+    <linearGradient id="frontFace" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0%" stop-color="#20E4B6"/>
+      <stop offset="50%" stop-color="#14BFA0"/>
+      <stop offset="100%" stop-color="#0EA88A"/>
+    </linearGradient>
+
+    <!-- Back face — deep ocean, shadowed -->
+    <linearGradient id="backFace" x1="0" y1="0" x2="1" y2="0.5">
+      <stop offset="0%" stop-color="#1B3455"/>
+      <stop offset="50%" stop-color="#152A45"/>
+      <stop offset="100%" stop-color="#0F2035"/>
+    </linearGradient>
+
+    <!-- Twist transition — teal morphing into deep blue -->
+    <linearGradient id="twistGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0EA88A"/>
+      <stop offset="30%" stop-color="#0C7E78"/>
+      <stop offset="60%" stop-color="#1A4A6A"/>
+      <stop offset="100%" stop-color="#1B3455"/>
+    </linearGradient>
+
+    <!-- Twist return — deep blue morphing back toward teal -->
+    <linearGradient id="twistReturn" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1B3455"/>
+      <stop offset="40%" stop-color="#1A4A6A"/>
+      <stop offset="70%" stop-color="#0C7E78"/>
+      <stop offset="100%" stop-color="#14BFA0"/>
+    </linearGradient>
+
+    <!-- Far segment — darkened, atmospheric perspective -->
+    <linearGradient id="farSegment" x1="0" y1="0" x2="1" y2="0.4">
+      <stop offset="0%" stop-color="#14BFA0" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#0EA88A" stop-opacity="0.4"/>
+    </linearGradient>
+
+    <!-- Rim highlight -->
+    <linearGradient id="rimHL" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="40%" stop-color="#ffffff" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Wordmark accent line -->
+    <linearGradient id="accentLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#14BFA0"/>
+      <stop offset="100%" stop-color="#1B3455"/>
+    </linearGradient>
+
+    <!-- Soft shadow -->
+    <filter id="shadow" x="-15%" y="-10%" width="130%" height="135%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="b"/>
+      <feOffset dx="1" dy="3" result="o"/>
+      <feFlood flood-color="#050D18" flood-opacity="0.25" result="c"/>
+      <feComposite in="c" in2="o" operator="in" result="s"/>
+      <feMerge>
+        <feMergeNode in="s"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Ground shadow -->
+    <filter id="groundBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+  </defs>
+
+  <!--
+    THE MÖBIUS STRIP
+    
+    The band width is ~28px. The strip forms a flattened loop
+    (~300px wide, ~160px tall). The twist happens on the right side.
+    
+    Drawing order (back to front):
+      1. Back-bottom segment (passes behind)
+      2. Back-right segment going up into twist (behind the crossing)
+      3. Front-top segment (the main visible arc)
+      4. Twist-over segment (passes OVER the back, creating the crossing)
+      5. Front-bottom-left continuing the loop
+    
+    The crossing is the key. One part of the band clearly goes
+    OVER the other — that's what makes it a Möbius strip.
+  -->
+
+  <g transform="translate(256, 185)">
+
+    <!-- Ground shadow -->
+    <ellipse cx="0" cy="110" rx="140" ry="16" fill="#050D18" opacity="0.2"
+             filter="url(#groundBlur)"/>
+
+    <!--
+      LAYER 1 (BACK): The far/bottom portion of the loop.
+      This part of the band goes BEHIND — it will be partially
+      hidden by the front crossing piece.
+      
+      Path: from lower-left, arcs across the bottom, curves up
+      on the right side heading toward the twist zone.
+    -->
+
+    <!-- Back segment — bottom arc going from left to right, behind -->
+    <path d="
+      M -140,40
+      C -140,85  -90,105  -30,105
+      C 30,105   85,85    115,50
+      C 130,30   140,5    138,-15
+      L 118,-5
+      C 120,12   112,30   100,45
+      C 75,75    25,85    -30,82
+      C -80,78   -115,60  -115,30
+      Z
+    " fill="url(#backFace)" opacity="0.75" filter="url(#shadow)"/>
+
+    <!--
+      LAYER 2 (BACK-UPPER): The back part continuing upward on
+      the right, heading into where the twist happens. This goes
+      BEHIND the front-crossing piece.
+    -->
+    <path d="
+      M 138,-15
+      C 134,-40  120,-60  100,-68
+      C 82,-75   68,-65   62,-48
+      L 48,-38
+      C 52,-52   62,-60   78,-55
+      C 98,-48   112,-32  118,-5
+      Z
+    " fill="url(#twistReturn)" opacity="0.65" filter="url(#shadow)"/>
+
+    <!--
+      LAYER 3 (FRONT): The main visible top arc.
+      This is the "hero" — the large front-facing curve that
+      sweeps from the left, arcs over the top, and comes down
+      on the right toward the twist. This face is lit (teal).
+    -->
+    <path d="
+      M -140,40
+      C -145,-10  -120,-55  -75,-72
+      C -30,-88   25,-80    60,-55
+      L 48,-38
+      C 20,-58   -20,-65   -60,-55
+      C -100,-42  -120,-10  -115,30
+      Z
+    " fill="url(#frontFace)" filter="url(#shadow)"/>
+
+    <!-- Rim highlight on top edge of front arc -->
+    <path d="
+      M -140,40
+      C -145,-10  -120,-55  -75,-72
+      C -30,-88   25,-80    60,-55
+      L 48,-38
+      C 20,-58   -20,-65   -60,-55
+      C -100,-42  -120,-10  -115,30
+      Z
+    " fill="url(#rimHL)"/>
+
+    <!--
+      LAYER 4 (FRONT-CROSSING): THE TWIST — the defining feature.
+      
+      This piece of the band comes from the top-right (end of the
+      front arc), twists 180°, and crosses OVER the back segment
+      below it. This crossing is what makes the Möbius topology
+      visible.
+      
+      The twist transitions from teal (front face) to deep blue
+      (what was the back face, now visible because of the twist).
+      After crossing over, this piece connects back to the bottom-left
+      where the back segment started — completing the single loop.
+    -->
+    <path d="
+      M 60,-55
+      C 85,-42   110,-20   128,5
+      C 142,25   145,48    132,65
+      C 118,82   95,82     75,68
+      C 55,52    30,48     0,52
+      C -35,58   -75,65    -108,58
+      C -130,52  -145,38   -140,22
+      L -115,15
+      C -118,28  -108,38   -92,42
+      C -65,48   -30,42    5,35
+      C 40,28    65,28     85,42
+      C 100,52   108,58    112,52
+      C 120,42   122,28    115,10
+      C 105,-10  85,-30    65,-42
+      L 48,-38
+      Z
+    " fill="url(#twistGrad)" filter="url(#shadow)"/>
+
+    <!-- Rim on twist crossing top edge -->
+    <path d="
+      M 60,-55
+      C 85,-42   110,-20   128,5
+      C 142,25   145,48    132,65
+      C 118,82   95,82     75,68
+    " fill="none" stroke="#ffffff" stroke-width="0.7" opacity="0.1"
+       stroke-linecap="round"/>
+
+    <!--
+      LAYER 5 (FRONT-CLOSING): The band continues from the crossing
+      down to the left, reconnecting to where the back segment begins.
+      This closes the loop. The color here transitions back from
+      the twist shade toward the front face, because after 180°
+      twist the "back" is now the "front" (Möbius!).
+    -->
+    <path d="
+      M -140,22
+      C -142,30  -140,36   -140,40
+      L -115,30
+      C -115,25  -116,20   -115,15
+      Z
+    " fill="#0F8E7A" opacity="0.7"/>
+
+    <!-- Subtle edge contour along the top of the front arc -->
+    <path d="
+      M -140,40
+      C -145,-10  -120,-55  -75,-72
+      C -30,-88   25,-80    60,-55
+    " fill="none" stroke="#40F0D0" stroke-width="0.8" opacity="0.2"
+       stroke-linecap="round"/>
+
+    <!-- Subtle edge along bottom of back arc -->
+    <path d="
+      M -140,40
+      C -140,85  -90,105  -30,105
+      C 30,105   85,85    115,50
+    " fill="none" stroke="#0F2035" stroke-width="0.5" opacity="0.15"
+       stroke-linecap="round"/>
+
+  </g>
+
+  <!-- WORDMARK -->
+  <g transform="translate(256, 365)">
+    <text x="0" y="0" text-anchor="middle"
+          font-family="'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif"
+          font-size="54" letter-spacing="-1">
+      <tspan font-weight="700" fill="#E2E8F0">Nova</tspan><tspan font-weight="300" fill="#64748B">Sight</tspan>
+    </text>
+    <text x="0" y="34" text-anchor="middle"
+          font-family="'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif"
+          font-size="12" font-weight="500" letter-spacing="5" fill="#4A5568">
+      SEE EVERYTHING
+    </text>
+    <line x1="-45" y1="46" x2="45" y2="46" stroke="url(#accentLine)" stroke-width="1"
+          stroke-linecap="round" opacity="0.35"/>
+  </g>
+</svg>

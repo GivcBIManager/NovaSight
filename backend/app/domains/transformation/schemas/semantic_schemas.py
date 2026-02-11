@@ -154,11 +154,12 @@ class SemanticModelResponseSchema(BaseModel):
     dimensions_count: Optional[int] = 0
     measures_count: Optional[int] = 0
     
-    class Config:
-        orm_mode = True
-        json_encoders = {
+    model_config = {
+        "from_attributes": True,
+        "json_encoders": {
             datetime: lambda v: v.isoformat() if v else None
         }
+    }
 
 
 # =============================================================================
@@ -253,15 +254,12 @@ class DimensionResponseSchema(BaseModel):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
     
-    class Config:
-        orm_mode = True
-        json_encoders = {
+    model_config = {
+        "from_attributes": True,
+        "json_encoders": {
             datetime: lambda v: v.isoformat() if v else None
         }
-
-
-# =============================================================================
-# Measure Schemas
+    }
 # =============================================================================
 
 class MeasureCreateSchema(BaseModel):
@@ -360,11 +358,12 @@ class MeasureResponseSchema(BaseModel):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
     
-    class Config:
-        orm_mode = True
-        json_encoders = {
+    model_config = {
+        "from_attributes": True,
+        "json_encoders": {
             datetime: lambda v: v.isoformat() if v else None
         }
+    }
 
 
 # =============================================================================
@@ -405,8 +404,7 @@ class RelationshipResponseSchema(BaseModel):
     additional_conditions: Optional[str]
     is_active: bool
     
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 # =============================================================================
@@ -498,8 +496,7 @@ class AvailableFieldSchema(BaseModel):
     data_type: Optional[str]
     model_name: str
     
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 class ExploreSchema(BaseModel):

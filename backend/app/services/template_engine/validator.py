@@ -256,10 +256,12 @@ class DbtColumnDefinition(BaseModel):
 class DbtModelDefinition(BaseModel):
     """Definition for dbt model templates."""
     
+    model_config = ConfigDict(populate_by_name=True)
+    
     model_name: str = Field(..., min_length=1, max_length=63)
     description: Optional[str] = Field(default=None, max_length=2000)
     materialized: Literal['view', 'table', 'incremental', 'ephemeral'] = Field(default='view')
-    schema: Optional[str] = Field(default=None)
+    schema_name: Optional[str] = Field(default=None, alias="schema")
     columns: List[DbtColumnDefinition] = Field(default_factory=list)
     tags: List[str] = Field(default_factory=list)
     meta: Dict[str, Any] = Field(default_factory=dict)
@@ -528,7 +530,7 @@ class ClickHouseTenantDatabaseDefinition(BaseModel):
 class PySparkConnectionDefinition(BaseModel):
     """Validated connection configuration for PySpark templates."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra='allow')
+    model_config = ConfigDict(str_strip_whitespace=True, extra='allow', populate_by_name=True)
     
     host: str = Field(..., min_length=1)
     port: int = Field(..., ge=1, le=65535)
@@ -537,17 +539,16 @@ class PySparkConnectionDefinition(BaseModel):
     password: Optional[str] = Field(default=None)  # Injected at runtime
     db_type: str = Field(default="postgresql")
     id: Optional[str] = Field(default=None)
-    schema: Optional[str] = Field(default=None)
+    schema_name: Optional[str] = Field(default=None, alias="schema")
 
 
 class PySparkSourceDefinition(BaseModel):
     """Validated source configuration for PySpark templates."""
     
-    model_config = ConfigDict(str_strip_whitespace=True, extra='allow')
+    model_config = ConfigDict(str_strip_whitespace=True, extra='allow', populate_by_name=True)
     
     type: str = Field(..., pattern=r'^(table|query)$')
-    schema: Optional[str] = Field(default=None)
-    schema_name: Optional[str] = Field(default=None)
+    schema_name: Optional[str] = Field(default=None, alias="schema")
     table: Optional[str] = Field(default=None)
     query: Optional[str] = Field(default=None)
 

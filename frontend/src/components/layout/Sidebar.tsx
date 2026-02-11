@@ -18,6 +18,7 @@ import {
   FileText,
   Layers,
   HardDrive,
+  Code2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
@@ -26,6 +27,7 @@ import { useAuth } from '@/contexts/AuthContext'
 const navigation = [
   { name: 'Dashboard', href: '/app/dashboard', icon: LayoutDashboard },
   { name: 'Ask Data', href: '/app/query', icon: MessageSquare },
+  { name: 'SQL Editor', href: '/app/sql', icon: Code2 },
   { name: 'Connections', href: '/app/connections', icon: Database },
   { name: 'DAGs', href: '/app/dags', icon: GitBranch },
   { name: 'PySpark Apps', href: '/app/pyspark', icon: Sparkles },

@@ -38,6 +38,7 @@ import os
 from datetime import datetime, timedelta
 import pendulum
 from airflow.models.dag import DAG
+from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
@@ -91,52 +92,36 @@ with DAG(
     tags={{ tags | tojson }},
 ) as dag:
     
+    # Start task
+    start = EmptyOperator(task_id='start')
+    
+    # End task
+    end = EmptyOperator(task_id='end')
+    
     # Task definitions
     tasks = {}
     
     {% for task in tasks %}
     # Task: {{ task.task_id }}
     {% if task.task_type == 'spark_submit' %}
-    # Spark Submit Task: {{ task.task_id }}
-    if SPARK_NATIVE_AVAILABLE:
-        # Use native SparkSubmitOperator (preferred)
-        tasks['{{ task.task_id }}'] = SparkSubmitOperator(
-            task_id='{{ task.task_id }}',
-            application='{{ task.config.get("application_path") or task.config.get("application", "/opt/spark/jobs/job.py") }}',
-            conn_id='spark_default',
-            jars=JDBC_JARS,
-            executor_memory='{{ task.config.get("executor_memory", "2g") }}',
-            executor_cores={{ task.config.get("executor_cores", 2) }},
-            driver_memory='{{ task.config.get("driver_memory", "1g") }}',
-            conf={
-                'spark.executor.memory': '{{ task.config.get("executor_memory", "2g") }}',
-                'spark.executor.cores': '{{ task.config.get("executor_cores", 2) }}',
-            },
-            execution_timeout=timedelta(minutes={{ task.timeout_minutes }}),
-            retries={{ task.retries }},
-            retry_delay=timedelta(minutes={{ task.retry_delay_minutes }}),
-            trigger_rule=TriggerRule.{{ task.trigger_rule | upper }},
-        )
-    else:
-        # Fallback to docker exec
-        {{ task.task_id }}_cmd = f"""
-docker exec {SPARK_MASTER_CONTAINER} /opt/spark/bin/spark-submit \\
-    --master spark://spark-master:7077 \\
-    --deploy-mode client \\
-    --driver-memory {{ task.config.get("driver_memory", "1g") }} \\
-    --executor-memory {{ task.config.get("executor_memory", "2g") }} \\
-    --executor-cores {{ task.config.get("executor_cores", 2) }} \\
-    --jars /opt/spark/jars/custom/postgresql-42.7.4.jar,/opt/spark/jars/custom/clickhouse-jdbc-0.6.3.jar \\
-    {{ task.config.get("application_path") or task.config.get("application", "/opt/spark/jobs/job.py") }}
-"""
-        tasks['{{ task.task_id }}'] = BashOperator(
-            task_id='{{ task.task_id }}',
-            bash_command={{ task.task_id }}_cmd,
-            execution_timeout=timedelta(minutes={{ task.timeout_minutes }}),
-            retries={{ task.retries }},
-            retry_delay=timedelta(minutes={{ task.retry_delay_minutes }}),
-            trigger_rule=TriggerRule.{{ task.trigger_rule | upper }},
-        )
+    # Use native SparkSubmitOperator (preferred)
+    tasks['{{ task.task_id }}'] = SparkSubmitOperator(
+        task_id='{{ task.task_id }}',
+        application='{{ task.config.get("application_path") or task.config.get("application", "/opt/spark/jobs/job.py") }}',
+        conn_id='spark_default',
+        jars=JDBC_JARS,
+        executor_memory='{{ task.config.get("executor_memory", "2g") }}',
+        executor_cores={{ task.config.get("executor_cores", 2) }},
+        driver_memory='{{ task.config.get("driver_memory", "1g") }}',
+        conf={
+            'spark.executor.memory': '{{ task.config.get("executor_memory", "2g") }}',
+            'spark.executor.cores': '{{ task.config.get("executor_cores", 2) }}',
+        },
+        execution_timeout=timedelta(minutes={{ task.timeout_minutes }}),
+        retries={{ task.retries }},
+        retry_delay=timedelta(minutes={{ task.retry_delay_minutes }}),
+        trigger_rule=TriggerRule.{{ task.trigger_rule | upper }},
+    )
     {% elif task.task_type == 'dbt_run' %}
     tasks['{{ task.task_id }}'] = BashOperator(
         task_id='{{ task.task_id }}',
@@ -196,12 +181,46 @@ docker exec {SPARK_MASTER_CONTAINER} /opt/spark/bin/spark-submit \\
     {% endif %}
     
     {% endfor %}
-    
-    # Define task dependencies
-    {% for task in tasks %}
-    {% if task.depends_on %}
-    {% for dep in task.depends_on %}
-    tasks['{{ dep }}'] >> tasks['{{ task.task_id }}']
-    {% endfor %}
-    {% endif %}
-    {% endfor %}
+
+# ============================================
+# Task Dependencies
+# ============================================
+# Dependencies are set at the end after all tasks are defined
+# to ensure proper resolution regardless of conditional task creation
+
+# Connect start to all root tasks (tasks with no dependencies)
+{% set root_tasks = [] %}
+{% for task in tasks %}
+{% if not task.depends_on or task.depends_on | length == 0 %}
+{% set _ = root_tasks.append(task.task_id) %}
+{% endif %}
+{% endfor %}
+{% if root_tasks %}
+start >> [{% for task_id in root_tasks %}tasks['{{ task_id }}']{% if not loop.last %}, {% endif %}{% endfor %}]
+{% endif %}
+
+# Define explicit task dependencies
+{% for task in tasks %}
+{% if task.depends_on %}
+{% for dep in task.depends_on %}
+tasks['{{ dep }}'] >> tasks['{{ task.task_id }}']
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+# Connect all leaf tasks (tasks that nothing depends on) to end
+{% set leaf_tasks = [] %}
+{% set all_deps = [] %}
+{% for task in tasks %}
+{% for dep in task.depends_on %}
+{% set _ = all_deps.append(dep) %}
+{% endfor %}
+{% endfor %}
+{% for task in tasks %}
+{% if task.task_id not in all_deps %}
+{% set _ = leaf_tasks.append(task.task_id) %}
+{% endif %}
+{% endfor %}
+{% if leaf_tasks %}
+[{% for task_id in leaf_tasks %}tasks['{{ task_id }}']{% if not loop.last %}, {% endif %}{% endfor %}] >> end
+{% endif %}

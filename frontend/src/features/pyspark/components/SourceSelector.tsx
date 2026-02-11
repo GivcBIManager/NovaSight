@@ -7,15 +7,22 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Database, Table, Code, Loader2, CheckCircle } from 'lucide-react'
+import { Database, Table, Code, Loader2, CheckCircle, FileCode, ChevronDown } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useDataSources, useDataSourceSchema } from '@/features/datasources/hooks'
 import { dataSourceService } from '@/services/dataSourceService'
+import { useSavedQueries } from '@/features/sql-editor/hooks/useSavedQueries'
 import { useValidateQuery } from '../hooks'
 import type { SourceType, PySparkWizardState, ColumnConfig } from '@/types/pyspark'
 import type { DataSource, TableInfo } from '@/types/datasource'
@@ -30,6 +37,10 @@ export function SourceSelector({ state, onStateChange }: SourceSelectorProps) {
   
   // Fetch available connections
   const { data: connectionsData, isLoading: loadingConnections } = useDataSources()
+  
+  // Fetch saved queries with type 'pyspark'
+  const { data: savedQueriesData } = useSavedQueries({ query_type: 'pyspark' })
+  const savedQueries = savedQueriesData?.items || []
   
   // Fetch schema when connection is selected (without columns for speed)
   const { data: schemaData, isLoading: loadingSchema } = useDataSourceSchema(
@@ -179,6 +190,28 @@ export function SourceSelector({ state, onStateChange }: SourceSelectorProps) {
     )
   }
   
+  // Handle loading a saved query
+  const handleLoadSavedQuery = (query: { id: string; name: string; sql: string; connection_id?: string }) => {
+    // Set the connection if the saved query has one
+    if (query.connection_id) {
+      onStateChange({
+        connectionId: query.connection_id,
+        sourceType: 'query',
+        sourceQuery: query.sql,
+        availableColumns: [],
+        selectedColumns: [],
+      })
+    } else {
+      // Just update the query, keep current connection
+      onStateChange({
+        sourceType: 'query',
+        sourceQuery: query.sql,
+        availableColumns: [],
+        selectedColumns: [],
+      })
+    }
+  }
+  
   return (
     <div className="space-y-6">
       <div>
@@ -315,7 +348,36 @@ export function SourceSelector({ state, onStateChange }: SourceSelectorProps) {
       {state.connectionId && state.sourceType === 'query' && (
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="query">SQL Query</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="query">SQL Query</Label>
+              {savedQueries.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <FileCode className="h-4 w-4 mr-2" />
+                      Load Saved Query
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    {savedQueries.map((query) => (
+                      <DropdownMenuItem
+                        key={query.id}
+                        onClick={() => handleLoadSavedQuery(query)}
+                        className="flex flex-col items-start"
+                      >
+                        <span className="font-medium">{query.name}</span>
+                        {query.description && (
+                          <span className="text-xs text-muted-foreground truncate max-w-full">
+                            {query.description}
+                          </span>
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
             <Textarea
               id="query"
               value={state.sourceQuery}

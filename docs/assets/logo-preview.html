@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NovaSight — Semantic Möbius Logo Preview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    background: #080E18;
+    color: #E2E8F0;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 300;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .header h1 strong { font-weight: 700; color: #00D4AA; }
+  .header p {
+    font-size: 15px;
+    color: #64748B;
+    font-style: italic;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 28px;
+    max-width: 1200px;
+    margin: 0 auto 50px;
+  }
+
+  .card {
+    border-radius: 16px;
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    min-height: 340px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+    pointer-events: none;
+  }
+  .card-label {
+    position: absolute;
+    top: 14px;
+    left: 18px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.4;
+  }
+  .card img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .dark-bg  { background: #0F1B2D; }
+  .light-bg { background: #F8FAFC; }
+  .light-bg .card-label { color: #1E3A5F; }
+
+  /* === Size Scaling Test === */
+  .sizes {
+    background: #0F1B2D;
+  }
+  .sizes-row {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .size-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .size-item span {
+    font-size: 11px;
+    color: #64748B;
+    font-weight: 500;
+  }
+
+  /* === Sidebar Mockup === */
+  .sidebar-card {
+    background: #0F1B2D;
+    padding: 0;
+    align-items: stretch;
+  }
+  .sidebar-mock {
+    width: 220px;
+    background: #0A1628;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    padding: 18px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 340px;
+  }
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 6px;
+    margin-bottom: 16px;
+  }
+  .sidebar-logo img {
+    width: 28px;
+    height: 28px;
+  }
+  .sidebar-logo .name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #E2E8F0;
+    letter-spacing: -0.3px;
+  }
+  .sidebar-logo .name span { font-weight: 400; color: #64748B; }
+  .sidebar-item {
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #64748B;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: default;
+  }
+  .sidebar-item.active {
+    background: rgba(0, 212, 170, 0.08);
+    color: #00D4AA;
+  }
+  .sidebar-item .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.5;
+  }
+  .sidebar-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    background: #0F1B2D;
+  }
+  .sidebar-card .inner {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* === Symbolism Table === */
+  .symbolism {
+    max-width: 700px;
+    margin: 0 auto 50px;
+    background: rgba(15, 27, 45, 0.6);
+    border-radius: 16px;
+    padding: 36px 40px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .symbolism h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #00D4AA;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .sym-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 14px;
+  }
+  .sym-row:last-child { border-bottom: none; }
+  .sym-element {
+    font-weight: 600;
+    color: #FFB800;
+    min-width: 160px;
+  }
+  .sym-meaning {
+    color: #94A3B8;
+    text-align: right;
+  }
+
+  /* === Color Palette === */
+  .palette {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 50px;
+  }
+  .swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .swatch-color {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    border: 2px solid rgba(255,255,255,0.08);
+  }
+  .swatch-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94A3B8;
+  }
+  .swatch-hex {
+    font-size: 10px;
+    color: #475569;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* === Technical Specs === */
+  .specs {
+    max-width: 700px;
+    margin: 0 auto 50px;
+    text-align: center;
+  }
+  .specs h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748B;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .spec-tags {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .spec-tag {
+    background: rgba(0, 212, 170, 0.08);
+    color: #00D4AA;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid rgba(0, 212, 170, 0.15);
+  }
+
+  /* === Favicon Test === */
+  .favicon-test {
+    max-width: 700px;
+    margin: 0 auto 50px;
+    background: rgba(15, 27, 45, 0.6);
+    border-radius: 16px;
+    padding: 36px 40px;
+    border: 1px solid rgba(255,255,255,0.06);
+    text-align: center;
+  }
+  .favicon-test h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748B;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .favicon-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 40px;
+  }
+  .favicon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .favicon-frame {
+    background: #1E293B;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .favicon-frame img {
+    display: block;
+  }
+  .favicon-item span {
+    font-size: 11px;
+    color: #64748B;
+    font-weight: 500;
+  }
+
+  /* === Browser Tab Mockup === */
+  .tab-mock {
+    max-width: 700px;
+    margin: 0 auto 50px;
+    background: #1E293B;
+    border-radius: 12px 12px 0 0;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .tab-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 8px 12px 0;
+    background: #0F172A;
+  }
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    background: #1E293B;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: #94A3B8;
+  }
+  .tab img {
+    width: 14px;
+    height: 14px;
+  }
+  .tab-inactive {
+    background: transparent;
+    color: #475569;
+  }
+  .address-bar {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: #0F172A;
+    margin: 0 12px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #475569;
+    gap: 8px;
+  }
+  .address-bar .lock { color: #00D4AA; font-size: 11px; }
+  .tab-content {
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    background: #0F1B2D;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1><strong>Möbius Strip</strong> — Corrected Topology</h1>
+  <p>One band, one 180° twist, one real crossing. The strip passes over itself — that's what makes it Möbius.</p>
+</div>
+
+<!-- Main Preview Grid -->
+<div class="grid">
+
+  <!-- Full logo on dark -->
+  <div class="card dark-bg">
+    <span class="card-label">Full Logo — Dark</span>
+    <img src="logo.svg" alt="NovaSight logo on dark background" style="width: 380px;">
+  </div>
+
+  <!-- Full logo on light -->
+  <div class="card light-bg">
+    <span class="card-label">Full Logo — Light</span>
+    <img src="logo.svg" alt="NovaSight logo on light background" style="width: 380px;">
+  </div>
+
+  <!-- Icon on dark -->
+  <div class="card dark-bg">
+    <span class="card-label">Icon — Dark</span>
+    <img src="logo-icon.svg" alt="NovaSight icon on dark" style="width: 96px;">
+  </div>
+
+  <!-- Icon on light -->
+  <div class="card light-bg">
+    <span class="card-label">Icon — Light</span>
+    <img src="logo-icon.svg" alt="NovaSight icon on light" style="width: 96px;">
+  </div>
+
+  <!-- Size Scaling -->
+  <div class="card sizes">
+    <span class="card-label">Size Scaling</span>
+    <div class="sizes-row">
+      <div class="size-item">
+        <img src="logo-icon.svg" alt="" width="96" height="96">
+        <span>96px</span>
+      </div>
+      <div class="size-item">
+        <img src="logo-icon.svg" alt="" width="64" height="64">
+        <span>64px</span>
+      </div>
+      <div class="size-item">
+        <img src="logo-icon.svg" alt="" width="48" height="48">
+        <span>48px</span>
+      </div>
+      <div class="size-item">
+        <img src="logo-icon.svg" alt="" width="32" height="32">
+        <span>32px</span>
+      </div>
+      <div class="size-item">
+        <img src="logo-icon.svg" alt="" width="24" height="24">
+        <span>24px</span>
+      </div>
+      <div class="size-item">
+        <img src="logo-icon.svg" alt="" width="16" height="16">
+        <span>16px</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar Mockup -->
+  <div class="card sidebar-card">
+    <span class="card-label" style="z-index:2;">App Sidebar</span>
+    <div class="inner">
+      <div class="sidebar-mock">
+        <div class="sidebar-logo">
+          <img src="logo-icon.svg" alt="">
+          <div class="name">Nova<span>Sight</span></div>
+        </div>
+        <div class="sidebar-item active"><span class="dot"></span> Dashboard</div>
+        <div class="sidebar-item"><span class="dot"></span> Data Sources</div>
+        <div class="sidebar-item"><span class="dot"></span> Semantic Layer</div>
+        <div class="sidebar-item"><span class="dot"></span> Pipelines</div>
+        <div class="sidebar-item"><span class="dot"></span> Reports</div>
+        <div class="sidebar-item"><span class="dot"></span> AI Insights</div>
+        <div class="sidebar-item"><span class="dot"></span> Settings</div>
+      </div>
+      <div class="sidebar-main">
+        <img src="logo.svg" alt="" style="width: 280px; opacity: 0.12;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Symbolism Table -->
+<div class="symbolism">
+  <h3>Symbolic Layering</h3>
+  <div class="sym-row">
+    <span class="sym-element">🔄 The Twist</span>
+    <span class="sym-meaning">Insight / Transformation / The "Aha" Moment</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">♾️ Continuous Loop</span>
+    <span class="sym-meaning">End-to-end Data Lifecycle</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">📐 Single Surface</span>
+    <span class="sym-meaning">Unified Semantic Truth</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">✨ Gold Glow at Twist</span>
+    <span class="sym-meaning">Value emerges at the transformation point</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">🟢 Teal → Gold Gradient</span>
+    <span class="sym-meaning">Raw data → Actionable insight</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">⚫ Negative Space</span>
+    <span class="sym-meaning">Transparency & Trust</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">💠 Data Pulse Dots</span>
+    <span class="sym-meaning">Continuous data flow through the platform</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">🔷 Back Surface Visible</span>
+    <span class="sym-meaning">Multiple perspectives, one truth</span>
+  </div>
+</div>
+
+<!-- Favicon Test -->
+<div class="favicon-test">
+  <h3>Favicon & Tab Test</h3>
+  <div class="favicon-row">
+    <div class="favicon-item">
+      <div class="favicon-frame" style="width:16px; height:16px;">
+        <img src="logo-icon.svg" alt="" width="16" height="16">
+      </div>
+      <span>16×16</span>
+    </div>
+    <div class="favicon-item">
+      <div class="favicon-frame" style="width:24px; height:24px;">
+        <img src="logo-icon.svg" alt="" width="24" height="24">
+      </div>
+      <span>24×24</span>
+    </div>
+    <div class="favicon-item">
+      <div class="favicon-frame" style="width:32px; height:32px;">
+        <img src="logo-icon.svg" alt="" width="32" height="32">
+      </div>
+      <span>32×32</span>
+    </div>
+    <div class="favicon-item">
+      <div class="favicon-frame" style="width:48px; height:48px;">
+        <img src="logo-icon.svg" alt="" width="48" height="48">
+      </div>
+      <span>48×48</span>
+    </div>
+  </div>
+</div>
+
+<!-- Browser Tab Mockup -->
+<div class="tab-mock">
+  <div class="tab-bar">
+    <div class="tab">
+      <img src="logo-icon.svg" alt="">
+      NovaSight — Dashboard
+    </div>
+    <div class="tab tab-inactive">
+      New Tab
+    </div>
+  </div>
+  <div class="address-bar">
+    <span class="lock">🔒</span>
+    app.novasight.io/dashboard
+  </div>
+  <div class="tab-content">
+    <img src="logo.svg" alt="" style="width: 240px; opacity: 0.2;">
+  </div>
+</div>
+
+<!-- Möbius Topology -->
+<div class="symbolism">
+  <h3>Möbius Strip Topology</h3>
+  <div class="sym-row">
+    <span class="sym-element">✓ Real Crossing</span>
+    <span class="sym-meaning">One part of the band visibly passes OVER the other — the defining visual of a Möbius strip</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">✓ Single Band</span>
+    <span class="sym-meaning">One continuous ribbon forming a closed loop with consistent width throughout</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">✓ 180° Half-Twist</span>
+    <span class="sym-meaning">The band twists once — outer edge becomes inner edge, front face becomes back face</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">✓ Over/Under Depth</span>
+    <span class="sym-meaning">Back-to-front rendering creates real occlusion — the crossing isn't faked with outlines</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">✓ Continuous Color Shift</span>
+    <span class="sym-meaning">Teal (front face) → deep blue (back face) — shading rotates through the twist</span>
+  </div>
+  <div class="sym-row">
+    <span class="sym-element">✓ One-Sided Surface</span>
+    <span class="sym-meaning">After the twist, the "back" IS the "front" — Möbius topology means one continuous surface</span>
+  </div>
+</div>
+
+<!-- Technical Specs -->
+<div class="specs">
+  <h3>Design Properties</h3>
+  <div class="spec-tags">
+    <span class="spec-tag">One Band</span>
+    <span class="spec-tag">One 180° Twist</span>
+    <span class="spec-tag">Continuous Normal Rotation</span>
+    <span class="spec-tag">No Fake Crossings</span>
+    <span class="spec-tag">Natural Negative Space</span>
+    <span class="spec-tag">Back-to-Front Occlusion</span>
+    <span class="spec-tag">Lit Face → Shadow Face</span>
+    <span class="spec-tag">Zero Decoration</span>
+    <span class="spec-tag">Scales to 16px</span>
+  </div>
+</div>
+
+<!-- Color Palette -->
+<div class="specs">
+  <h3>Color System</h3>
+</div>
+<div class="palette">
+  <div class="swatch">
+    <div class="swatch-color" style="background:#0F1B2D;"></div>
+    <span class="swatch-name">Deep Space</span>
+    <span class="swatch-hex">#0F1B2D</span>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#1E3A5F;"></div>
+    <span class="swatch-name">Ocean</span>
+    <span class="swatch-hex">#1E3A5F</span>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#00D4AA;"></div>
+    <span class="swatch-name">Electric Teal</span>
+    <span class="swatch-hex">#00D4AA</span>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#00917C;"></div>
+    <span class="swatch-name">Emerald</span>
+    <span class="swatch-hex">#00917C</span>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#FFB800;"></div>
+    <span class="swatch-name">Nova Gold</span>
+    <span class="swatch-hex">#FFB800</span>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#64748B;"></div>
+    <span class="swatch-name">Slate</span>
+    <span class="swatch-hex">#64748B</span>
+  </div>
+  <div class="swatch">
+    <div class="swatch-color" style="background:#E2E8F0;"></div>
+    <span class="swatch-name">Cloud</span>
+    <span class="swatch-hex">#E2E8F0</span>
+  </div>
+</div>
+
+</body>
+</html>

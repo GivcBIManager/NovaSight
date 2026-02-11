@@ -45,7 +45,7 @@ class ConnectionConfig(BaseModel):
     password: str = Field(..., min_length=1)
     ssl: bool = True
     ssl_mode: Optional[str] = None
-    schema: Optional[str] = None
+    schema_name: Optional[str] = Field(default=None, alias="schema")
     extra_params: Dict[str, Any] = Field(default_factory=dict)
 
     @validator('host')
@@ -59,8 +59,7 @@ class ConnectionConfig(BaseModel):
             pass
         return v
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = {"arbitrary_types_allowed": True, "populate_by_name": True}
 
 
 # ─── Abstract Base Connector ──────────────────────────────────────

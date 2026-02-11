@@ -573,3 +573,95 @@ class ConnectionService(IConnectionProvider, ISchemaProvider):
                 f"Failed to get columns for {table_name} in connection {connection_id}: {e}"
             )
             return []
+
+    def execute_query(
+        self,
+        connection_id: str,
+        sql: str,
+        limit: int = 1000,
+    ) -> Dict[str, Any]:
+        """
+        Execute a SQL query against a connection.
+
+        Args:
+            connection_id: Connection UUID
+            sql: SQL query to execute
+            limit: Maximum rows to return
+
+        Returns:
+            Query result with columns, rows, and metadata
+        """
+        import time
+
+        connection = self.get_connection(connection_id)
+        if not connection:
+            raise ValueError(f"Connection {connection_id} not found")
+
+        # Validate query - only SELECT allowed
+        sql_stripped = sql.strip().upper()
+        if not sql_stripped.startswith("SELECT"):
+            raise ValueError("Only SELECT queries are allowed")
+
+        dangerous_keywords = ["DROP", "TRUNCATE", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE"]
+        for keyword in dangerous_keywords:
+            if keyword in sql_stripped:
+                raise ValueError(f"Query contains disallowed keyword: {keyword}")
+
+        try:
+            password = self._encryption.decrypt(connection.password_encrypted)
+
+            config = ConnectionConfig(
+                host=connection.host,
+                port=connection.port,
+                database=connection.database,
+                username=connection.username,
+                password=password,
+                ssl_mode=connection.ssl_mode,
+                ssl=bool(connection.ssl_mode),
+                schema=connection.schema_name,
+                extra_params=connection.extra_params,
+            )
+
+            connector = ConnectorRegistry.create_connector(
+                connection.db_type.value, config
+            )
+
+            # Add LIMIT if not present
+            if "LIMIT" not in sql_stripped:
+                sql = f"{sql.rstrip().rstrip(';')} LIMIT {limit}"
+
+            start_time = time.time()
+
+            with connector:
+                # Use fetch_data to get rows as dictionaries
+                all_rows = []
+                columns = []
+                truncated = False
+
+                for batch in connector.fetch_data(sql, batch_size=limit):
+                    if batch:
+                        # Get column names from first row
+                        if not columns and batch:
+                            columns = [{"name": col, "type": "unknown"} for col in batch[0].keys()]
+                        all_rows.extend(batch)
+                        if len(all_rows) >= limit:
+                            all_rows = all_rows[:limit]
+                            truncated = True
+                            break
+
+                execution_time_ms = int((time.time() - start_time) * 1000)
+
+                return {
+                    "columns": columns,
+                    "rows": all_rows,
+                    "row_count": len(all_rows),
+                    "execution_time_ms": execution_time_ms,
+                    "truncated": truncated,
+                }
+
+        except ConnectorException as e:
+            logger.error(f"Query execution failed for connection {connection_id}: {e}")
+            raise ValueError(f"Query execution failed: {str(e)}")
+        except Exception as e:
+            logger.error(f"Query execution failed for connection {connection_id}: {e}")
+            raise ValueError(f"Query execution failed: {str(e)}")

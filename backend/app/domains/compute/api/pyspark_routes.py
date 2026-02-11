@@ -253,11 +253,15 @@ def generate_pyspark_code(app_id: str):
     """
     Generate PySpark code from app configuration.
     
+    Writes the generated code to:
+    1. Database (app.generated_code) for persistence
+    2. /opt/spark/jobs/{app_name}.py file for execution
+    
     Path Parameters:
         - app_id: PySpark app UUID
     
     Returns:
-        Generated code and metadata
+        Generated code and metadata including job file path
     """
     identity = get_current_identity()
     tenant_id = identity.tenant_id
@@ -271,6 +275,7 @@ def generate_pyspark_code(app_id: str):
         "template_version": metadata["template_version"],
         "parameters_hash": metadata["parameters_hash"],
         "generated_at": metadata["generated_at"],
+        "job_file_path": metadata.get("job_file_path"),
     })
 
 

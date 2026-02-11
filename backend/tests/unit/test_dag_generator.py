@@ -488,7 +488,7 @@ class TestPySparkDAGGenerator:
         """Test initialization."""
         assert pyspark_dag_generator.tenant_id == "test-tenant-123"
         assert pyspark_dag_generator.dags_path == Path('/opt/airflow/dags')
-        assert pyspark_dag_generator.spark_apps_path == Path('/opt/airflow/spark_apps')
+        assert pyspark_dag_generator.spark_jobs_path == Path('/opt/spark/jobs')
     
     def test_is_tenant_dag_pyspark(self, pyspark_dag_generator):
         """Test tenant DAG detection for pyspark DAGs."""

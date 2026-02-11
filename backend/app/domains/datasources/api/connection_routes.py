@@ -15,6 +15,7 @@ from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 
 from app.api.v1 import api_v1_bp
+from app.extensions import db
 from app.domains.datasources.application.connection_service import ConnectionService
 from app.platform.auth.identity import get_current_identity
 from app.decorators import require_roles, require_tenant_context
@@ -290,3 +291,320 @@ def trigger_connection_sync(connection_id: str):
         "status": "started",
         "message": "Data sync job started successfully",
     })
+
+
+@api_v1_bp.route("/query/execute", methods=["POST"])
+@jwt_required()
+@require_tenant_context
+@require_roles(["data_engineer", "tenant_admin", "analyst", "viewer"])
+def execute_query():
+    """Execute a SQL query against a connection."""
+    identity = get_current_identity()
+    tenant_id = identity.tenant_id
+    data = request.get_json()
+
+    if not data:
+        raise ValidationError("Request body required")
+
+    connection_id = data.get("connection_id")
+    sql = data.get("sql")
+    limit = data.get("limit", 1000)
+
+    if not connection_id:
+        raise ValidationError("connection_id is required")
+    if not sql:
+        raise ValidationError("sql is required")
+
+    connection_service = ConnectionService(tenant_id)
+
+    try:
+        result = connection_service.execute_query(
+            connection_id=connection_id,
+            sql=sql,
+            limit=limit,
+        )
+        return jsonify(result)
+
+    except ValueError as e:
+        raise ValidationError(str(e))
+
+
+# ─── Tenant ClickHouse Endpoints ──────────────────────────────────────
+
+
+@api_v1_bp.route("/clickhouse/info", methods=["GET"])
+@jwt_required()
+@require_tenant_context
+def get_tenant_clickhouse_info():
+    """Get tenant's ClickHouse database information."""
+    from app.platform.tenant.isolation import TenantIsolationService
+    
+    identity = get_current_identity()
+    tenant_id = identity.tenant_id
+    
+    isolation = TenantIsolationService(tenant_id)
+    
+    return jsonify({
+        "database": isolation.tenant_database,
+        "tenant_id": tenant_id,
+        "type": "clickhouse",
+        "name": f"Tenant ClickHouse ({isolation.tenant_database})",
+    })
+
+
+@api_v1_bp.route("/clickhouse/query", methods=["POST"])
+@jwt_required()
+@require_tenant_context
+@require_roles(["data_engineer", "tenant_admin", "analyst", "viewer"])
+def execute_clickhouse_query():
+    """Execute a SQL query against tenant's ClickHouse database."""
+    import time
+    from app.domains.analytics.infrastructure.clickhouse_client import get_clickhouse_client
+    from app.platform.tenant.isolation import TenantIsolationService
+    
+    identity = get_current_identity()
+    tenant_id = identity.tenant_id
+    data = request.get_json()
+
+    if not data:
+        raise ValidationError("Request body required")
+
+    sql = data.get("sql")
+    limit = data.get("limit", 1000)
+
+    if not sql:
+        raise ValidationError("sql is required")
+
+    # Validate query
+    sql_stripped = sql.strip().upper()
+    if not sql_stripped.startswith("SELECT"):
+        raise ValidationError("Only SELECT queries are allowed")
+
+    dangerous_keywords = ["DROP", "TRUNCATE", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE"]
+    for keyword in dangerous_keywords:
+        if keyword in sql_stripped:
+            raise ValidationError(f"Query contains disallowed keyword: {keyword}")
+
+    try:
+        # Get tenant-specific ClickHouse client
+        isolation = TenantIsolationService(tenant_id)
+        client = get_clickhouse_client(database=isolation.tenant_database)
+        
+        # Add LIMIT if not present
+        if "LIMIT" not in sql_stripped:
+            sql = f"{sql.rstrip().rstrip(';')} LIMIT {limit}"
+        
+        start_time = time.time()
+        result = client.execute(sql)
+        execution_time_ms = int((time.time() - start_time) * 1000)
+        
+        columns = result.columns if hasattr(result, 'columns') else []
+        rows = result.to_records() if hasattr(result, 'to_records') else []
+        
+        return jsonify({
+            "columns": [{"name": col, "type": "unknown"} for col in columns],
+            "rows": rows[:limit],
+            "row_count": len(rows),
+            "execution_time_ms": execution_time_ms,
+            "truncated": len(rows) > limit,
+        })
+
+    except Exception as e:
+        logger.error(f"ClickHouse query failed: {e}")
+        raise ValidationError(f"Query execution failed: {str(e)}")
+
+
+# ─── Saved Queries Endpoints ──────────────────────────────────────
+
+
+@api_v1_bp.route("/saved-queries", methods=["GET"])
+@jwt_required()
+@require_tenant_context
+def list_saved_queries():
+    """List saved queries for the current tenant."""
+    from app.domains.datasources.domain.models import SavedQuery
+    
+    identity = get_current_identity()
+    user_id = identity.user_id
+    
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 20, type=int)
+    query_type = request.args.get("query_type")
+    
+    query = SavedQuery.query
+    
+    # Filter by type if specified
+    if query_type:
+        from app.domains.datasources.domain.models import QueryType
+        try:
+            qt = QueryType(query_type)
+            query = query.filter(SavedQuery.query_type == qt)
+        except ValueError:
+            pass
+    
+    # Show user's own queries and public queries
+    query = query.filter(
+        db.or_(
+            SavedQuery.created_by == user_id,
+            SavedQuery.is_public == True
+        )
+    )
+    
+    query = query.order_by(SavedQuery.updated_at.desc())
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    return jsonify({
+        "items": [q.to_dict() for q in pagination.items],
+        "total": pagination.total,
+        "page": pagination.page,
+        "per_page": pagination.per_page,
+        "pages": pagination.pages,
+    })
+
+
+@api_v1_bp.route("/saved-queries", methods=["POST"])
+@jwt_required()
+@require_tenant_context
+def create_saved_query():
+    """Create a new saved query."""
+    from app.domains.datasources.domain.models import SavedQuery, QueryType
+    
+    identity = get_current_identity()
+    tenant_id = identity.tenant_id
+    user_id = identity.user_id
+    data = request.get_json()
+
+    if not data:
+        raise ValidationError("Request body required")
+
+    name = data.get("name")
+    sql = data.get("sql")
+
+    if not name:
+        raise ValidationError("name is required")
+    if not sql:
+        raise ValidationError("sql is required")
+
+    # Check for duplicate name
+    existing = SavedQuery.query.filter_by(tenant_id=tenant_id, name=name).first()
+    if existing:
+        raise ValidationError(f"A query with name '{name}' already exists")
+
+    query_type = QueryType.ADHOC
+    if data.get("query_type"):
+        try:
+            query_type = QueryType(data.get("query_type"))
+        except ValueError:
+            pass
+
+    saved_query = SavedQuery(
+        tenant_id=tenant_id,
+        name=name,
+        description=data.get("description"),
+        sql=sql,
+        query_type=query_type,
+        tags=data.get("tags", []),
+        connection_id=data.get("connection_id"),
+        is_clickhouse=data.get("is_clickhouse", False),
+        is_public=data.get("is_public", False),
+        created_by=user_id,
+    )
+    
+    db.session.add(saved_query)
+    db.session.commit()
+    
+    logger.info(f"Saved query '{name}' created by user {user_id}")
+    
+    return jsonify({"saved_query": saved_query.to_dict()}), 201
+
+
+@api_v1_bp.route("/saved-queries/<query_id>", methods=["GET"])
+@jwt_required()
+@require_tenant_context
+def get_saved_query(query_id: str):
+    """Get a saved query by ID."""
+    from app.domains.datasources.domain.models import SavedQuery
+    
+    identity = get_current_identity()
+    user_id = identity.user_id
+    
+    saved_query = SavedQuery.query.filter_by(id=query_id).first()
+    
+    if not saved_query:
+        raise NotFoundError("Saved query not found")
+    
+    # Check access
+    if not saved_query.is_public and str(saved_query.created_by) != str(user_id):
+        raise NotFoundError("Saved query not found")
+    
+    return jsonify({"saved_query": saved_query.to_dict()})
+
+
+@api_v1_bp.route("/saved-queries/<query_id>", methods=["PATCH"])
+@jwt_required()
+@require_tenant_context
+def update_saved_query(query_id: str):
+    """Update a saved query."""
+    from app.domains.datasources.domain.models import SavedQuery, QueryType
+    
+    identity = get_current_identity()
+    user_id = identity.user_id
+    data = request.get_json()
+
+    if not data:
+        raise ValidationError("Request body required")
+
+    saved_query = SavedQuery.query.filter_by(id=query_id).first()
+    
+    if not saved_query:
+        raise NotFoundError("Saved query not found")
+    
+    # Only owner can update
+    if str(saved_query.created_by) != str(user_id):
+        raise ValidationError("You can only update your own queries")
+
+    # Update fields
+    if "name" in data:
+        saved_query.name = data["name"]
+    if "description" in data:
+        saved_query.description = data["description"]
+    if "sql" in data:
+        saved_query.sql = data["sql"]
+    if "query_type" in data:
+        try:
+            saved_query.query_type = QueryType(data["query_type"])
+        except ValueError:
+            pass
+    if "tags" in data:
+        saved_query.tags = data["tags"]
+    if "is_public" in data:
+        saved_query.is_public = data["is_public"]
+    
+    db.session.commit()
+    
+    return jsonify({"saved_query": saved_query.to_dict()})
+
+
+@api_v1_bp.route("/saved-queries/<query_id>", methods=["DELETE"])
+@jwt_required()
+@require_tenant_context
+def delete_saved_query(query_id: str):
+    """Delete a saved query."""
+    from app.domains.datasources.domain.models import SavedQuery
+    
+    identity = get_current_identity()
+    user_id = identity.user_id
+
+    saved_query = SavedQuery.query.filter_by(id=query_id).first()
+    
+    if not saved_query:
+        raise NotFoundError("Saved query not found")
+    
+    # Only owner can delete
+    if str(saved_query.created_by) != str(user_id):
+        raise ValidationError("You can only delete your own queries")
+
+    db.session.delete(saved_query)
+    db.session.commit()
+    
+    return jsonify({"message": "Saved query deleted successfully"})

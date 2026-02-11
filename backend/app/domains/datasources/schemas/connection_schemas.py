@@ -38,7 +38,7 @@ class ConnectionConfigSchema(BaseModel):
     username: str = Field(..., min_length=1, max_length=255)
     password: str = Field(..., min_length=1)
     ssl_mode: Optional[str] = Field(None, max_length=50)
-    schema: Optional[str] = Field(None, max_length=255)
+    schema_name: Optional[str] = Field(None, max_length=255, alias="schema")
 
     @validator('host')
     def validate_host(cls, v):
@@ -55,8 +55,9 @@ class ConnectionConfigSchema(BaseModel):
             pass
         return v
 
-    class Config:
-        schema_extra = {
+    model_config = {
+        "populate_by_name": True,
+        "json_schema_extra": {
             "example": {
                 "host": "db.example.com",
                 "port": 5432,
@@ -67,6 +68,7 @@ class ConnectionConfigSchema(BaseModel):
                 "schema": "public",
             }
         }
+    }
 
 
 class ConnectionCreateSchema(BaseModel):
@@ -146,11 +148,12 @@ class ConnectionResponseSchema(BaseModel):
     updated_at: datetime
     created_by: str
 
-    class Config:
-        orm_mode = True
-        json_encoders = {
+    model_config = {
+        "from_attributes": True,
+        "json_encoders": {
             datetime: lambda v: v.isoformat() if v else None,
         }
+    }
 
 
 class ColumnSchema(BaseModel):
@@ -168,7 +171,9 @@ class ColumnSchema(BaseModel):
 class TableSchema(BaseModel):
     """Schema for table information."""
     name: str
-    schema: str
+    schema_name: str = Field(..., alias="schema")
+    
+    model_config = {"populate_by_name": True}
     row_count: int = 0
     comment: Optional[str] = None
     table_type: str = "BASE TABLE"
@@ -188,8 +193,8 @@ class ConnectionTestResultSchema(BaseModel):
     details: Optional[Dict[str, Any]] = None
     version: Optional[str] = None
 
-    class Config:
-        schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "success": True,
                 "message": "Connection successful",
@@ -200,6 +205,7 @@ class ConnectionTestResultSchema(BaseModel):
                 },
             }
         }
+    }
 
 
 class ConnectionListQuerySchema(BaseModel):

@@ -25,8 +25,17 @@ import app.models  # noqa: F401
 config = context.config
 
 # Interpret the config file for Python logging
+# Handle both running from /app and /app/migrations
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    config_path = config.config_file_name
+    if not os.path.isabs(config_path):
+        # Try relative to backend root first
+        backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        abs_path = os.path.join(backend_root, config_path)
+        if os.path.exists(abs_path):
+            config_path = abs_path
+    if os.path.exists(config_path):
+        fileConfig(config_path)
 
 # Get database URL from app config
 app_config = get_config(os.getenv("FLASK_ENV", "development"))

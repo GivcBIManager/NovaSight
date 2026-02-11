@@ -45,6 +45,88 @@ class ConnectionStatus(enum.Enum):
     TESTING = "testing"
 
 
+class QueryType(enum.Enum):
+    """Saved query type for categorization."""
+    ADHOC = "adhoc"
+    PYSPARK = "pyspark"
+    DBT = "dbt"
+    REPORT = "report"
+
+
+# ─── SavedQuery Model ──────────────────────────────────────────────
+
+class SavedQuery(TenantMixin, TimestampMixin, db.Model):
+    """
+    Saved SQL query model.
+    
+    Stores reusable SQL queries that can be used in:
+    - SQL Editor
+    - PySpark builder
+    - dbt modeling
+    """
+    
+    __tablename__ = "saved_queries"
+    
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Query metadata
+    name = db.Column(String(255), nullable=False)
+    description = db.Column(Text, nullable=True)
+    
+    # Query content
+    sql = db.Column(Text, nullable=False)
+    
+    # Classification
+    query_type = db.Column(
+        SQLEnum(QueryType),
+        default=QueryType.ADHOC,
+        nullable=False,
+    )
+    tags = db.Column(JSONB, default=list, nullable=False)
+    
+    # Connection reference (optional - for connection-specific queries)
+    connection_id = db.Column(UUID(as_uuid=True), ForeignKey("data_connections.id"), nullable=True)
+    
+    # For ClickHouse tenant DB queries
+    is_clickhouse = db.Column(Boolean, default=False, nullable=False)
+    
+    # Visibility
+    is_public = db.Column(Boolean, default=False, nullable=False)  # Shared within tenant
+    
+    # Audit
+    created_by = db.Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    
+    # Unique name within tenant
+    __table_args__ = (
+        db.UniqueConstraint("tenant_id", "name", name="uq_tenant_savedquery_name"),
+    )
+    
+    # Relationships
+    creator = relationship("User", foreign_keys=[created_by])
+    connection = relationship("DataConnection", foreign_keys=[connection_id])
+    
+    def __repr__(self):
+        return f"<SavedQuery {self.name}>"
+    
+    def to_dict(self) -> dict:
+        """Convert to dictionary."""
+        return {
+            "id": str(self.id),
+            "tenant_id": str(self.tenant_id),
+            "name": self.name,
+            "description": self.description,
+            "sql": self.sql,
+            "query_type": self.query_type.value,
+            "tags": self.tags or [],
+            "connection_id": str(self.connection_id) if self.connection_id else None,
+            "is_clickhouse": self.is_clickhouse,
+            "is_public": self.is_public,
+            "created_by": str(self.created_by),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 # ─── DataConnection Model ──────────────────────────────────────────
 
 class DataConnection(TenantMixin, TimestampMixin, db.Model):

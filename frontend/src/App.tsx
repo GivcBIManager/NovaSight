@@ -32,6 +32,7 @@ import {
 import { SemanticModelsPage, ModelDetailPage } from '@/features/semantic'
 import { DashboardsListPage, DashboardBuilderPage } from '@/features/dashboards'
 import { QueryPage } from '@/features/query'
+import { SqlEditorPage } from '@/features/sql-editor'
 import { DocumentationPage } from '@/pages/documentation'
 import { InfrastructureConfigPage, AuditLogsPage, RolesManagementPage, DbtOperationsPage, BackupManagementPage } from '@/pages/admin'
 import { SettingsPage } from '@/pages/settings'
@@ -124,6 +125,9 @@ function App() {
             
             {/* AI Query Interface */}
             <Route path="query" element={<QueryPage />} />
+            
+            {/* SQL Editor */}
+            <Route path="sql" element={<SqlEditorPage />} />
             
             {/* Admin Pages */}
             <Route path="admin/infrastructure" element={<InfrastructureConfigPage />} />

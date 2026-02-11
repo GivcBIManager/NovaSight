@@ -8,6 +8,7 @@ Business logic for PySpark application configuration and code generation.
 import hashlib
 import json
 import logging
+from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
 from uuid import UUID
@@ -43,6 +44,9 @@ class PySparkAppService:
         SCDType.TYPE1: "pyspark/scd_type1.py.j2",
         SCDType.TYPE2: "pyspark/scd_type2.py.j2",
     }
+    
+    # Spark jobs directory path (mounted volume shared between containers)
+    SPARK_JOBS_PATH = Path("/opt/spark/jobs")
     
     def __init__(self, tenant_id: str, tenant_slug: Optional[str] = None):
         """
@@ -336,6 +340,15 @@ class PySparkAppService:
         if not app:
             raise NotFoundError(f"PySpark app {app_id} not found")
         
+        # Delete the PySpark job file if it exists
+        job_file_path = self.SPARK_JOBS_PATH / self._get_job_filename(app)
+        try:
+            if job_file_path.exists():
+                job_file_path.unlink()
+                logger.info(f"Deleted PySpark job file: {job_file_path}")
+        except Exception as e:
+            logger.warning(f"Failed to delete PySpark job file {job_file_path}: {e}")
+        
         db.session.delete(app)
         db.session.commit()
         
@@ -387,15 +400,53 @@ class PySparkAppService:
         
         db.session.commit()
         
+        # Write PySpark job file to the shared Spark jobs directory
+        # This file will be accessible by both Airflow and Spark containers
+        job_filename = self._get_job_filename(app)
+        job_file_path = self.SPARK_JOBS_PATH / job_filename
+        try:
+            self.SPARK_JOBS_PATH.mkdir(parents=True, exist_ok=True)
+            job_file_path.write_text(generated_code)
+            logger.info(f"Wrote PySpark job file: {job_file_path}")
+        except Exception as e:
+            logger.warning(f"Failed to write PySpark job file to {job_file_path}: {e}")
+        
         metadata = {
             "template_name": template_name,
             "template_version": self.template_engine.TEMPLATE_VERSION,
             "parameters_hash": code_hash,
             "generated_at": app.generated_at.isoformat(),
+            "job_file_path": str(job_file_path),
         }
         
         logger.info(f"Generated code for PySpark app: {app_id}")
         return generated_code, metadata
+    
+    def _get_job_filename(self, app: PySparkApp) -> str:
+        """
+        Generate a consistent job filename for a PySpark app.
+        
+        Uses app name with sanitization for filesystem safety.
+        """
+        import re
+        # Sanitize app name for use as filename
+        safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', app.name.lower())
+        return f"{safe_name}.py"
+    
+    def get_job_file_path(self, app_id: str) -> Optional[Path]:
+        """
+        Get the path to the PySpark job file for an app.
+        
+        Args:
+            app_id: App UUID
+            
+        Returns:
+            Path to the job file or None if app not found
+        """
+        app = self.get_app(app_id)
+        if not app:
+            return None
+        return self.SPARK_JOBS_PATH / self._get_job_filename(app)
     
     def preview_code(
         self,

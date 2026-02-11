@@ -12,13 +12,15 @@ echo "Waiting for Airflow database..."
 sleep 10
 
 # Create Spark connection
+# NOTE: For Airflow 3.x Spark provider, the host must include the spark:// protocol prefix
+# and spark-home is deprecated - use spark-binary instead (must be on PATH, not full path)
 echo "Creating Spark connection..."
 airflow connections delete spark_default 2>/dev/null || true
 airflow connections add spark_default \
     --conn-type spark \
-    --conn-host spark-master \
+    --conn-host "spark://spark-master" \
     --conn-port 7077 \
-    --conn-extra '{"queue": "root.default", "deploy-mode": "client", "spark-home": "/opt/spark", "spark-binary": "spark-submit"}'
+    --conn-extra '{"queue": "root.default", "deploy-mode": "client", "spark-binary": "spark-submit"}'
 
 echo "Spark connection 'spark_default' created successfully"
 
