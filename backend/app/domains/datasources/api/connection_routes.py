@@ -20,6 +20,7 @@ from app.domains.datasources.application.connection_service import ConnectionSer
 from app.platform.auth.identity import get_current_identity
 from app.decorators import require_roles, require_tenant_context
 from app.errors import ValidationError, NotFoundError
+from app.services.audit_service import AuditService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,7 @@ def create_connection():
             username=data["username"],
             password=data["password"],
             ssl_mode=ssl_mode,
+            schema_name=data.get("schema_name"),
             extra_params=data.get("extra_params", {}),
             created_by=user_id,
         )
@@ -96,6 +98,16 @@ def create_connection():
         raise ValidationError(str(e))
 
     logger.info(f"Connection '{data['name']}' created in tenant {tenant_id}")
+    
+    # Audit log: connection created
+    AuditService.log(
+        action='connection.created',
+        resource_type='connection',
+        resource_id=str(connection.id),
+        resource_name=data['name'],
+        tenant_id=tenant_id,
+        extra_data={'db_type': data['db_type'], 'host': data['host']},
+    )
 
     return jsonify({"connection": connection.to_dict(mask_password=True)}), 201
 
@@ -137,6 +149,16 @@ def update_connection(connection_id: str):
         raise NotFoundError("Connection not found")
 
     logger.info(f"Connection {connection_id} updated in tenant {tenant_id}")
+    
+    # Audit log: connection updated
+    AuditService.log(
+        action='connection.updated',
+        resource_type='connection',
+        resource_id=connection_id,
+        resource_name=connection.name,
+        tenant_id=tenant_id,
+        changes={'updated_fields': list(data.keys())},
+    )
 
     return jsonify({"connection": connection.to_dict(mask_password=True)})
 
@@ -157,6 +179,14 @@ def delete_connection(connection_id: str):
         raise NotFoundError("Connection not found")
 
     logger.info(f"Connection {connection_id} deleted from tenant {tenant_id}")
+    
+    # Audit log: connection deleted
+    AuditService.log(
+        action='connection.deleted',
+        resource_type='connection',
+        resource_id=connection_id,
+        tenant_id=tenant_id,
+    )
 
     return jsonify({"message": "Connection deleted successfully"})
 
@@ -172,6 +202,16 @@ def test_connection(connection_id: str):
 
     connection_service = ConnectionService(tenant_id)
     result = connection_service.test_connection(connection_id)
+
+    # Audit log: connection tested
+    AuditService.log(
+        action='connection.tested',
+        resource_type='connection',
+        resource_id=connection_id,
+        tenant_id=tenant_id,
+        success=result["success"],
+        error_message=result.get("error") if not result["success"] else None,
+    )
 
     if not result["success"]:
         return jsonify({

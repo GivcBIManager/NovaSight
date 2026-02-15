@@ -54,15 +54,28 @@ interface Permission {
   category: string
 }
 
+// Permissions can be either an array ["*"] or a dict {"category": ["perm1", "perm2"]}
+type PermissionsData = string[] | Record<string, string[]>
+
 interface Role {
   id: string
   name: string
   display_name: string
   description: string
   is_system: boolean
-  permissions: string[]
+  permissions: PermissionsData
   user_count?: number
   created_at: string
+}
+
+// Helper to flatten permissions dict/array to a flat array of permission names
+function flattenPermissions(permissions: PermissionsData): string[] {
+  if (!permissions) return []
+  if (Array.isArray(permissions)) {
+    return permissions
+  }
+  // It's a dict like {"category": ["perm1", "perm2"]}
+  return Object.values(permissions).flat()
 }
 
 export function RolesManagementPage() {
@@ -77,7 +90,7 @@ export function RolesManagementPage() {
   const { data: rolesData, isLoading: rolesLoading, refetch } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
-      const res = await api.get('/roles')
+      const res = await api.get('/api/v1/roles')
       return res.data
     },
   })
@@ -86,7 +99,7 @@ export function RolesManagementPage() {
   const { data: permissionsData } = useQuery({
     queryKey: ['permissions'],
     queryFn: async () => {
-      const res = await api.get('/roles/permissions')
+      const res = await api.get('/api/v1/roles/permissions')
       return res.data
     },
   })
@@ -94,7 +107,7 @@ export function RolesManagementPage() {
   // Delete role
   const deleteRole = useMutation({
     mutationFn: async (roleId: string) => {
-      await api.delete(`/roles/${roleId}`)
+      await api.delete(`/api/v1/roles/${roleId}`)
     },
     onSuccess: () => {
       toast({ title: 'Success', description: 'Role deleted successfully' })
@@ -192,17 +205,17 @@ export function RolesManagementPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Key className="h-4 w-4 text-muted-foreground" />
-                    <span>{role.permissions.length} permissions</span>
+                    <span>{flattenPermissions(role.permissions).length} permissions</span>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {role.permissions.slice(0, 5).map((perm) => (
+                    {flattenPermissions(role.permissions).slice(0, 5).map((perm) => (
                       <Badge key={perm} variant="outline" className="text-xs">
                         {perm}
                       </Badge>
                     ))}
-                    {role.permissions.length > 5 && (
+                    {flattenPermissions(role.permissions).length > 5 && (
                       <Badge variant="outline" className="text-xs">
-                        +{role.permissions.length - 5} more
+                        +{flattenPermissions(role.permissions).length - 5} more
                       </Badge>
                     )}
                   </div>
@@ -295,7 +308,9 @@ function RoleFormDialog({ open, role, permissionsByCategory, onClose, onSuccess 
   const [name, setName] = useState(role?.name || '')
   const [displayName, setDisplayName] = useState(role?.display_name || '')
   const [description, setDescription] = useState(role?.description || '')
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(role?.permissions || [])
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(
+    role?.permissions ? flattenPermissions(role.permissions) : []
+  )
   const [isSaving, setIsSaving] = useState(false)
 
   // Reset form when dialog opens
@@ -304,7 +319,7 @@ function RoleFormDialog({ open, role, permissionsByCategory, onClose, onSuccess 
       setName(role?.name || '')
       setDisplayName(role?.display_name || '')
       setDescription(role?.description || '')
-      setSelectedPermissions(role?.permissions || [])
+      setSelectedPermissions(role?.permissions ? flattenPermissions(role.permissions) : [])
     }
   })
 
@@ -329,14 +344,14 @@ function RoleFormDialog({ open, role, permissionsByCategory, onClose, onSuccess 
     setIsSaving(true)
     try {
       if (role) {
-        await api.put(`/roles/${role.id}`, {
+        await api.put(`/api/v1/roles/${role.id}`, {
           display_name: displayName,
           description,
           permissions: selectedPermissions,
         })
         toast({ title: 'Success', description: 'Role updated successfully' })
       } else {
-        await api.post('/roles', {
+        await api.post('/api/v1/roles', {
           name,
           display_name: displayName,
           description,

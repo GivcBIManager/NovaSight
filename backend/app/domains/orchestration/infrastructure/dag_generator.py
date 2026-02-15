@@ -344,6 +344,7 @@ class PySparkDAGGenerator:
             "scd_type": pyspark_app.scd_type.value,
             "write_mode": pyspark_app.write_mode.value,
             "source_type": pyspark_app.source_type.value,
+            "source_table": pyspark_app.source_table or "",
             # Use tenant database as default
             "target_database": pyspark_app.target_database or self.tenant_database,
             "target_table": pyspark_app.target_table or "",

@@ -120,6 +120,7 @@ class ConnectionService(IConnectionProvider, ISchemaProvider):
         username: str,
         password: str,
         ssl_mode: Optional[str] = None,
+        schema_name: Optional[str] = None,
         extra_params: Optional[Dict[str, Any]] = None,
         created_by: str = None,
     ) -> DataConnection:
@@ -149,6 +150,7 @@ class ConnectionService(IConnectionProvider, ISchemaProvider):
             host=host,
             port=port,
             database=database,
+            schema_name=schema_name,
             username=username,
             password_encrypted=encrypted_password,
             ssl_mode=ssl_mode,
@@ -258,15 +260,26 @@ class ConnectionService(IConnectionProvider, ISchemaProvider):
 
             with connector:
                 connector.test_connection()
-                schemas = connector.get_schemas()
+                all_schemas = connector.get_schemas()
+                
+                # Filter out empty schemas (those with no tables)
+                non_empty_schemas = []
+                for schema_name in all_schemas:
+                    try:
+                        tables = connector.get_tables(schema_name)
+                        if tables:  # Only include schemas that have tables
+                            non_empty_schemas.append(schema_name)
+                    except Exception:
+                        # If we can't get tables, include the schema anyway
+                        non_empty_schemas.append(schema_name)
 
                 return {
                     "success": True,
                     "message": "Connection successful",
                     "details": {
                         "database": database,
-                        "schemas_count": len(schemas),
-                        "schemas": schemas[:10],
+                        "schemas_count": len(non_empty_schemas),
+                        "schemas": non_empty_schemas,
                     },
                 }
 

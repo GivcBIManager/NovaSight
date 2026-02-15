@@ -77,7 +77,7 @@ class SCDType2Job:
             "database": "{{ connection.database }}",
             "schema": "{{ connection.schema | default('public', true) }}",
             "username": os.getenv("SOURCE_DB_USER", "{{ connection.username }}"),
-            "password": os.getenv("SOURCE_DB_PASSWORD"),
+            "password": os.getenv("SOURCE_DB_PASSWORD", "{{ connection.password | default('', true) }}"),
         }
         
         # Target configuration

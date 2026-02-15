@@ -89,11 +89,12 @@ def upgrade():
         # Identity
         sa.Column('name', sa.String(100), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('type', sa.Enum(
+        sa.Column('type', postgresql.ENUM(
             'bar_chart', 'line_chart', 'pie_chart', 'table', 'metric_card',
             'area_chart', 'scatter_plot', 'heatmap', 'donut_chart', 'gauge',
             'treemap', 'funnel', 'text',
-            name='widgettype'
+            name='widgettype',
+            create_type=False
         ), nullable=False),
         
         # Query configuration

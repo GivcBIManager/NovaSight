@@ -40,11 +40,11 @@ import os
 from datetime import datetime, timedelta
 import pendulum
 from airflow.models.dag import DAG
-from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
-from airflow.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.python import PythonOperator
+from airflow.providers.standard.operators.bash import BashOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.utils.task_group import TaskGroup
-from airflow.utils.trigger_rule import TriggerRule
+from airflow.task.trigger_rule import TriggerRule
 {% if use_spark %}
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 {% endif %}
@@ -58,7 +58,7 @@ from airflow.providers.http.sensors.http import HttpSensor
 from airflow.sensors.external_task import ExternalTaskSensor
 {% endif %}
 {% if use_dbt %}
-from airflow.operators.bash import BashOperator
+# BashOperator already imported above for dbt commands
 {% endif %}
 {% endmacro %}
 

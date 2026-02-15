@@ -23,7 +23,9 @@ import {
   Key,
   Layers,
   Settings,
-  Loader2
+  Loader2,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -98,8 +100,10 @@ export function PySparkAppDetailPage() {
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showCode, setShowCode] = useState(true)
   
-  const { data: app, isLoading, error, refetch } = usePySparkApp(id!)
+  // Fetch app with generated code included
+  const { data: app, isLoading, error, refetch } = usePySparkApp(id!, true)
   const deleteApp = useDeletePySparkApp()
   const generateCode = useGeneratePySparkCode()
   
@@ -150,6 +154,8 @@ export function PySparkAppDetailPage() {
     
     try {
       await generateCode.mutateAsync(app.id)
+      // Refetch to get the newly generated code
+      await refetch()
       toast({
         title: 'Code Generated',
         description: 'Successfully generated PySpark code.',
@@ -456,6 +462,17 @@ export function PySparkAppDetailPage() {
                 <CardTitle>Generated PySpark Code</CardTitle>
                 {app.generated_code && (
                   <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setShowCode(!showCode)}
+                    >
+                      {showCode ? (
+                        <><EyeOff className="h-4 w-4 mr-2" />Hide Code</>
+                      ) : (
+                        <><Eye className="h-4 w-4 mr-2" />Show Code</>
+                      )}
+                    </Button>
                     <Button variant="outline" size="sm" onClick={handleCopy}>
                       <Copy className="h-4 w-4 mr-2" />
                       {copied ? 'Copied!' : 'Copy'}
@@ -475,11 +492,17 @@ export function PySparkAppDetailPage() {
             </CardHeader>
             <CardContent>
               {app.generated_code ? (
-                <div className="rounded-md overflow-hidden max-h-[600px] overflow-auto">
-                  <pre className="p-4 text-sm font-mono bg-slate-950 text-slate-50 overflow-x-auto">
-                    <code>{app.generated_code}</code>
-                  </pre>
-                </div>
+                showCode ? (
+                  <div className="rounded-md overflow-hidden max-h-[70vh] overflow-y-auto border border-slate-800">
+                    <pre className="p-4 text-sm font-mono bg-slate-950 text-slate-50 overflow-x-auto whitespace-pre min-w-max">
+                      <code>{app.generated_code}</code>
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center py-8 text-center bg-muted/30 rounded-md">
+                    <p className="text-muted-foreground">Code is hidden. Click "Show Code" to view.</p>
+                  </div>
+                )
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <FileCode className="h-12 w-12 text-muted-foreground mb-4" />

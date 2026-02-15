@@ -17,6 +17,7 @@ from app.domains.identity.application.user_service import UserService
 from app.platform.auth.jwt_handler import get_jwt_identity_dict
 from app.platform.auth.decorators import require_roles, tenant_required
 from app.platform.errors.exceptions import ValidationError, NotFoundError
+from app.services.audit_service import AuditService
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,16 @@ def create_user():
         raise ValidationError(str(e))
 
     logger.info(f"User '{data['email']}' created in tenant {tenant_id}")
+    
+    # Audit log: user created
+    AuditService.log(
+        action='user.created',
+        resource_type='user',
+        resource_id=str(user.id),
+        resource_name=user.email,
+        tenant_id=tenant_id,
+        extra_data={'roles': data.get('roles', ['viewer'])},
+    )
 
     return jsonify({"user": user.to_dict()}), 201
 
@@ -139,6 +150,16 @@ def update_user(user_id: str):
         raise NotFoundError("User not found")
 
     logger.info(f"User {user_id} updated in tenant {tenant_id}")
+    
+    # Audit log: user updated
+    AuditService.log(
+        action='user.updated',
+        resource_type='user',
+        resource_id=user_id,
+        resource_name=user.email,
+        tenant_id=tenant_id,
+        changes={'updated_fields': list(data.keys())},
+    )
 
     return jsonify({"user": user.to_dict()})
 
@@ -163,6 +184,14 @@ def delete_user(user_id: str):
         raise NotFoundError("User not found")
 
     logger.info(f"User {user_id} deleted from tenant {tenant_id}")
+    
+    # Audit log: user deleted
+    AuditService.log(
+        action='user.deleted',
+        resource_type='user',
+        resource_id=user_id,
+        tenant_id=tenant_id,
+    )
 
     return jsonify({"message": "User deleted successfully"})
 
@@ -217,6 +246,16 @@ def assign_user_roles(user_id: str):
         raise NotFoundError(str(e))
 
     logger.info(f"Roles {role_names} assigned to user {user_id} in tenant {tenant_id}")
+    
+    # Audit log: role changed
+    AuditService.log(
+        action='user.role_changed',
+        resource_type='user',
+        resource_id=user_id,
+        resource_name=user.email,
+        tenant_id=tenant_id,
+        changes={'roles': role_names},
+    )
 
     return jsonify({"user": user.to_dict()})
 

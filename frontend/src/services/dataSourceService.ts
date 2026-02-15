@@ -126,9 +126,10 @@ export const dataSourceService = {
    * Trigger data sync job
    */
   async triggerSync(id: string, config?: SyncConfig): Promise<SyncJob> {
+    // Always send an object body to ensure Content-Type: application/json is set
     const response = await apiClient.post<SyncJob>(
       `${BASE_PATH}/${id}/sync`,
-      config
+      config || {}
     )
     return response.data
   },

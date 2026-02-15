@@ -52,6 +52,19 @@ export function SchemaBrowser({
     )
   }
 
+  // Filter out empty schemas (schemas with no tables)
+  const nonEmptySchemas = schemaData.schemas.filter(s => s.tables.length > 0)
+  const totalTables = nonEmptySchemas.reduce((acc, s) => acc + s.tables.length, 0)
+
+  if (nonEmptySchemas.length === 0) {
+    return (
+      <div className="text-center p-8 text-muted-foreground">
+        <Database className="h-12 w-12 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">No tables found in any schema</p>
+      </div>
+    )
+  }
+
   return (
     <div className="border rounded-lg">
       <div className="flex items-center justify-between p-4 border-b bg-muted/50">
@@ -59,11 +72,11 @@ export function SchemaBrowser({
           <Database className="h-5 w-5 text-muted-foreground" />
           <span className="font-medium">Database Schema</span>
         </div>
-        <Badge variant="secondary">{schemaData.total_tables} tables</Badge>
+        <Badge variant="secondary">{totalTables} tables</Badge>
       </div>
 
       <div className="divide-y">
-        {schemaData.schemas.map((schema) => (
+        {nonEmptySchemas.map((schema) => (
           <SchemaItem
             key={schema.name}
             schema={schema}

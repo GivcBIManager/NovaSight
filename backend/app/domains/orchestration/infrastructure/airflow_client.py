@@ -39,7 +39,7 @@ class TaskInstance:
 
 
 class AirflowClient:
-    """Client for Airflow REST API."""
+    """Client for Airflow REST API (supports Airflow 3.x with JWT auth)."""
 
     def __init__(
         self,
@@ -57,6 +57,7 @@ class AirflowClient:
         self._client = None
         self._config_loaded = False
         self._loaded_settings: Dict[str, Any] = {}
+        self._access_token: Optional[str] = None
 
     def _load_infrastructure_config(self):
         """Load settings from infrastructure config service."""
@@ -81,7 +82,8 @@ class AirflowClient:
         return current_app.config.get("AIRFLOW_BASE_URL", "http://localhost:8080").rstrip("/")
 
     @property
-    def auth(self) -> tuple:
+    def auth_credentials(self) -> tuple:
+        """Get username and password for authentication."""
         self._load_infrastructure_config()
         username = (
             self._username
@@ -101,10 +103,57 @@ class AirflowClient:
             self._client = httpx.Client(timeout=30.0)
         return self._client
 
-    def _request(self, method: str, path: str, **kwargs) -> Dict[str, Any]:
-        url = f"{self.base_url}/api/v1{path}"
+    def _get_access_token(self) -> str:
+        """
+        Get JWT access token from Airflow 3.x auth endpoint.
+        
+        Airflow 3 uses JWT-based authentication via /auth/token endpoint.
+        """
+        if self._access_token:
+            return self._access_token
+        
+        username, password = self.auth_credentials
+        url = f"{self.base_url}/auth/token"
+        
         try:
-            response = self.client.request(method, url, auth=self.auth, **kwargs)
+            # Airflow 3.x uses form-encoded data for token request
+            response = self.client.post(
+                url,
+                data={"username": username, "password": password},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            response.raise_for_status()
+            token_data = response.json()
+            self._access_token = token_data.get("access_token")
+            logger.debug("Successfully obtained Airflow access token")
+            return self._access_token
+        except Exception as e:
+            logger.error(f"Failed to get Airflow access token: {e}")
+            raise
+
+    def _get_auth_headers(self) -> Dict[str, str]:
+        """Get authorization headers for API requests."""
+        token = self._get_access_token()
+        return {"Authorization": f"Bearer {token}"}
+
+    def _request(self, method: str, path: str, **kwargs) -> Dict[str, Any]:
+        # Airflow 3.x uses /api/v2 with JWT authentication
+        url = f"{self.base_url}/api/v2{path}"
+        
+        # Merge auth headers with any existing headers
+        headers = kwargs.pop("headers", {})
+        headers.update(self._get_auth_headers())
+        
+        try:
+            response = self.client.request(method, url, headers=headers, **kwargs)
+            
+            # Handle token expiration - retry once with fresh token
+            if response.status_code == 401:
+                logger.debug("Token expired, refreshing...")
+                self._access_token = None
+                headers.update(self._get_auth_headers())
+                response = self.client.request(method, url, headers=headers, **kwargs)
+            
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
@@ -142,29 +191,41 @@ class AirflowClient:
     # ------------------------------------------------------------------
 
     def trigger_dag(self, dag_id: str, conf: Optional[Dict] = None) -> DagRun:
-        payload = {"conf": conf or {}}
+        # Airflow 3 API v2 requires logical_date in the trigger payload
+        payload: Dict[str, Any] = {
+            "logical_date": datetime.utcnow().isoformat() + "Z",
+        }
+        if conf:
+            payload["conf"] = conf
+        
         result = self._request("POST", f"/dags/{dag_id}/dagRuns", json=payload)
+        # Airflow 3 uses logical_date instead of execution_date, and run_id instead of dag_run_id
         return DagRun(
             dag_id=result["dag_id"],
-            run_id=result["dag_run_id"],
+            run_id=result.get("run_id") or result.get("dag_run_id"),
             state=result["state"],
-            execution_date=datetime.fromisoformat(result["execution_date"].replace("Z", "+00:00")),
+            execution_date=datetime.fromisoformat(
+                (result.get("logical_date") or result.get("execution_date")).replace("Z", "+00:00")
+            ),
             start_date=None,
             end_date=None,
         )
 
     def get_dag_runs(self, dag_id: str, limit: int = 25, offset: int = 0) -> List[DagRun]:
+        # Airflow 3 uses logical_date instead of execution_date for ordering
         result = self._request(
             "GET",
             f"/dags/{dag_id}/dagRuns",
-            params={"limit": limit, "offset": offset, "order_by": "-execution_date"},
+            params={"limit": limit, "offset": offset, "order_by": "-logical_date"},
         )
         return [
             DagRun(
                 dag_id=r["dag_id"],
-                run_id=r["dag_run_id"],
+                run_id=r.get("run_id") or r.get("dag_run_id"),
                 state=r["state"],
-                execution_date=datetime.fromisoformat(r["execution_date"].replace("Z", "+00:00")),
+                execution_date=datetime.fromisoformat(
+                    (r.get("logical_date") or r.get("execution_date")).replace("Z", "+00:00")
+                ),
                 start_date=(
                     datetime.fromisoformat(r["start_date"].replace("Z", "+00:00"))
                     if r.get("start_date") else None
@@ -181,9 +242,11 @@ class AirflowClient:
         result = self._request("GET", f"/dags/{dag_id}/dagRuns/{run_id}")
         return DagRun(
             dag_id=result["dag_id"],
-            run_id=result["dag_run_id"],
+            run_id=result.get("run_id") or result.get("dag_run_id"),
             state=result["state"],
-            execution_date=datetime.fromisoformat(result["execution_date"].replace("Z", "+00:00")),
+            execution_date=datetime.fromisoformat(
+                (result.get("logical_date") or result.get("execution_date")).replace("Z", "+00:00")
+            ),
             start_date=(
                 datetime.fromisoformat(result["start_date"].replace("Z", "+00:00"))
                 if result.get("start_date") else None

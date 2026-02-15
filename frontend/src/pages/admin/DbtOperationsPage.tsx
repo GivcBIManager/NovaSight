@@ -162,7 +162,7 @@ export function DbtOperationsPage() {
   const { data: connectionStatus, isLoading: isCheckingConnection } = useQuery({
     queryKey: ['dbt', 'status'],
     queryFn: async () => {
-      const res = await api.get('/dbt/status')
+      const res = await api.get('/api/v1/dbt/status')
       return res.data
     },
   })
@@ -173,7 +173,7 @@ export function DbtOperationsPage() {
       const params = new URLSearchParams()
       if (modelSearch) params.set('search', modelSearch)
       params.set('limit', '100')
-      const res = await api.get(`/dbt/models?${params.toString()}`)
+      const res = await api.get(`/api/v1/dbt/models?${params.toString()}`)
       return res.data
     },
     enabled: activeTab === 'models',
@@ -182,7 +182,7 @@ export function DbtOperationsPage() {
   const { data: lineageData, isLoading: isLoadingLineage } = useQuery({
     queryKey: ['dbt', 'lineage', lineageModel],
     queryFn: async () => {
-      const res = await api.get(`/dbt/lineage/${lineageModel}`)
+      const res = await api.get(`/api/v1/dbt/lineage/${lineageModel}`)
       return res.data as DbtLineage
     },
     enabled: !!lineageModel,
@@ -203,7 +203,7 @@ export function DbtOperationsPage() {
 
   const parseMutation = useMutation({
     mutationFn: async () => {
-      const res = await api.post('/dbt/parse')
+      const res = await api.post('/api/v1/dbt/parse')
       return res.data
     },
     onSuccess: () => {

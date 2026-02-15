@@ -23,6 +23,7 @@ export interface DataSource {
   host: string
   port: number
   database: string
+  schema_name?: string
   username: string
   status: ConnectionStatus
   ssl_enabled: boolean
@@ -42,6 +43,7 @@ export interface DataSourceCreate {
   username: string
   password: string
   ssl_enabled?: boolean
+  schema_name?: string
   extra_params?: Record<string, unknown>
 }
 

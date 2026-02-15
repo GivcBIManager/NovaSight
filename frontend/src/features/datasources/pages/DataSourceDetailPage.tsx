@@ -220,6 +220,10 @@ export function DataSourceDetailPage() {
                   <dd className="font-mono text-sm">{datasource.database}</dd>
                 </div>
                 <div>
+                  <dt className="text-sm font-medium text-muted-foreground mb-1">Schema</dt>
+                  <dd className="font-mono text-sm">{datasource.schema_name || 'All schemas'}</dd>
+                </div>
+                <div>
                   <dt className="text-sm font-medium text-muted-foreground mb-1">Username</dt>
                   <dd className="font-mono text-sm">{datasource.username}</dd>
                 </div>

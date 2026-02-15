@@ -21,6 +21,7 @@ from flask_jwt_extended import (
 from pydantic import ValidationError as PydanticValidationError
 
 from app.api.v1 import api_v1_bp
+from app.services.audit_service import AuditService
 from app.domains.identity.application.auth_service import AuthService
 from app.platform.auth.token_service import token_blacklist
 from app.platform.auth.jwt_handler import get_jwt_identity_dict
@@ -58,6 +59,18 @@ def register():
         raise ValidationError(error)
 
     logger.info(f"New user registered: {user.email}")
+    
+    # Audit log: user registration
+    AuditService.log(
+        action='user.created',
+        resource_type='user',
+        resource_id=str(user.id),
+        resource_name=user.email,
+        user_id=str(user.id),
+        user_email=user.email,
+        tenant_id=str(user.tenant_id),
+        extra_data={'registration_method': 'self_register'},
+    )
 
     return jsonify({
         "message": "User registered successfully",
@@ -93,6 +106,15 @@ def login():
     )
 
     if error:
+        # Audit log: failed login attempt
+        AuditService.log(
+            action='auth.login_failed',
+            resource_type='user',
+            resource_name=login_req.email,
+            extra_data={'tenant_slug': login_req.tenant_slug},
+            success=False,
+            error_message=error,
+        )
         raise AuthenticationError(error)
 
     identity = {
@@ -106,6 +128,17 @@ def login():
     refresh_token = create_refresh_token(identity=identity)
 
     logger.info(f"User {login_req.email} logged in successfully")
+    
+    # Audit log: successful login
+    AuditService.log(
+        action='auth.login',
+        resource_type='user',
+        resource_id=str(user.id),
+        resource_name=user.email,
+        user_id=str(user.id),
+        user_email=user.email,
+        tenant_id=str(user.tenant_id),
+    )
 
     return jsonify({
         "access_token": access_token,
@@ -178,6 +211,17 @@ def logout():
         token_blacklist.add(jti, expires_in)
 
     logger.info(f"User {identity.get('email')} logged out")
+    
+    # Audit log: logout
+    AuditService.log(
+        action='auth.logout',
+        resource_type='user',
+        resource_id=identity.get('user_id'),
+        resource_name=identity.get('email'),
+        user_id=identity.get('user_id'),
+        user_email=identity.get('email'),
+        tenant_id=identity.get('tenant_id'),
+    )
 
     return jsonify({"message": "Successfully logged out"})
 
@@ -221,5 +265,16 @@ def change_password():
         raise ValidationError(error)
 
     logger.info(f"Password changed for user {identity.get('email')}")
+    
+    # Audit log: password changed
+    AuditService.log(
+        action='auth.password_changed',
+        resource_type='user',
+        resource_id=identity.get('user_id'),
+        resource_name=identity.get('email'),
+        user_id=identity.get('user_id'),
+        user_email=identity.get('email'),
+        tenant_id=identity.get('tenant_id'),
+    )
 
     return jsonify({"message": "Password changed successfully"})

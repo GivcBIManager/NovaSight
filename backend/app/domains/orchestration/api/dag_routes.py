@@ -16,6 +16,7 @@ from app.domains.orchestration.application.dag_service import DagService
 from app.domains.orchestration.infrastructure.dag_generator import PySparkDAGGenerator
 from app.decorators import require_roles, require_tenant_context
 from app.errors import ValidationError, NotFoundError, AirflowAPIError
+from app.services.audit_service import AuditService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -129,6 +130,17 @@ def create_dag():
     )
 
     logger.info(f"DAG '{dag_id}' created in tenant {tenant_id}")
+    
+    # Audit log: DAG created
+    AuditService.log(
+        action='dag.created',
+        resource_type='dag',
+        resource_id=str(dag_config.id),
+        resource_name=dag_id,
+        tenant_id=tenant_id,
+        extra_data={'schedule_type': data.get('schedule_type', 'manual')},
+    )
+    
     return jsonify({"dag": dag_config.to_dict()}), 201
 
 
@@ -175,6 +187,17 @@ def update_dag(dag_id: str):
         raise NotFoundError("DAG not found")
 
     logger.info(f"DAG '{dag_id}' updated in tenant {tenant_id}")
+    
+    # Audit log: DAG updated
+    AuditService.log(
+        action='dag.updated',
+        resource_type='dag',
+        resource_id=str(dag_config.id),
+        resource_name=dag_id,
+        tenant_id=tenant_id,
+        changes={'updated_fields': list(data.keys())},
+    )
+    
     return jsonify({"dag": dag_config.to_dict()})
 
 
@@ -206,6 +229,16 @@ def delete_dag(dag_id: str):
 
     action = "permanently deleted" if hard_delete else "archived"
     logger.info(f"DAG '{dag_id}' {action} from tenant {tenant_id}")
+    
+    # Audit log: DAG deleted
+    AuditService.log(
+        action='dag.deleted',
+        resource_type='dag',
+        resource_name=dag_id,
+        tenant_id=tenant_id,
+        extra_data={'hard_delete': hard_delete},
+    )
+    
     return jsonify({"message": f"DAG {action} successfully"})
 
 
@@ -251,6 +284,15 @@ def deploy_dag(dag_id: str):
         raise AirflowAPIError(result.get("error", "Deployment failed"))
 
     logger.info(f"DAG '{dag_id}' deployed to Airflow by user {user_id}")
+    
+    # Audit log: DAG deployed
+    AuditService.log(
+        action='dag.deployed',
+        resource_type='dag',
+        resource_name=dag_id,
+        tenant_id=tenant_id,
+    )
+    
     return jsonify(result)
 
 
@@ -274,6 +316,16 @@ def trigger_dag(dag_id: str):
         raise AirflowAPIError(result.get("error", "Failed to trigger DAG"))
 
     logger.info(f"DAG '{dag_id}' triggered in tenant {tenant_id}")
+    
+    # Audit log: DAG triggered
+    AuditService.log(
+        action='dag.triggered',
+        resource_type='dag',
+        resource_name=dag_id,
+        tenant_id=tenant_id,
+        extra_data={'conf': data.get('conf', {})},
+    )
+    
     return jsonify(result)
 
 
@@ -296,6 +348,15 @@ def pause_dag(dag_id: str):
         raise AirflowAPIError(result.get("error", "Failed to pause DAG in Airflow"))
 
     logger.info(f"DAG '{dag_id}' paused in tenant {tenant_id}")
+    
+    # Audit log: DAG paused
+    AuditService.log(
+        action='dag.paused',
+        resource_type='dag',
+        resource_name=dag_id,
+        tenant_id=tenant_id,
+    )
+    
     return jsonify(result)
 
 
@@ -318,6 +379,15 @@ def unpause_dag(dag_id: str):
         raise AirflowAPIError(result.get("error", "Failed to unpause DAG in Airflow"))
 
     logger.info(f"DAG '{dag_id}' unpaused in tenant {tenant_id}")
+    
+    # Audit log: DAG unpaused
+    AuditService.log(
+        action='dag.unpaused',
+        resource_type='dag',
+        resource_name=dag_id,
+        tenant_id=tenant_id,
+    )
+    
     return jsonify(result)
 
 

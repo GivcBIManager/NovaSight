@@ -125,7 +125,7 @@ export function BackupManagementPage() {
       const params = new URLSearchParams()
       if (filterType) params.set('database_type', filterType)
       params.set('limit', '50')
-      const res = await api.get(`/admin/backups?${params.toString()}`)
+      const res = await api.get(`/api/v1/admin/backups?${params.toString()}`)
       return res.data
     },
   })
@@ -135,7 +135,7 @@ export function BackupManagementPage() {
     queryFn: async () => {
       const params = new URLSearchParams()
       if (filterType) params.set('database_type', filterType)
-      const res = await api.get(`/admin/backups/stats?${params.toString()}`)
+      const res = await api.get(`/api/v1/admin/backups/stats?${params.toString()}`)
       return res.data as BackupStats
     },
   })
@@ -144,7 +144,7 @@ export function BackupManagementPage() {
     queryKey: ['backups', 'recovery-points', pitrDbType],
     queryFn: async () => {
       const params = new URLSearchParams({ database_type: pitrDbType })
-      const res = await api.get(`/admin/backups/recovery-points?${params.toString()}`)
+      const res = await api.get(`/api/v1/admin/backups/recovery-points?${params.toString()}`)
       return res.data as RecoveryPoint[]
     },
     enabled: activeTab === 'recovery',
@@ -153,7 +153,7 @@ export function BackupManagementPage() {
   // ── Mutations ──
   const createBackupMutation = useMutation({
     mutationFn: async (dbType: string) => {
-      const res = await api.post(`/admin/backups/${dbType}`)
+      const res = await api.post(`/api/v1/admin/backups/${dbType}`)
       return res.data
     },
     onSuccess: () => {
@@ -164,7 +164,7 @@ export function BackupManagementPage() {
 
   const deleteBackupMutation = useMutation({
     mutationFn: async (key: string) => {
-      const res = await api.delete(`/admin/backups/${encodeURIComponent(key)}`)
+      const res = await api.delete(`/api/v1/admin/backups/${encodeURIComponent(key)}`)
       return res.data
     },
     onSuccess: () => {
@@ -176,14 +176,14 @@ export function BackupManagementPage() {
 
   const verifyBackupMutation = useMutation({
     mutationFn: async (key: string) => {
-      const res = await api.post(`/admin/backups/${encodeURIComponent(key)}/verify`)
+      const res = await api.post(`/api/v1/admin/backups/${encodeURIComponent(key)}/verify`)
       return res.data
     },
   })
 
   const downloadBackupMutation = useMutation({
     mutationFn: async (key: string) => {
-      const res = await api.get(`/admin/backups/${encodeURIComponent(key)}/download`)
+      const res = await api.get(`/api/v1/admin/backups/${encodeURIComponent(key)}/download`)
       return res.data as { download_url: string; expires_in: number }
     },
     onSuccess: (data) => {
@@ -193,7 +193,7 @@ export function BackupManagementPage() {
 
   const pitrMutation = useMutation({
     mutationFn: async (params: { target_time: string; database_type: string }) => {
-      const res = await api.post('/admin/backups/pitr', params)
+      const res = await api.post('/api/v1/admin/backups/pitr', params)
       return res.data
     },
     onSuccess: () => {

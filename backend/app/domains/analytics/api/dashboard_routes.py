@@ -9,6 +9,7 @@ from flask import request, g, jsonify
 from flask_jwt_extended import jwt_required
 from app.platform.auth.identity import get_current_identity
 from pydantic import ValidationError
+from app.services.audit_service import AuditService
 import logging
 
 from app.api.v1 import api_v1_bp
@@ -146,6 +147,15 @@ def create_dashboard():
             tags=data.tags,
         )
         
+        # Audit log: dashboard created
+        AuditService.log(
+            action='dashboard.created',
+            resource_type='dashboard',
+            resource_id=str(dashboard.id),
+            resource_name=data.name,
+            tenant_id=tenant_id,
+        )
+        
         return jsonify(dashboard.to_dict(include_widgets=True)), 201
     
     except DashboardServiceError as e:
@@ -233,6 +243,16 @@ def update_dashboard(dashboard_id):
             **updates,
         )
         
+        # Audit log: dashboard updated
+        AuditService.log(
+            action='dashboard.updated',
+            resource_type='dashboard',
+            resource_id=str(dashboard_id),
+            resource_name=dashboard.name,
+            tenant_id=tenant_id,
+            changes={'updated_fields': list(updates.keys())},
+        )
+        
         return jsonify(dashboard.to_dict(include_widgets=True))
     
     except DashboardNotFoundError as e:
@@ -271,6 +291,15 @@ def delete_dashboard(dashboard_id):
             tenant_id=tenant_id,
             user_id=user_id,
             soft_delete=not hard_delete,
+        )
+        
+        # Audit log: dashboard deleted
+        AuditService.log(
+            action='dashboard.deleted',
+            resource_type='dashboard',
+            resource_id=str(dashboard_id),
+            tenant_id=tenant_id,
+            extra_data={'hard_delete': hard_delete},
         )
         
         return jsonify({"success": True, "message": "Dashboard deleted"})
@@ -414,6 +443,15 @@ def share_dashboard(dashboard_id):
             tenant_id=tenant_id,
             user_id=user_id,
             target_user_ids=[str(uid) for uid in data.user_ids],
+        )
+        
+        # Audit log: dashboard shared
+        AuditService.log(
+            action='dashboard.shared',
+            resource_type='dashboard',
+            resource_id=str(dashboard_id),
+            tenant_id=tenant_id,
+            extra_data={'shared_with_user_ids': [str(uid) for uid in data.user_ids]},
         )
         
         return jsonify({"success": True, "shared_with": dashboard.to_dict()['shared_with']})

@@ -51,14 +51,14 @@ services:
       AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
 
   # ============================================
-  # Spark - Reduced Resources for Dev
+  # Spark - Resources for Dev
   # ============================================
   spark-worker-1:
     environment:
-      SPARK_WORKER_MEMORY: 1G
-      SPARK_WORKER_CORES: 1
+      SPARK_WORKER_MEMORY: 3G
+      SPARK_WORKER_CORES: 2
 
   spark-worker-2:
     environment:
-      SPARK_WORKER_MEMORY: 1G
-      SPARK_WORKER_CORES: 1
+      SPARK_WORKER_MEMORY: 3G
+      SPARK_WORKER_CORES: 2

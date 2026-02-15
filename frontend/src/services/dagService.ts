@@ -104,9 +104,9 @@ class DagService {
     return response.data
   }
 
-  async trigger(dagId: string, conf?: Record<string, unknown>): Promise<DagRun> {
+  async trigger(dagId: string, conf?: Record<string, unknown>): Promise<{ success: boolean; run_id?: string; execution_date?: string; error?: string }> {
     const response = await apiClient.post(`${this.baseUrl}/${dagId}/trigger`, { conf })
-    return response.data.run
+    return response.data
   }
 
   async pause(dagId: string): Promise<void> {

@@ -30,7 +30,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 // Main navigation - visible to all users
 const mainNavigation = [
-  { name: 'Connections', href: '/app/connections', icon: Database },
+  { name: 'Data Sources', href: '/app/datasources', icon: Database },
 ]
 
 // Orchestrate your Data section

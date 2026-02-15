@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { dagService } from '@/services/dagService'
@@ -13,9 +14,12 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { formatDate, formatDuration } from '@/lib/utils'
+import { useToast } from '@/components/ui/use-toast'
 
 export function DagMonitorPage() {
   const { dagId } = useParams<{ dagId: string }>()
+  const { toast } = useToast()
+  const [isTriggering, setIsTriggering] = useState(false)
 
   const {
     data: runs,
@@ -62,11 +66,31 @@ export function DagMonitorPage() {
   }
 
   const handleTrigger = async () => {
+    if (isTriggering) return
+    setIsTriggering(true)
     try {
-      await dagService.trigger(dagId!)
+      const result = await dagService.trigger(dagId!)
+      toast({
+        title: 'DAG Triggered',
+        description: `Run started successfully. Run ID: ${result.run_id}`,
+      })
       refetch()
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to trigger DAG:', error)
+      let message = 'Failed to trigger DAG. Make sure the DAG is deployed to Airflow.'
+      if (error instanceof Error) {
+        message = error.message
+      } else if (typeof error === 'object' && error !== null && 'response' in error) {
+        const axiosError = error as { response?: { data?: { error?: string; message?: string } } }
+        message = axiosError.response?.data?.error || axiosError.response?.data?.message || message
+      }
+      toast({
+        title: 'Trigger Failed',
+        description: message,
+        variant: 'destructive',
+      })
+    } finally {
+      setIsTriggering(false)
     }
   }
 
@@ -91,9 +115,13 @@ export function DagMonitorPage() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
-          <Button onClick={handleTrigger}>
-            <Play className="mr-2 h-4 w-4" />
-            Trigger Run
+          <Button onClick={handleTrigger} disabled={isTriggering}>
+            {isTriggering ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="mr-2 h-4 w-4" />
+            )}
+            {isTriggering ? 'Triggering...' : 'Trigger Run'}
           </Button>
         </div>
       </div>

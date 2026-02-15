@@ -301,7 +301,7 @@ export function SourceSelector({ state, onStateChange }: SourceSelectorProps) {
                     <SelectValue placeholder="Select a schema" />
                   </SelectTrigger>
                   <SelectContent>
-                    {schemas.map((schema) => (
+                    {schemas.filter(s => s.tables.length > 0).map((schema) => (
                       <SelectItem key={schema.name} value={schema.name}>
                         {schema.name}
                       </SelectItem>

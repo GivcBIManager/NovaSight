@@ -87,7 +87,7 @@ class RoleSchema(Schema):
     name = fields.String(required=True)
     display_name = fields.String()
     description = fields.String()
-    permissions = fields.Dict()
+    permissions = fields.Raw()  # Can be dict or list (e.g., ["*"] for super_admin)
     is_system = fields.Boolean(dump_only=True)
     is_default = fields.Boolean()
     tenant_id = fields.UUID(dump_only=True)

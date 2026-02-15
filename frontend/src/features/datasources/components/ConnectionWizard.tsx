@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { DataSourceTypeSelector } from './DataSourceTypeSelector'
 import { ConnectionForm } from './ConnectionForm'
-import { TableSelector } from './TableSelector'
+import { SchemaSelector } from './SchemaSelector'
 import { useTestNewConnection, useCreateDataSource } from '../hooks'
 import type { DatabaseType, ConnectionTestResult } from '@/types/datasource'
 
@@ -23,7 +23,7 @@ const steps = [
   { id: 'type', title: 'Select Type', description: 'Choose your database type' },
   { id: 'connection', title: 'Connection Details', description: 'Enter connection information' },
   { id: 'test', title: 'Test Connection', description: 'Verify the connection works' },
-  { id: 'tables', title: 'Select Tables', description: 'Choose tables to sync (optional)' },
+  { id: 'schema', title: 'Select Schema', description: 'Choose the database schema' },
 ]
 
 const connectionSchema = z.object({
@@ -52,7 +52,7 @@ export function ConnectionWizard({ open, onOpenChange, onSuccess }: ConnectionWi
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedType, setSelectedType] = useState<DatabaseType | null>(null)
   const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null)
-  const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set())
+  const [selectedSchema, setSelectedSchema] = useState<string | null>(null)
 
   const testConnection = useTestNewConnection()
   const createDataSource = useCreateDataSource()
@@ -110,6 +110,7 @@ export function ConnectionWizard({ open, onOpenChange, onSuccess }: ConnectionWi
       const result = await testConnection.mutateAsync(testData)
       setTestResult(result)
       if (result.success) {
+        // Move to schema selection step
         setCurrentStep(3)
       }
     } catch (error) {
@@ -123,15 +124,12 @@ export function ConnectionWizard({ open, onOpenChange, onSuccess }: ConnectionWi
   const handleFinish = async () => {
     const data = form.getValues()
     try {
-      // Merge Oracle options with selected tables
-      const extraParams: Record<string, unknown> = {
-        ...buildExtraParams(data),
-        ...(selectedTables.size > 0 ? { selected_tables: Array.from(selectedTables) } : {}),
-      }
+      const extraParams = buildExtraParams(data)
       
       await createDataSource.mutateAsync({
         ...data,
-        extra_params: Object.keys(extraParams).length > 0 ? extraParams : undefined,
+        schema_name: selectedSchema || undefined,
+        extra_params: extraParams,
       })
       handleClose()
       onSuccess?.()
@@ -144,7 +142,7 @@ export function ConnectionWizard({ open, onOpenChange, onSuccess }: ConnectionWi
     setCurrentStep(0)
     setSelectedType(null)
     setTestResult(null)
-    setSelectedTables(new Set())
+    setSelectedSchema(null)
     form.reset()
     onOpenChange(false)
   }
@@ -157,6 +155,9 @@ export function ConnectionWizard({ open, onOpenChange, onSuccess }: ConnectionWi
         return form.formState.isValid
       case 2:
         return testResult?.success
+      case 3:
+        // Schema selection is required
+        return selectedSchema !== null
       default:
         return true
     }
@@ -231,12 +232,12 @@ export function ConnectionWizard({ open, onOpenChange, onSuccess }: ConnectionWi
             />
           )}
 
-          {currentStep === 3 && form.getValues('db_type') && (
-            <TableSelector
-              dbType={form.getValues('db_type')}
+          {currentStep === 3 && (
+            <SchemaSelector
               connectionData={form.getValues()}
-              selectedTables={selectedTables}
-              onSelectionChange={setSelectedTables}
+              testResult={testResult}
+              selectedSchema={selectedSchema}
+              onSchemaChange={setSelectedSchema}
             />
           )}
         </div>

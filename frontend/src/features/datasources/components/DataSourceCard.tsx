@@ -116,6 +116,12 @@ export function DataSourceCard({ datasource }: DataSourceCardProps) {
               <span>Database:</span>
               <span className="font-mono text-xs">{datasource.database}</span>
             </div>
+            {datasource.schema_name && (
+              <div className="flex items-center justify-between">
+                <span>Schema:</span>
+                <span className="font-mono text-xs">{datasource.schema_name}</span>
+              </div>
+            )}
           </div>
           
           {datasource.last_synced_at && (

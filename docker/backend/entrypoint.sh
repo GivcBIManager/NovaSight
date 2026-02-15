@@ -82,43 +82,76 @@ if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
     log_info "Database connection established successfully"
 fi
 
-# ── 2. Run Alembic migrations ──
+# ── 2. Initialize Database Schema ──
 if [ "${SKIP_MIGRATIONS}" != "true" ]; then
-    log_info "Running database migrations..."
-    MIGRATION_OUTPUT=$(flask db upgrade 2>&1) && MIGRATION_STATUS=$? || MIGRATION_STATUS=$?
+    log_info "Initializing database schema..."
+    set +e
     
-    if [ $MIGRATION_STATUS -eq 0 ]; then
-        log_info "Migrations completed successfully"
+    # Use SQLAlchemy create_all to create tables from models (more reliable than migrations)
+    INIT_OUTPUT=$(python -c "
+from app import create_app
+from app.extensions import db
+
+app = create_app()
+with app.app_context():
+    # Create all tables from models
+    db.create_all()
+    print('Tables created successfully')
+" 2>&1)
+    INIT_STATUS=$?
+    
+    if [ $INIT_STATUS -eq 0 ]; then
+        log_info "Database schema initialized successfully"
+        
+        # Stamp the database to mark migrations as applied
+        flask db stamp head 2>/dev/null || true
+        log_info "Migration state synchronized"
     else
-        # Check if it's just "already exists" errors
-        if echo "$MIGRATION_OUTPUT" | grep -q "already exists\|duplicate\|nothing to do"; then
-            log_info "Migrations skipped - database already up to date"
+        if echo "$INIT_OUTPUT" | grep -q "already exists"; then
+            log_info "Database schema already exists"
         else
-            log_warn "Migration command returned non-zero exit code: $MIGRATION_STATUS"
-            log_warn "Migration output: $MIGRATION_OUTPUT"
+            log_warn "Schema initialization returned: $INIT_STATUS"
+            log_debug "Output: $INIT_OUTPUT"
         fi
     fi
+    set -e
 else
-    log_info "Skipping migrations (SKIP_MIGRATIONS=true)"
+    log_info "Skipping database initialization (SKIP_MIGRATIONS=true)"
 fi
 
-# ── 3. Seed default users ──
+# ── 3. Seed default data ──
 if [ "${SEED_USERS:-true}" = "true" ] || [ "${SEED_USERS}" = "1" ] || [ "${SEED_USERS}" = "yes" ]; then
-    log_info "Seeding default test users..."
-    SEED_OUTPUT=$(flask seed users 2>&1) && SEED_STATUS=$? || SEED_STATUS=$?
+    log_info "Seeding default data..."
+    set +e
+    
+    # Use Python directly to seed, which triggers auto-seed in app initialization
+    SEED_OUTPUT=$(python -c "
+from app import create_app
+from app.extensions import db
+from app.seed import seed_default_users
+
+app = create_app()
+with app.app_context():
+    try:
+        result = seed_default_users()
+        if result:
+            print(f'Seeded {len(result)} users')
+        else:
+            print('No users seeded (may already exist)')
+    except Exception as e:
+        print(f'Seed note: {e}')
+" 2>&1)
+    SEED_STATUS=$?
     
     if [ $SEED_STATUS -eq 0 ]; then
-        log_info "User seeding completed"
+        log_info "Data seeding completed: $SEED_OUTPUT"
     else
-        if echo "$SEED_OUTPUT" | grep -q "already exists\|already seeded"; then
-            log_info "Users already seeded - skipping"
-        else
-            log_warn "Seed command returned non-zero: $SEED_STATUS"
-            log_debug "Seed output: $SEED_OUTPUT"
-        fi
+        log_info "Seeding skipped (data may already exist)"
+        log_debug "Seed output: $SEED_OUTPUT"
     fi
+    set -e
 else
-    log_info "Skipping user seeding (SEED_USERS=${SEED_USERS})"
+    log_info "Skipping data seeding (SEED_USERS=${SEED_USERS})"
 fi
 
 echo ""

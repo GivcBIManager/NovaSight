@@ -245,7 +245,8 @@ class TemplateEngine:
         try:
             # Try using registered validator
             validated_model = TemplateParameterValidator.validate(template_name, parameters)
-            return validated_model.model_dump()
+            # Use by_alias=True to preserve original field names (e.g., "schema" not "schema_name")
+            return validated_model.model_dump(by_alias=True)
         except ValueError as e:
             if "No schema defined" in str(e):
                 # Check manifest for schema

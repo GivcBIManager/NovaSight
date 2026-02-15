@@ -16,9 +16,10 @@ export default defineConfig({
     allowedHosts: ['host.docker.internal', 'localhost', 'frontend'],
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:5000',
+        // Use 'backend' for Docker, 'localhost' for local dev
+        target: process.env.VITE_API_URL || 'http://backend:5000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        // Don't rewrite - backend expects /api/v1/... paths
       },
     },
   },

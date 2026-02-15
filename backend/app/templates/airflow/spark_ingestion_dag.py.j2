@@ -18,14 +18,14 @@ import os
 from datetime import datetime, timedelta
 import pendulum
 from airflow.models.dag import DAG
-from airflow.operators.empty import EmptyOperator
-from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.python import PythonOperator
+from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.providers.smtp.operators.smtp import EmailOperator
 from airflow.providers.http.sensors.http import HttpSensor
-from airflow.sensors.time_sensor import TimeSensor
-from airflow.utils.trigger_rule import TriggerRule
+from airflow.providers.standard.sensors.time import TimeSensor
+from airflow.task.trigger_rule import TriggerRule
 
 # ============================================
 # Spark Configuration

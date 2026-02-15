@@ -26,6 +26,7 @@ from app.models.connection import DataConnection
 from app.services.connection_service import ConnectionService
 from app.services.template_engine import TemplateEngine
 from app.errors import ValidationError, NotFoundError
+from app.platform.security.encryption import EncryptionService
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,7 @@ class PySparkAppService:
         self._tenant_slug = tenant_slug
         self.connection_service = ConnectionService(tenant_id)
         self.template_engine = TemplateEngine()
+        self._encryption = EncryptionService(tenant_id=tenant_id)
     
     @property
     def tenant_database(self) -> str:
@@ -564,6 +566,16 @@ class PySparkAppService:
         Returns:
             Template parameters dictionary
         """
+        # Decrypt password for runtime use
+        # Note: This embeds the password in generated code for runtime use.
+        # Consider using secrets management (Vault, Airflow Connections) in production.
+        decrypted_password = ""
+        try:
+            if connection.password_encrypted:
+                decrypted_password = self._encryption.decrypt(connection.password_encrypted)
+        except Exception as e:
+            logger.warning(f"Failed to decrypt password for connection {connection.id}: {e}")
+        
         return {
             "app_name": app.name,
             "app_id": str(app.id),
@@ -576,7 +588,7 @@ class PySparkAppService:
                 "database": connection.database,
                 "schema": connection.schema_name,
                 "username": connection.username,
-                # Password will be injected at runtime from secrets
+                "password": decrypted_password,  # Decrypted for template use
             },
             "source": {
                 "type": app.source_type.value,

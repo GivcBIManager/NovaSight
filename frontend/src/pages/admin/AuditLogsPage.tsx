@@ -42,12 +42,18 @@ interface AuditLog {
   id: string
   action: string
   resource_type: string
-  resource_id: string
-  user_id: string
-  user_email: string
-  ip_address: string
-  details: Record<string, unknown>
-  created_at: string
+  resource_id: string | null
+  resource_name: string | null
+  user_id: string | null
+  user_email: string | null
+  ip_address: string | null
+  changes: Record<string, unknown> | null
+  extra_data: Record<string, unknown> | null
+  success: boolean
+  error_message: string | null
+  severity: string
+  timestamp: string
+  integrity_verified: boolean
 }
 
 interface SecurityEvent {
@@ -61,11 +67,36 @@ interface SecurityEvent {
 }
 
 const ACTION_COLORS: Record<string, string> = {
+  // Direct matches
   create: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
   update: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   delete: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   login: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
   logout: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+  // Dotted action patterns
+  'auth.login': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  'auth.logout': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+  'auth.login_failed': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  'auth.password_changed': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+  'user.created': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  'user.updated': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  'user.deleted': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  'user.role_changed': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  'connection.created': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  'connection.updated': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  'connection.deleted': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  'connection.tested': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+  'dashboard.created': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  'dashboard.updated': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  'dashboard.deleted': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  'dashboard.shared': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+  'dag.created': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  'dag.updated': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  'dag.deleted': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  'dag.deployed': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  'dag.triggered': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  'dag.paused': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
+  'dag.unpaused': 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
 }
 
 const SEVERITY_ICONS: Record<string, React.ReactNode> = {
@@ -74,6 +105,22 @@ const SEVERITY_ICONS: Record<string, React.ReactNode> = {
   medium: <Info className="h-4 w-4 text-yellow-500" />,
   low: <Info className="h-4 w-4 text-blue-500" />,
   info: <CheckCircle className="h-4 w-4 text-green-500" />,
+}
+
+// Helper to get action color with fallback based on action suffix
+function getActionColor(action: string): string {
+  if (ACTION_COLORS[action]) return ACTION_COLORS[action]
+  // Fallback: check if action ends with common suffixes
+  if (action.endsWith('.created') || action.endsWith('_created')) {
+    return ACTION_COLORS['create']
+  }
+  if (action.endsWith('.updated') || action.endsWith('_updated')) {
+    return ACTION_COLORS['update']
+  }
+  if (action.endsWith('.deleted') || action.endsWith('_deleted')) {
+    return ACTION_COLORS['delete']
+  }
+  return '' // Default styling
 }
 
 export function AuditLogsPage() {
@@ -96,8 +143,8 @@ export function AuditLogsPage() {
       if (actionFilter !== 'all') params.append('action', actionFilter)
       if (resourceFilter !== 'all') params.append('resource_type', resourceFilter)
       
-      const res = await api.get(`/audit/logs?${params}`)
-      return res.data
+      const res = await api.get(`/api/v1/audit/logs?${params}`)
+      return res.data.data || res.data  // Handle { success, data } wrapper
     },
   })
 
@@ -105,8 +152,8 @@ export function AuditLogsPage() {
   const { data: securityData, isLoading: securityLoading } = useQuery({
     queryKey: ['security-events'],
     queryFn: async () => {
-      const res = await api.get('/audit/security-events')
-      return res.data
+      const res = await api.get('/api/v1/audit/security-events')
+      return res.data.data || res.data  // Handle { success, data } wrapper
     },
   })
 
@@ -114,7 +161,7 @@ export function AuditLogsPage() {
   const { data: actionTypes } = useQuery({
     queryKey: ['audit-action-types'],
     queryFn: async () => {
-      const res = await api.get('/audit/actions')
+      const res = await api.get('/api/v1/audit/actions')
       return res.data
     },
   })
@@ -122,7 +169,7 @@ export function AuditLogsPage() {
   // Verify integrity
   const verifyIntegrity = useMutation({
     mutationFn: async () => {
-      const res = await api.post('/audit/verify-integrity')
+      const res = await api.post('/api/v1/audit/verify-integrity')
       return res.data
     },
     onSuccess: (data) => {
@@ -146,7 +193,7 @@ export function AuditLogsPage() {
   // Export audit logs
   const exportLogs = useMutation({
     mutationFn: async () => {
-      const res = await api.post('/audit/export', {
+      const res = await api.post('/api/v1/audit/export', {
         format: 'csv',
         days: 30,
       })
@@ -313,24 +360,31 @@ export function AuditLogsPage() {
                             <td className="p-3 text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {formatDate(log.created_at)}
+                                {formatDate(log.timestamp)}
                               </div>
                             </td>
                             <td className="p-3">
-                              <Badge variant="outline" className={ACTION_COLORS[log.action] || ''}>
+                              <Badge variant="outline" className={getActionColor(log.action)}>
                                 {log.action}
                               </Badge>
                             </td>
                             <td className="p-3">
                               <div>
                                 <span className="font-medium">{log.resource_type}</span>
-                                <span className="text-muted-foreground ml-1 text-xs">
-                                  #{log.resource_id?.slice(0, 8)}
-                                </span>
+                                {log.resource_name && (
+                                  <span className="text-muted-foreground ml-1 text-xs">
+                                    ({log.resource_name})
+                                  </span>
+                                )}
+                                {!log.resource_name && log.resource_id && (
+                                  <span className="text-muted-foreground ml-1 text-xs">
+                                    #{log.resource_id?.slice(0, 8)}
+                                  </span>
+                                )}
                               </div>
                             </td>
-                            <td className="p-3">{log.user_email}</td>
-                            <td className="p-3 font-mono text-xs">{log.ip_address}</td>
+                            <td className="p-3">{log.user_email || '-'}</td>
+                            <td className="p-3 font-mono text-xs">{log.ip_address || '-'}</td>
                           </tr>
                         ))}
                       </tbody>

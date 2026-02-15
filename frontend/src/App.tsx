@@ -22,7 +22,6 @@ import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { DagsListPage } from '@/pages/orchestration/DagsListPage'
 import { DagBuilderPage } from '@/pages/orchestration/DagBuilderPage'
 import { DagMonitorPage } from '@/pages/orchestration/DagMonitorPage'
-import { ConnectionsPage } from '@/pages/connections/ConnectionsPage'
 import { DataSourcesPage, DataSourceDetailPage } from '@/features/datasources'
 import { 
   PySparkAppsListPage, 
@@ -100,9 +99,6 @@ function App() {
             <Route path="datasources" element={<DataSourcesPage />} />
             <Route path="datasources/:id" element={<DataSourceDetailPage />} />
             
-            {/* Data Connections */}
-            <Route path="connections" element={<ConnectionsPage />} />
-            
             {/* Orchestration - DAGs */}
             <Route path="dags" element={<DagsListPage />} />
             <Route path="dags/new" element={<DagBuilderPage />} />
@@ -162,7 +158,7 @@ function App() {
 
           {/* Legacy routes - redirect to new /app prefix */}
           <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
-          <Route path="/connections" element={<Navigate to="/app/connections" replace />} />
+          <Route path="/connections" element={<Navigate to="/app/datasources" replace />} />
           <Route path="/datasources" element={<Navigate to="/app/datasources" replace />} />
           <Route path="/dags" element={<Navigate to="/app/dags" replace />} />
           <Route path="/pyspark" element={<Navigate to="/app/pyspark" replace />} />

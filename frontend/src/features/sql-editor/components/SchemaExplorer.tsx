@@ -127,23 +127,30 @@ export function SchemaExplorer({
   const [selectedSchemaName, setSelectedSchemaName] = useState<string>('__all__')
   const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set())
 
-  // Get list of schema names for selector
+  // Get list of schema names for selector (exclude empty schemas)
   const schemaNames = useMemo(() => {
-    return schemas.map((s) => s.name)
+    return schemas
+      .filter((s) => s.tables.length > 0)
+      .map((s) => s.name)
+  }, [schemas])
+
+  // Filter schemas to only non-empty ones
+  const nonEmptySchemas = useMemo(() => {
+    return schemas.filter((s) => s.tables.length > 0)
   }, [schemas])
 
   // Auto-select first schema or 'public'/'default' if available
   useMemo(() => {
-    if (schemas.length > 0 && selectedSchemaName === '__all__') {
-      const hasPublic = schemas.some(s => s.name === 'public')
-      const hasDefault = schemas.some(s => s.name === 'default')
+    if (nonEmptySchemas.length > 0 && selectedSchemaName === '__all__') {
+      const hasPublic = nonEmptySchemas.some(s => s.name === 'public')
+      const hasDefault = nonEmptySchemas.some(s => s.name === 'default')
       if (hasPublic) {
         setSelectedSchemaName('public')
       } else if (hasDefault) {
         setSelectedSchemaName('default')
       }
     }
-  }, [schemas, selectedSchemaName])
+  }, [nonEmptySchemas, selectedSchemaName])
 
   const toggleTable = (tableKey: string) => {
     setExpandedTables((prev) => {
@@ -161,7 +168,7 @@ export function SchemaExplorer({
   const filteredTables = useMemo(() => {
     let tables: Array<{ schema: string; table: TableSchema }> = []
     
-    schemas.forEach((schema) => {
+    nonEmptySchemas.forEach((schema) => {
       if (selectedSchemaName !== '__all__' && schema.name !== selectedSchemaName) {
         return
       }
@@ -184,7 +191,7 @@ export function SchemaExplorer({
     tables.sort((a, b) => a.table.name.localeCompare(b.table.name))
     
     return tables
-  }, [schemas, selectedSchemaName, search])
+  }, [nonEmptySchemas, selectedSchemaName, search])
 
   // Handle bulk insert SELECT for all visible tables
   const handleInsertSelectAll = () => {
@@ -267,12 +274,12 @@ export function SchemaExplorer({
                 <span className="flex items-center gap-2">
                   <span>All Schemas</span>
                   <Badge variant="secondary" className="text-[10px] h-4">
-                    {schemas.reduce((acc, s) => acc + s.tables.length, 0)}
+                    {nonEmptySchemas.reduce((acc, s) => acc + s.tables.length, 0)}
                   </Badge>
                 </span>
               </SelectItem>
               {schemaNames.map((name) => {
-                const tableCount = schemas.find(s => s.name === name)?.tables.length || 0
+                const tableCount = nonEmptySchemas.find(s => s.name === name)?.tables.length || 0
                 return (
                   <SelectItem key={name} value={name}>
                     <span className="flex items-center gap-2">

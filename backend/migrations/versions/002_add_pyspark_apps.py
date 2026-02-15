@@ -45,11 +45,11 @@ def upgrade():
         sa.Column('description', sa.Text(), nullable=True),
         
         # Status
-        sa.Column('status', sa.Enum('draft', 'active', 'inactive', 'error', name='pysparkappstatus'), 
+        sa.Column('status', postgresql.ENUM('draft', 'active', 'inactive', 'error', name='pysparkappstatus', create_type=False), 
                   nullable=False, server_default='draft'),
         
         # Source Configuration
-        sa.Column('source_type', sa.Enum('table', 'query', name='sourcetype'), 
+        sa.Column('source_type', postgresql.ENUM('table', 'query', name='sourcetype', create_type=False), 
                   nullable=False, server_default='table'),
         sa.Column('source_schema', sa.String(255), nullable=True),
         sa.Column('source_table', sa.String(255), nullable=True),
@@ -62,7 +62,7 @@ def upgrade():
         sa.Column('primary_key_columns', postgresql.JSONB(), nullable=False, server_default='[]'),
         
         # CDC Configuration
-        sa.Column('cdc_type', sa.Enum('none', 'timestamp', 'version', 'hash', name='cdctype'), 
+        sa.Column('cdc_type', postgresql.ENUM('none', 'timestamp', 'version', 'hash', name='cdctype', create_type=False), 
                   nullable=False, server_default='none'),
         sa.Column('cdc_column', sa.String(255), nullable=True),
         sa.Column('cdc_high_watermark', sa.Text(), nullable=True),
@@ -71,11 +71,11 @@ def upgrade():
         sa.Column('partition_columns', postgresql.JSONB(), nullable=False, server_default='[]'),
         
         # SCD Configuration
-        sa.Column('scd_type', sa.Enum('none', 'type1', 'type2', name='scdtype'), 
+        sa.Column('scd_type', postgresql.ENUM('none', 'type1', 'type2', name='scdtype', create_type=False), 
                   nullable=False, server_default='none'),
         
         # Write Mode
-        sa.Column('write_mode', sa.Enum('append', 'overwrite', 'merge', name='writemode'), 
+        sa.Column('write_mode', postgresql.ENUM('append', 'overwrite', 'merge', name='writemode', create_type=False), 
                   nullable=False, server_default='append'),
         
         # Target Configuration

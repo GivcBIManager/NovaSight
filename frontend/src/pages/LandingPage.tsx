@@ -28,12 +28,12 @@ import { cn } from '@/lib/utils';
 
 const features = [
   {
-    title: 'Data Connections',
+    title: 'Data Sources',
     description: 'Connect to any database, API, or file source with our unified connector framework.',
     icon: Database,
     color: 'text-accent-indigo',
     bgColor: 'bg-accent-indigo/10',
-    href: '/app/connections',
+    href: '/app/datasources',
   },
   {
     title: 'Orchestration',

@@ -70,23 +70,26 @@ export function useSchemaExplorer(datasourceId: string | undefined) {
         throw new Error(response.data.schema.error)
       }
       
-      const schemas: SchemaInfo[] = response.data.schema.schemas.map((schema) => ({
-        name: schema.name,
-        tables: schema.tables.map((table) => ({
-          name: table.name,
-          schema: table.schema,
-          columns: (table.columns || []).map((col) => ({
-            name: col.name,
-            type: col.data_type,
-            nullable: col.nullable ?? col.is_nullable ?? true,
-            isPrimaryKey: col.primary_key,
-            isForeignKey: false,
-            comment: col.comment,
+      const schemas: SchemaInfo[] = response.data.schema.schemas
+        .map((schema) => ({
+          name: schema.name,
+          tables: schema.tables.map((table) => ({
+            name: table.name,
+            schema: table.schema,
+            columns: (table.columns || []).map((col) => ({
+              name: col.name,
+              type: col.data_type,
+              nullable: col.nullable ?? col.is_nullable ?? true,
+              isPrimaryKey: col.primary_key,
+              isForeignKey: false,
+              comment: col.comment,
+            })),
+            rowCount: table.row_count,
+            comment: table.comment,
           })),
-          rowCount: table.row_count,
-          comment: table.comment,
-        })),
-      }))
+        }))
+        // Filter out empty schemas (those with no tables)
+        .filter((schema) => schema.tables.length > 0)
       
       return schemas
     },

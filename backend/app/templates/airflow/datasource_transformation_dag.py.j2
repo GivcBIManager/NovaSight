@@ -38,11 +38,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import pendulum
 from airflow.models.dag import DAG
-from airflow.operators.bash import BashOperator
-from airflow.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.bash import BashOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.utils.task_group import TaskGroup
-from airflow.utils.trigger_rule import TriggerRule
+from airflow.task.trigger_rule import TriggerRule
 
 # Default arguments for the DAG
 default_args = {
