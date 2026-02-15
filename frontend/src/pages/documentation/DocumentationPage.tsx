@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -351,6 +352,7 @@ const quickLinks = [
 export function DocumentationPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
+  const [selectedArticle, setSelectedArticle] = useState<{ sectionId: string; title: string } | null>(null)
 
   const filteredSections = docSections.filter((section) => {
     if (!searchQuery) return true
@@ -368,8 +370,66 @@ export function DocumentationPage() {
   })
 
   const handleArticleClick = (sectionId: string, articleTitle: string) => {
-    // In a real app, this would navigate to the article
-    console.log(`Navigate to: ${sectionId}/${articleTitle}`)
+    setSelectedArticle({ sectionId, title: articleTitle })
+  }
+
+  const handleBackFromArticle = () => {
+    setSelectedArticle(null)
+  }
+
+  // If an article is selected, show article content
+  if (selectedArticle) {
+    const section = docSections.find(s => s.id === selectedArticle.sectionId)
+    const article = section?.articles.find(a => a.title === selectedArticle.title)
+    
+    return (
+      <div className="space-y-6">
+        <Button
+          variant="ghost"
+          onClick={handleBackFromArticle}
+          className="gap-2"
+        >
+          ← Back to Documentation
+        </Button>
+        
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3 mb-4">
+              {section && (
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <section.icon className="h-6 w-6 text-primary" />
+                </div>
+              )}
+              <Badge variant="secondary">{section?.title}</Badge>
+            </div>
+            <CardTitle className="text-2xl">{selectedArticle.title}</CardTitle>
+            <CardDescription>{article?.description}</CardDescription>
+            {article?.readTime && (
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="outline">{article.readTime} read</Badge>
+                {article.tags?.map((tag) => (
+                  <Badge key={tag} variant="secondary">{tag}</Badge>
+                ))}
+              </div>
+            )}
+          </CardHeader>
+          <CardContent className="prose dark:prose-invert max-w-none">
+            <p className="text-muted-foreground">
+              This documentation article is coming soon. We're working on creating comprehensive 
+              guides for all features of NovaSight.
+            </p>
+            <div className="mt-8 p-4 rounded-lg bg-muted">
+              <h4 className="font-medium mb-2">In the meantime:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                <li>Check out our FAQ section for quick answers</li>
+                <li>Contact support if you have specific questions</li>
+                <li>Join our community forum for discussions</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -593,23 +653,24 @@ export function DocumentationPage() {
           {/* Quick Links */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {quickLinks.map((link) => (
-              <Card
-                key={link.title}
-                className="group cursor-pointer hover:shadow-md transition-all hover:border-primary/50"
-              >
-                <CardContent className="flex items-start gap-4 p-4">
-                  <div className="rounded-lg bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
-                    <link.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium flex items-center gap-2">
-                      {link.title}
-                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                    </h4>
-                    <p className="text-sm text-muted-foreground">{link.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <Link key={link.title} to={link.href}>
+                <Card
+                  className="group cursor-pointer hover:shadow-md transition-all hover:border-primary/50 h-full"
+                >
+                  <CardContent className="flex items-start gap-4 p-4">
+                    <div className="rounded-lg bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
+                      <link.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium flex items-center gap-2">
+                        {link.title}
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                      </h4>
+                      <p className="text-sm text-muted-foreground">{link.description}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
 
