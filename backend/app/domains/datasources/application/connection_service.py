@@ -262,24 +262,17 @@ class ConnectionService(IConnectionProvider, ISchemaProvider):
                 connector.test_connection()
                 all_schemas = connector.get_schemas()
                 
-                # Filter out empty schemas (those with no tables)
-                non_empty_schemas = []
-                for schema_name in all_schemas:
-                    try:
-                        tables = connector.get_tables(schema_name)
-                        if tables:  # Only include schemas that have tables
-                            non_empty_schemas.append(schema_name)
-                    except Exception:
-                        # If we can't get tables, include the schema anyway
-                        non_empty_schemas.append(schema_name)
-
+                # For connection test, just return all schemas without filtering
+                # Filtering empty schemas is too slow for databases with many schemas (e.g., Oracle)
+                # The schema selection step can handle this more efficiently
                 return {
                     "success": True,
                     "message": "Connection successful",
                     "details": {
                         "database": database,
-                        "schemas_count": len(non_empty_schemas),
-                        "schemas": non_empty_schemas,
+                        "schemas_count": len(all_schemas),
+                        "schemas": all_schemas[:50],  # Limit to first 50 schemas for performance
+                        "schemas_truncated": len(all_schemas) > 50,
                     },
                 }
 

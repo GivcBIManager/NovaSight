@@ -98,8 +98,9 @@ TEST_USERS = [
 
 
 def _get_or_create_tenant():
-    """Get or create the default demo tenant."""
+    """Get or create the default demo tenant with full provisioning."""
     from app.domains.tenants.domain.models import Tenant
+    from app.domains.tenants.infrastructure.provisioning import ProvisioningService
 
     tenant = Tenant.query.filter_by(slug=DEFAULT_TENANT["slug"]).first()
     if tenant:
@@ -116,6 +117,18 @@ def _get_or_create_tenant():
     db.session.add(tenant)
     db.session.flush()  # get the id without committing
     logger.info("Created demo tenant: %s (id=%s)", tenant.slug, tenant.id)
+
+    # Provision PostgreSQL schema + ClickHouse database for the new tenant
+    try:
+        provisioning = ProvisioningService()
+        provisioning.provision(tenant)
+        logger.info("Provisioned resources for demo tenant: %s", tenant.slug)
+    except Exception as exc:
+        logger.warning(
+            "Failed to provision resources for demo tenant (may already exist or service unavailable): %s",
+            exc,
+        )
+
     return tenant, True
 
 

@@ -71,11 +71,38 @@ else
     echo "⏭️  Skipping user seeding (SEED_USERS=${SEED_USERS})"
 fi
 
+# ── 4. Provision ClickHouse databases for all tenants ──
+# This ensures ClickHouse databases exist even if provisioning failed during seed
+echo "🔧 Ensuring ClickHouse databases for all tenants..."
+MAX_CH_RETRIES=15
+CH_RETRY_COUNT=0
+until python -c "
+from app.services.clickhouse_client import ClickHouseClient
+client = ClickHouseClient()
+client.execute('SELECT 1')
+print('ClickHouse connected!')
+" 2>/dev/null; do
+    CH_RETRY_COUNT=$((CH_RETRY_COUNT + 1))
+    if [ $CH_RETRY_COUNT -ge $MAX_CH_RETRIES ]; then
+        echo "⚠️  ClickHouse not ready after ${MAX_CH_RETRIES} attempts. Skipping provisioning..."
+        break
+    fi
+    echo "  Waiting for ClickHouse... (${CH_RETRY_COUNT}/${MAX_CH_RETRIES})"
+    sleep 2
+done
+
+if [ $CH_RETRY_COUNT -lt $MAX_CH_RETRIES ]; then
+    flask tenant provision-ch-all 2>&1 || {
+        echo "⚠️  ClickHouse provisioning had issues. Some databases may need manual setup."
+    }
+    echo "✅ ClickHouse databases ready"
+fi
+
 echo ""
 echo "╔═══════════════════════════════════════════════════════╗"
 echo "║           NovaSight Backend Ready! 🚀                 ║"
 echo "╚═══════════════════════════════════════════════════════╝"
 echo ""
 
-# ── 4. Start the application ──
+# ── 5. Start the application ──
 exec "$@"

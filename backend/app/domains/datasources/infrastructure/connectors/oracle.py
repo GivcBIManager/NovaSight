@@ -39,11 +39,18 @@ class OracleConnector(BaseConnector):
             # Build connection string - support both SID and service name
             dsn = self._build_dsn()
 
+            # Get connection timeout from extra_params or use default
+            connect_timeout = 10  # Default 10 seconds
+            if self.config.extra_params:
+                connect_timeout = self.config.extra_params.get("connect_timeout", connect_timeout)
+
             # Build connection parameters dynamically
             connection_kwargs: Dict[str, Any] = {
                 "user": self.config.username,
                 "password": self.config.password,
                 "dsn": dsn,
+                # TCP connection timeout (thin mode) - prevents hanging on unreachable hosts
+                "tcp_connect_timeout": connect_timeout,
             }
 
             if self.config.extra_params:
@@ -57,6 +64,9 @@ class OracleConnector(BaseConnector):
                 # Handle thick mode for older Oracle versions or advanced features
                 if self.config.extra_params.get("thick_mode"):
                     self._init_thick_mode()
+                    # In thick mode, timeout is controlled via sqlnet.ora or TNS settings
+                    # Remove tcp_connect_timeout as it's thin-mode only
+                    connection_kwargs.pop("tcp_connect_timeout", None)
 
             self._connection = oracledb.connect(**connection_kwargs)  # type: ignore[arg-type]
             self._is_connected = True
@@ -68,6 +78,17 @@ class OracleConnector(BaseConnector):
         except oracledb.Error as e:
             error_str = str(e)
             logger.error(f"Failed to connect to Oracle: {e}")
+
+            # Check for timeout-related errors
+            if any(term in error_str.lower() for term in ["timeout", "timed out", "dpy-4011", "dpy-6005"]):
+                raise ConnectorException(
+                    f"Oracle connection timed out: {error_str}\n\n"
+                    "The connection attempt exceeded the timeout limit. This can happen if:\n"
+                    "1. The Oracle server is unreachable (check host/port)\n"
+                    "2. A firewall is blocking the connection\n"
+                    "3. The Oracle listener is not running\n"
+                    "You can increase the timeout by setting 'connect_timeout' in extra_params."
+                )
 
             # Check if this is a thin mode compatibility error
             if "DPY-3010" in error_str or "thin mode" in error_str.lower():

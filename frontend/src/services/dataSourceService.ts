@@ -79,7 +79,9 @@ export const dataSourceService = {
    */
   async testConnection(id: string): Promise<ConnectionTestResult> {
     const response = await apiClient.post<ConnectionTestResult>(
-      `${BASE_PATH}/${id}/test`
+      `${BASE_PATH}/${id}/test`,
+      {},
+      { timeout: 120000 } // 2 minutes for connection tests (database connections can be slow)
     )
     return response.data
   },
@@ -90,7 +92,8 @@ export const dataSourceService = {
   async testNewConnection(data: ConnectionTestRequest): Promise<ConnectionTestResult> {
     const response = await apiClient.post<ConnectionTestResult>(
       `${BASE_PATH}/test`,
-      data
+      data,
+      { timeout: 120000 } // 2 minutes for connection tests (database connections can be slow)
     )
     return response.data
   },
