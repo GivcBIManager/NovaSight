@@ -87,8 +87,11 @@ export function DagBuilderPage() {
   
   // Initialize tenant tag on mount
   useEffect(() => {
-    if (tenantSlug && !dagTags.includes(tenantSlug)) {
-      setDagTags(prev => [...prev, tenantSlug])
+    if (tenantSlug) {
+      setDagTags(prev => {
+        if (prev.includes(tenantSlug)) return prev
+        return [...prev, tenantSlug]
+      })
     }
   }, [tenantSlug])
   
@@ -962,8 +965,8 @@ ${indent})`
                   <Label>Tags</Label>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {dagTags.map(tag => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
+                  {dagTags.map((tag, index) => (
+                    <Badge key={`${tag}-${index}`} variant="secondary" className="text-xs">
                       {tag}
                     </Badge>
                   ))}

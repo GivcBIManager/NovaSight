@@ -59,24 +59,19 @@ export function GradientBorder({
         preserveAspectRatio="none"
       >
         <defs>
-          {/* Animated gradient that flows along the path */}
-          <linearGradient id={`mobius-gradient-${gradientId}`} x1="0%" y1="0%" x2="100%" y2="0%">
-            {colors.map((color, i) => (
-              <motion.stop
+          {/* Static gradient - animation handled via stroke-dashoffset on rect */}
+          <linearGradient
+            id={`mobius-gradient-${gradientId}`}
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="0%"
+          >
+            {colors.length > 0 && colors.map((color, i) => (
+              <stop
                 key={i}
-                offset={`${(i / colors.length) * 100}%`}
+                offset={`${(i / Math.max(colors.length - 1, 1)) * 100}%`}
                 stopColor={color}
-                animate={prefersReducedMotion ? {} : {
-                  offset: [
-                    `${(i / colors.length) * 100}%`,
-                    `${((i + colors.length) / colors.length) * 100}%`,
-                  ],
-                }}
-                transition={{
-                  duration: animationDuration,
-                  repeat: Infinity,
-                  ease: 'linear',
-                }}
               />
             ))}
           </linearGradient>

@@ -1,0 +1,292 @@
+"""
+NovaSight dbt Airflow DAG Template
+===================================
+
+Jinja2 template for generating Airflow DAGs that run dbt components.
+Supports:
+- Full project runs (dbt run)
+- Selective model runs (dbt run --select)
+- dbt test execution
+- dbt build (run + test)
+- Freshness checks (dbt source freshness)
+
+Template Variables:
+    dag_id: Unique DAG identifier
+    tenant_id: Tenant UUID
+    tenant_slug: Tenant slug for project path
+    schedule_interval: Cron expression or preset
+    dbt_command: The dbt command to run (run, test, build, etc.)
+    dbt_select: Optional model selection criteria
+    dbt_exclude: Optional model exclusion criteria
+    tags: List of tags for DAG filtering
+    owner: DAG owner for Airflow UI
+    retries: Number of retry attempts
+    retry_delay_minutes: Delay between retries
+    email_on_failure: Whether to send failure notifications
+    notification_emails: List of emails for notifications
+"""
+
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
+from airflow.providers.http.operators.http import SimpleHttpOperator
+from airflow.utils.dates import days_ago
+import json
+import os
+
+# ============================================================================
+# DAG Configuration (populated from template variables)
+# ============================================================================
+
+DAG_ID = "{{ dag_id }}"
+TENANT_ID = "{{ tenant_id }}"
+TENANT_SLUG = "{{ tenant_slug }}"
+DBT_PROJECT_PATH = "/opt/dbt/tenants/{{ tenant_slug }}"
+DBT_PROFILES_PATH = "/opt/dbt/tenants/{{ tenant_slug }}"
+
+# Schedule and retry configuration
+SCHEDULE_INTERVAL = "{{ schedule_interval | default('0 6 * * *') }}"  # Default: 6 AM daily
+RETRIES = {{ retries | default(2) }}
+RETRY_DELAY_MINUTES = {{ retry_delay_minutes | default(5) }}
+
+# dbt command configuration
+DBT_COMMAND = "{{ dbt_command | default('run') }}"
+DBT_SELECT = "{{ dbt_select | default('') }}"
+DBT_EXCLUDE = "{{ dbt_exclude | default('') }}"
+DBT_FULL_REFRESH = {{ dbt_full_refresh | default(false) | lower }}
+
+# Notification settings
+EMAIL_ON_FAILURE = {{ email_on_failure | default(false) | lower }}
+NOTIFICATION_EMAILS = {{ notification_emails | default([]) | tojson }}
+
+# Tags for DAG organization
+TAGS = ['dbt', 'tenant:{{ tenant_slug }}'] + {{ tags | default([]) | tojson }}
+
+
+# ============================================================================
+# Default DAG arguments
+# ============================================================================
+
+default_args = {
+    'owner': '{{ owner | default("novasight") }}',
+    'depends_on_past': False,
+    'email': NOTIFICATION_EMAILS if EMAIL_ON_FAILURE else [],
+    'email_on_failure': EMAIL_ON_FAILURE,
+    'email_on_retry': False,
+    'retries': RETRIES,
+    'retry_delay': timedelta(minutes=RETRY_DELAY_MINUTES),
+    'execution_timeout': timedelta(hours={{ execution_timeout_hours | default(2) }}),
+}
+
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+def build_dbt_command() -> str:
+    """Build the complete dbt command with all options."""
+    cmd_parts = [
+        'cd', DBT_PROJECT_PATH, '&&',
+        'dbt', DBT_COMMAND,
+        '--profiles-dir', DBT_PROFILES_PATH,
+        '--project-dir', DBT_PROJECT_PATH,
+    ]
+    
+    # Add selection criteria
+    if DBT_SELECT:
+        cmd_parts.extend(['--select', DBT_SELECT])
+    
+    if DBT_EXCLUDE:
+        cmd_parts.extend(['--exclude', DBT_EXCLUDE])
+    
+    # Full refresh for incremental models
+    if DBT_FULL_REFRESH and DBT_COMMAND in ('run', 'build'):
+        cmd_parts.append('--full-refresh')
+    
+    # Add target environment
+    cmd_parts.extend(['--target', os.getenv('DBT_TARGET', 'dev')])
+    
+    return ' '.join(cmd_parts)
+
+
+def notify_backend_start(**context):
+    """Notify NovaSight backend that dbt run is starting."""
+    import requests
+    
+    backend_url = os.getenv('NOVASIGHT_BACKEND_URL', 'http://backend:5000')
+    
+    try:
+        requests.post(
+            f"{backend_url}/api/v1/dbt/runs/notify",
+            json={
+                'dag_id': DAG_ID,
+                'dag_run_id': context['dag_run'].run_id,
+                'tenant_id': TENANT_ID,
+                'status': 'running',
+                'command': DBT_COMMAND,
+                'started_at': datetime.utcnow().isoformat(),
+            },
+            timeout=30,
+            headers={'X-Airflow-Internal': 'true'},
+        )
+    except Exception as e:
+        print(f"Failed to notify backend of start: {e}")
+
+
+def notify_backend_complete(**context):
+    """Notify NovaSight backend that dbt run completed."""
+    import requests
+    
+    backend_url = os.getenv('NOVASIGHT_BACKEND_URL', 'http://backend:5000')
+    
+    # Determine status from upstream tasks
+    ti = context['ti']
+    upstream_task_states = [ti.xcom_pull(task_ids='run_dbt')]
+    status = 'success' if all(s == 0 for s in upstream_task_states if s is not None) else 'failed'
+    
+    try:
+        requests.post(
+            f"{backend_url}/api/v1/dbt/runs/notify",
+            json={
+                'dag_id': DAG_ID,
+                'dag_run_id': context['dag_run'].run_id,
+                'tenant_id': TENANT_ID,
+                'status': status,
+                'command': DBT_COMMAND,
+                'completed_at': datetime.utcnow().isoformat(),
+            },
+            timeout=30,
+            headers={'X-Airflow-Internal': 'true'},
+        )
+    except Exception as e:
+        print(f"Failed to notify backend of completion: {e}")
+
+
+# ============================================================================
+# DAG Definition
+# ============================================================================
+
+with DAG(
+    dag_id=DAG_ID,
+    default_args=default_args,
+    description=f"dbt {DBT_COMMAND} for tenant {TENANT_SLUG}",
+    schedule_interval=SCHEDULE_INTERVAL,
+    start_date=days_ago(1),
+    catchup=False,
+    max_active_runs=1,
+    tags=TAGS,
+    doc_md="""
+# {{ dag_id }}
+
+**Tenant:** {{ tenant_slug }}
+**Command:** dbt {{ dbt_command }}
+{% if dbt_select %}**Selection:** {{ dbt_select }}{% endif %}
+
+This DAG runs dbt transformations for tenant data in ClickHouse.
+
+## Source Database
+`tenant_{{ tenant_slug }}` - Raw tenant data
+
+## Target Database  
+`dbt_tenant_{{ tenant_slug }}` - Transformed dbt models
+
+## Schedule
+{{ schedule_interval | default('0 6 * * *') }}
+""",
+) as dag:
+
+    # Task 1: Notify backend of run start
+    notify_start = PythonOperator(
+        task_id='notify_start',
+        python_callable=notify_backend_start,
+        provide_context=True,
+    )
+
+    # Task 2: Install dbt packages if needed
+    install_deps = BashOperator(
+        task_id='install_deps',
+        bash_command=f'''
+            cd {DBT_PROJECT_PATH} && \
+            dbt deps --profiles-dir {DBT_PROFILES_PATH} --project-dir {DBT_PROJECT_PATH}
+        ''',
+        env={
+            'TENANT_ID': TENANT_ID,
+            'TENANT_SLUG': TENANT_SLUG,
+            **os.environ,
+        },
+    )
+
+    # Task 3: Run dbt command
+    run_dbt = BashOperator(
+        task_id='run_dbt',
+        bash_command=build_dbt_command(),
+        env={
+            'TENANT_ID': TENANT_ID,
+            'TENANT_SLUG': TENANT_SLUG,
+            'CLICKHOUSE_HOST': os.getenv('CLICKHOUSE_HOST', 'clickhouse'),
+            'CLICKHOUSE_PORT': os.getenv('CLICKHOUSE_PORT', '8123'),
+            'CLICKHOUSE_USER': os.getenv('CLICKHOUSE_USER', 'default'),
+            'CLICKHOUSE_PASSWORD': os.getenv('CLICKHOUSE_PASSWORD', ''),
+            **os.environ,
+        },
+        do_xcom_push=True,  # Push exit code for notification
+    )
+
+    {% if include_test | default(false) %}
+    # Task 4: Run dbt tests (optional)
+    run_tests = BashOperator(
+        task_id='run_tests',
+        bash_command=f'''
+            cd {DBT_PROJECT_PATH} && \
+            dbt test --profiles-dir {DBT_PROFILES_PATH} --project-dir {DBT_PROJECT_PATH}
+        ''',
+        env={
+            'TENANT_ID': TENANT_ID,
+            'TENANT_SLUG': TENANT_SLUG,
+            **os.environ,
+        },
+        trigger_rule='all_success',
+    )
+    {% endif %}
+
+    {% if generate_docs | default(false) %}
+    # Task 5: Generate dbt docs (optional)
+    generate_docs_task = BashOperator(
+        task_id='generate_docs',
+        bash_command=f'''
+            cd {DBT_PROJECT_PATH} && \
+            dbt docs generate --profiles-dir {DBT_PROFILES_PATH} --project-dir {DBT_PROJECT_PATH}
+        ''',
+        env={
+            'TENANT_ID': TENANT_ID,
+            'TENANT_SLUG': TENANT_SLUG,
+            **os.environ,
+        },
+        trigger_rule='all_success',
+    )
+    {% endif %}
+
+    # Task 6: Notify backend of completion
+    notify_complete = PythonOperator(
+        task_id='notify_complete',
+        python_callable=notify_backend_complete,
+        provide_context=True,
+        trigger_rule='all_done',  # Run regardless of upstream status
+    )
+
+    # Task dependencies
+    notify_start >> install_deps >> run_dbt
+    
+    {% if include_test | default(false) %}
+    run_dbt >> run_tests
+    {% if generate_docs | default(false) %}
+    run_tests >> generate_docs_task >> notify_complete
+    {% else %}
+    run_tests >> notify_complete
+    {% endif %}
+    {% elif generate_docs | default(false) %}
+    run_dbt >> generate_docs_task >> notify_complete
+    {% else %}
+    run_dbt >> notify_complete
+    {% endif %}

@@ -29,6 +29,7 @@ import {
   PySparkAppDetailPage 
 } from '@/pages/pyspark'
 import { SemanticModelsPage, ModelDetailPage } from '@/features/semantic'
+import { DbtStudioPage, ModelDetailPage as DbtModelDetailPage } from '@/features/dbt-studio'
 import { DashboardsListPage, DashboardBuilderPage } from '@/features/dashboards'
 import { QueryPage } from '@/features/query'
 import { SqlEditorPage } from '@/features/sql-editor'
@@ -114,6 +115,10 @@ function App() {
             {/* Semantic Layer */}
             <Route path="semantic" element={<SemanticModelsPage />} />
             <Route path="semantic/models/:modelId" element={<ModelDetailPage />} />
+            
+            {/* dbt Studio - No-code/Low-code dbt Builder */}
+            <Route path="dbt-studio" element={<DbtStudioPage />} />
+            <Route path="dbt-studio/models/:modelName" element={<DbtModelDetailPage />} />
             
             {/* Analytics Dashboards */}
             <Route path="dashboards" element={<DashboardsListPage />} />

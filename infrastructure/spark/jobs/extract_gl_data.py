@@ -177,7 +177,7 @@ ENGINE = {engine}(_novasight_updated_at)
         """
         import clickhouse_connect
         
-        target_url = os.getenv("CLICKHOUSE_HOST", "localhost")
+        target_url = os.getenv("CLICKHOUSE_HOST", "clickhouse")
         target_port = int(os.getenv("CLICKHOUSE_PORT", "8123"))
         target_user = os.getenv("CLICKHOUSE_USER", "default")
         target_password = os.getenv("CLICKHOUSE_PASSWORD", "")
@@ -297,9 +297,9 @@ ENGINE = {engine}(_novasight_updated_at)
         # Add metadata columns
         column_defs.extend([
             "`_novasight_app_id` String",
-            "`_novasight_tenant_id` String",
-            "`_novasight_loaded_at` DateTime64(6) DEFAULT now64()",
-            "`_novasight_updated_at` Nullable(DateTime64(6))"
+            "`_novasight_extracted_at` DateTime64(6) DEFAULT now64()",
+            "`_novasight_updated_at` DateTime64(6) DEFAULT now64()",
+            "`_novasight_is_deleted` UInt8 DEFAULT 0"
         ])
         
         columns_sql = ",\n    ".join(column_defs)
@@ -311,7 +311,7 @@ ENGINE = {engine}(_novasight_updated_at)
         create_sql = f"""
         CREATE TABLE IF NOT EXISTS {target_table} (
             {columns_sql}
-        ) ENGINE = ReplacingMergeTree(_novasight_loaded_at)
+        ) ENGINE = ReplacingMergeTree(_novasight_updated_at)
         ORDER BY ({order_by_cols})
         PRIMARY KEY ({order_by_cols})
         """
@@ -396,13 +396,12 @@ ENGINE = {engine}(_novasight_updated_at)
     
     def add_metadata_columns(self, df: DataFrame, is_update: bool = False) -> DataFrame:
         """Add metadata columns for audit tracking."""
+        current_ts = current_timestamp()
         df = df \
             .withColumn("_novasight_app_id", lit(self.app_id)) \
-            .withColumn("_novasight_tenant_id", lit("eb09c5fc-6c5b-4745-a7ea-c3166a65de97")) \
-            .withColumn("_novasight_loaded_at", current_timestamp())
-        
-        if is_update:
-            df = df.withColumn("_novasight_updated_at", current_timestamp())
+            .withColumn("_novasight_extracted_at", current_ts) \
+            .withColumn("_novasight_updated_at", current_ts) \
+            .withColumn("_novasight_is_deleted", lit(0))
         
         return df
     

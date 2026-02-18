@@ -169,7 +169,7 @@ export function KeyConfiguration({ state, onStateChange }: KeyConfigurationProps
                     </SelectItem>
                   ))}
                   {timestampColumns.length === 0 && (
-                    <SelectItem value="" disabled>
+                    <SelectItem value="__no_columns__" disabled>
                       No timestamp columns found
                     </SelectItem>
                   )}
