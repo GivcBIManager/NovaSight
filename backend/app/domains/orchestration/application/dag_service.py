@@ -2,7 +2,7 @@
 NovaSight Orchestration Domain — DAG Service
 ==============================================
 
-Application-layer service for DAG configuration and Airflow integration.
+Application-layer service for DAG configuration and Dagster integration.
 
 Canonical location: ``app.domains.orchestration.application.dag_service``
 """
@@ -17,16 +17,17 @@ from app.domains.orchestration.domain.models import (
     DagConfig, DagVersion, TaskConfig,
     DagStatus, ScheduleType, TaskType, TriggerRule,
 )
-from app.domains.orchestration.infrastructure.airflow_client import AirflowClient
+from app.domains.orchestration.infrastructure.dagster_client import DagsterClient
+from app.domains.orchestration.infrastructure.asset_factory import AssetFactory
+from app.domains.orchestration.infrastructure.schedule_factory import ScheduleFactory
 from app.domains.orchestration.domain.validators import DagValidator
-from app.domains.orchestration.infrastructure.dag_generator import DagGenerator
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class DagService:
-    """Service for DAG configuration and Airflow integration."""
+    """Service for DAG configuration and Dagster integration."""
 
     def __init__(self, tenant_id: str):
         """
@@ -36,9 +37,10 @@ class DagService:
             tenant_id: Tenant UUID
         """
         self.tenant_id = tenant_id
-        self.airflow_client = AirflowClient()
+        self.dagster_client = DagsterClient(tenant_id=tenant_id)
+        self.asset_factory = AssetFactory(tenant_id)
+        self.schedule_factory = ScheduleFactory(tenant_id)
         self.validator = DagValidator()
-        self.generator = DagGenerator(tenant_id)
 
     # ------------------------------------------------------------------
     # Queries
@@ -134,8 +136,16 @@ class DagService:
 
         if dag and include_runs:
             try:
-                runs = self.airflow_client.get_dag_runs(dag.full_dag_id, limit=10)
-                dag._recent_runs = runs
+                runs = self.dagster_client.get_job_runs(f"{dag.full_dag_id}_job", limit=10)
+                dag._recent_runs = [
+                    {
+                        "run_id": r.run_id,
+                        "state": r.state,
+                        "start_date": r.start_time.isoformat() if r.start_time else None,
+                        "end_date": r.end_time.isoformat() if r.end_time else None,
+                    }
+                    for r in runs
+                ]
             except Exception as e:
                 logger.warning(f"Failed to fetch DAG runs: {e}")
                 dag._recent_runs = []
@@ -333,23 +343,18 @@ class DagService:
         if not dag_config:
             return False
 
-        # --- Airflow cleanup (best-effort) ---
+        # --- Dagster cleanup (best-effort) ---
         if dag_config.status in (DagStatus.ACTIVE, DagStatus.PAUSED, DagStatus.ERROR):
             try:
-                self.airflow_client.pause_dag(dag_config.full_dag_id)
+                self.dagster_client.stop_schedule(f"{dag_config.full_dag_id}_schedule")
             except Exception as e:
-                logger.warning(f"Failed to pause DAG in Airflow during delete: {e}")
+                logger.warning(f"Failed to stop schedule in Dagster during delete: {e}")
 
-            try:
-                self.airflow_client.delete_dag(dag_config.full_dag_id)
-            except Exception as e:
-                logger.warning(f"Failed to delete DAG from Airflow API: {e}")
-
-        # --- Remove generated DAG file ---
+        # --- Reload code location to pick up changes ---
         try:
-            self.generator.delete_dag(dag_config.full_dag_id)
+            self.dagster_client.reload_code_location()
         except Exception as e:
-            logger.warning(f"Failed to delete DAG file: {e}")
+            logger.warning(f"Failed to reload Dagster code location: {e}")
 
         if hard_delete:
             # Permanently remove from database
@@ -375,7 +380,7 @@ class DagService:
         return self.validator.validate(dag_config)
 
     def deploy_dag(self, dag_id: str, deployed_by: str = None) -> Optional[Dict[str, Any]]:
-        """Deploy DAG to Airflow."""
+        """Deploy DAG to Dagster."""
         dag_config = self.get_dag(dag_id)
         if not dag_config:
             return None
@@ -389,17 +394,26 @@ class DagService:
             }
 
         try:
-            dag_file_content = self.generator.generate(dag_config)
+            # Build assets using AssetFactory (for validation)
+            assets = self.asset_factory.build_assets_from_dag_config(dag_config)
+            if not assets:
+                return {
+                    "success": False,
+                    "error": "No assets could be built from DAG configuration",
+                }
+            logger.info(f"Built {len(assets)} assets for DAG: {dag_id}")
 
-            # Write DAG file to Airflow dags directory
-            dags_dir = self.generator.dags_path
-            dags_dir.mkdir(parents=True, exist_ok=True)
-            
-            dag_filename = f"{dag_config.full_dag_id}.py"
-            dag_file_path = dags_dir / dag_filename
-            
-            dag_file_path.write_text(dag_file_content, encoding='utf-8')
-            logger.info(f"Wrote DAG file to: {dag_file_path}")
+            # Build schedule using ScheduleFactory (for validation)
+            schedule = self.schedule_factory.build_schedule_from_dag_config(dag_config)
+            if schedule:
+                logger.info(f"Built schedule for DAG: {dag_id}")
+            else:
+                logger.info(f"DAG {dag_id} is manual, no schedule created")
+
+            # Reload Dagster code location to pick up new definitions
+            reload_result = self.dagster_client.reload_code_location()
+            if not reload_result.get("success"):
+                logger.warning(f"Code location reload warning: {reload_result.get('error')}")
 
             dag_config.deployed_at = datetime.utcnow()
             dag_config.deployed_version = dag_config.current_version
@@ -412,7 +426,9 @@ class DagService:
                 "success": True,
                 "dag_id": dag_config.full_dag_id,
                 "version": dag_config.deployed_version,
-                "file_path": str(dag_file_path),
+                "job_name": f"{dag_config.full_dag_id}_job",
+                "schedule_name": f"{dag_config.full_dag_id}_schedule" if schedule else None,
+                "asset_count": len(assets),
             }
 
         except Exception as e:
@@ -420,76 +436,78 @@ class DagService:
             return {"success": False, "error": str(e)}
 
     # ------------------------------------------------------------------
-    # Airflow Operations
+    # Dagster Operations
     # ------------------------------------------------------------------
 
     def trigger_dag(self, dag_id: str, conf: Dict[str, Any] = None) -> Optional[Dict[str, Any]]:
-        """Trigger immediate DAG run."""
+        """Trigger immediate DAG run (Dagster job)."""
         dag_config = self.get_dag(dag_id)
         if not dag_config:
             return None
 
         try:
-            run = self.airflow_client.trigger_dag(dag_config.full_dag_id, conf)
-            return {
-                "success": True,
-                "run_id": run.run_id,
-                "execution_date": run.execution_date.isoformat(),
-            }
+            job_name = f"{dag_config.full_dag_id}_job"
+            result = self.dagster_client.trigger_job(job_name, run_config=conf)
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "run_id": result.get("run_id"),
+                    "status": result.get("status"),
+                }
+            else:
+                return {"success": False, "error": result.get("error")}
         except Exception as e:
             logger.error(f"Failed to trigger DAG: {e}")
             return {"success": False, "error": str(e)}
 
     def pause_dag(self, dag_id: str) -> Optional[Dict[str, Any]]:
-        """Pause DAG scheduling in Airflow."""
+        """Pause DAG scheduling in Dagster (stop schedule)."""
         dag_config = self.get_dag(dag_id)
         if not dag_config:
             return None
 
         try:
-            # Call Airflow API to pause the DAG
-            response = self.airflow_client.pause_dag(dag_config.full_dag_id)
+            schedule_name = f"{dag_config.full_dag_id}_schedule"
+            response = self.dagster_client.stop_schedule(schedule_name)
             
-            # Verify Airflow confirmed the DAG is paused
-            if response.get("is_paused") is True:
+            if response.get("success"):
                 dag_config.status = DagStatus.PAUSED
                 db.session.commit()
-                logger.info(f"DAG '{dag_config.full_dag_id}' paused successfully in Airflow")
+                logger.info(f"DAG '{dag_config.full_dag_id}' paused successfully in Dagster")
                 return {"success": True, "status": "paused"}
             else:
-                # Airflow didn't confirm pause - log warning but still update local state
-                logger.warning(f"Airflow response did not confirm pause for '{dag_config.full_dag_id}': {response}")
+                # Dagster didn't confirm pause - log warning but still update local state
+                logger.warning(f"Dagster response did not confirm pause for '{dag_config.full_dag_id}': {response}")
                 dag_config.status = DagStatus.PAUSED
                 db.session.commit()
-                return {"success": True, "status": "paused", "warning": "Airflow response not confirmed"}
+                return {"success": True, "status": "paused", "warning": "Dagster response not confirmed"}
         except Exception as e:
-            logger.error(f"Failed to pause DAG '{dag_config.full_dag_id}' in Airflow: {e}")
+            logger.error(f"Failed to pause DAG '{dag_config.full_dag_id}' in Dagster: {e}")
             return {"success": False, "error": str(e)}
 
     def unpause_dag(self, dag_id: str) -> Optional[Dict[str, Any]]:
-        """Resume DAG scheduling in Airflow."""
+        """Resume DAG scheduling in Dagster (start schedule)."""
         dag_config = self.get_dag(dag_id)
         if not dag_config:
             return None
 
         try:
-            # Call Airflow API to unpause the DAG
-            response = self.airflow_client.unpause_dag(dag_config.full_dag_id)
+            schedule_name = f"{dag_config.full_dag_id}_schedule"
+            response = self.dagster_client.start_schedule(schedule_name)
             
-            # Verify Airflow confirmed the DAG is unpaused
-            if response.get("is_paused") is False:
+            if response.get("success"):
                 dag_config.status = DagStatus.ACTIVE
                 db.session.commit()
-                logger.info(f"DAG '{dag_config.full_dag_id}' unpaused successfully in Airflow")
+                logger.info(f"DAG '{dag_config.full_dag_id}' unpaused successfully in Dagster")
                 return {"success": True, "status": "active"}
             else:
-                # Airflow didn't confirm unpause - log warning but still update local state
-                logger.warning(f"Airflow response did not confirm unpause for '{dag_config.full_dag_id}': {response}")
+                # Dagster didn't confirm unpause - log warning but still update local state
+                logger.warning(f"Dagster response did not confirm unpause for '{dag_config.full_dag_id}': {response}")
                 dag_config.status = DagStatus.ACTIVE
                 db.session.commit()
-                return {"success": True, "status": "active", "warning": "Airflow response not confirmed"}
+                return {"success": True, "status": "active", "warning": "Dagster response not confirmed"}
         except Exception as e:
-            logger.error(f"Failed to unpause DAG '{dag_config.full_dag_id}' in Airflow: {e}")
+            logger.error(f"Failed to unpause DAG '{dag_config.full_dag_id}' in Dagster: {e}")
             return {"success": False, "error": str(e)}
 
     # ------------------------------------------------------------------
@@ -503,28 +521,33 @@ class DagService:
         per_page: int = 25,
         state: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
-        """List DAG run history."""
+        """List DAG run history (Dagster job runs)."""
         dag_config = self.get_dag(dag_id)
         if not dag_config:
             return None
 
         try:
-            offset = (page - 1) * per_page
-            runs = self.airflow_client.get_dag_runs(
-                dag_config.full_dag_id,
-                limit=per_page,
-                offset=offset,
+            job_name = f"{dag_config.full_dag_id}_job"
+            # Dagster doesn't support offset, so we fetch more and slice
+            runs = self.dagster_client.get_job_runs(
+                job_name,
+                limit=page * per_page,
             )
+            # Slice for pagination
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            paged_runs = runs[start_idx:end_idx]
+            
             return {
                 "runs": [
                     {
                         "run_id": r.run_id,
                         "state": r.state,
-                        "execution_date": r.execution_date.isoformat(),
-                        "start_date": r.start_date.isoformat() if r.start_date else None,
-                        "end_date": r.end_date.isoformat() if r.end_date else None,
+                        "execution_date": r.start_time.isoformat() if r.start_time else None,
+                        "start_date": r.start_time.isoformat() if r.start_time else None,
+                        "end_date": r.end_time.isoformat() if r.end_time else None,
                     }
-                    for r in runs
+                    for r in paged_runs
                 ],
                 "pagination": {"page": page, "per_page": per_page},
             }
@@ -533,32 +556,47 @@ class DagService:
             return {"runs": [], "error": str(e)}
 
     def get_dag_run(self, dag_id: str, run_id: str) -> Optional[Dict[str, Any]]:
-        """Get DAG run details with task instances."""
+        """Get DAG run details with step/asset information."""
         dag_config = self.get_dag(dag_id)
         if not dag_config:
             return None
 
         try:
-            run = self.airflow_client.get_dag_run(dag_config.full_dag_id, run_id)
-            tasks = self.airflow_client.get_task_instances(dag_config.full_dag_id, run_id)
+            run_details = self.dagster_client.get_run_details(run_id)
+
+            # Map Dagster status to Airflow-compatible state
+            status = run_details.get("status", "UNKNOWN")
+            state_map = {
+                "SUCCESS": "success",
+                "FAILURE": "failed",
+                "STARTED": "running",
+                "QUEUED": "queued",
+                "CANCELED": "cancelled",
+                "CANCELING": "cancelling",
+                "NOT_STARTED": "queued",
+            }
+            mapped_state = state_map.get(status, status.lower())
+
+            start_time = run_details.get("startTime")
+            end_time = run_details.get("endTime")
 
             return {
                 "run": {
-                    "run_id": run.run_id,
-                    "state": run.state,
-                    "execution_date": run.execution_date.isoformat(),
-                    "start_date": run.start_date.isoformat() if run.start_date else None,
-                    "end_date": run.end_date.isoformat() if run.end_date else None,
+                    "run_id": run_details.get("runId") or run_id,
+                    "state": mapped_state,
+                    "execution_date": datetime.fromtimestamp(float(start_time)).isoformat() if start_time else None,
+                    "start_date": datetime.fromtimestamp(float(start_time)).isoformat() if start_time else None,
+                    "end_date": datetime.fromtimestamp(float(end_time)).isoformat() if end_time else None,
                 },
                 "tasks": [
                     {
-                        "task_id": t.task_id,
-                        "state": t.state,
-                        "start_date": t.start_date.isoformat() if t.start_date else None,
-                        "end_date": t.end_date.isoformat() if t.end_date else None,
-                        "try_number": t.try_number,
+                        "task_id": step.get("stepKey"),
+                        "state": state_map.get(step.get("status"), step.get("status", "").lower()),
+                        "start_date": datetime.fromtimestamp(float(step["startTime"])).isoformat() if step.get("startTime") else None,
+                        "end_date": datetime.fromtimestamp(float(step["endTime"])).isoformat() if step.get("endTime") else None,
+                        "try_number": 1,  # Dagster doesn't have try_number concept
                     }
-                    for t in tasks
+                    for step in run_details.get("stepStats", [])
                 ],
             }
         except Exception as e:
@@ -572,21 +610,16 @@ class DagService:
         task_id: str,
         try_number: Optional[int] = None,
     ) -> Optional[Dict[str, Any]]:
-        """Get task execution logs."""
+        """Get task execution logs (Dagster step logs)."""
         dag_config = self.get_dag(dag_id)
         if not dag_config:
             return None
 
         try:
-            logs = self.airflow_client.get_task_logs(
-                dag_config.full_dag_id,
-                run_id,
-                task_id,
-                try_number or 1,
-            )
+            logs = self.dagster_client.get_run_logs(run_id, step_key=task_id)
             return {
                 "task_id": task_id,
-                "try_number": try_number or 1,
+                "try_number": 1,  # Dagster doesn't have try_number concept
                 "content": logs,
             }
         except Exception as e:

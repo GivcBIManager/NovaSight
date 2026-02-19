@@ -22,6 +22,7 @@ from app.domains.datasources.api import connection_routes  # noqa: F401
 
 # Orchestration domain routes (canonical)
 from app.domains.orchestration.api import dag_routes  # noqa: F401
+from app.domains.orchestration.api.dagster_proxy import dagster_proxy_bp  # noqa: F401
 
 # Analytics domain routes (canonical)
 from app.domains.analytics.api import dashboard_routes  # noqa: F401
@@ -47,3 +48,6 @@ api_v1_bp.register_blueprint(admin_bp)
 # Register backup API (admin-only endpoints)
 from app.api.backup import bp as backup_bp
 api_v1_bp.register_blueprint(backup_bp)
+
+# Register Dagster proxy (orchestration endpoints)
+api_v1_bp.register_blueprint(dagster_proxy_bp)

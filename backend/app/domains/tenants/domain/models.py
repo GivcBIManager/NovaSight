@@ -45,8 +45,10 @@ class InfrastructureType(enum.Enum):
 
     CLICKHOUSE = "clickhouse"
     SPARK = "spark"
-    AIRFLOW = "airflow"
+    DAGSTER = "dagster"
     OLLAMA = "ollama"
+    # Deprecated: use DAGSTER instead
+    AIRFLOW = "airflow"
 
 
 # ---------------------------------------------------------------------------
@@ -284,9 +286,24 @@ DEFAULT_INFRASTRUCTURE_CONFIGS: Dict[str, Dict[str, Any]] = {
             "additional_configs": {},
         },
     },
+    InfrastructureType.DAGSTER.value: {
+        "name": "Default Dagster",
+        "description": "Default Dagster orchestrator configuration",
+        "host": "localhost",
+        "port": 3000,
+        "settings": {
+            "graphql_url": "http://localhost:3000/graphql",
+            "request_timeout": 30,
+            "verify_ssl": True,
+            "max_concurrent_runs": 10,
+            "spark_concurrency_limit": 3,
+            "dbt_concurrency_limit": 2,
+            "compute_logs_dir": "/var/dagster/logs",
+        },
+    },
     InfrastructureType.AIRFLOW.value: {
         "name": "Default Airflow",
-        "description": "Default Apache Airflow configuration for development",
+        "description": "Default Apache Airflow configuration for development (deprecated)",
         "host": "localhost",
         "port": 8080,
         "settings": {

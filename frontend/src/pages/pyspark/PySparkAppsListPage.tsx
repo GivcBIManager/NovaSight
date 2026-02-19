@@ -19,7 +19,10 @@ import {
   Clock,
   FileCode,
   RefreshCw,
-  Loader2
+  Loader2,
+  Power,
+  PowerOff,
+  Rocket
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,7 +57,10 @@ import { useToast } from '@/components/ui/use-toast'
 import { 
   usePySparkApps, 
   useDeletePySparkApp, 
-  useGeneratePySparkCode 
+  useGeneratePySparkCode,
+  useActivatePySparkApp,
+  useDeactivatePySparkApp,
+  useRunPySparkApp
 } from '@/features/pyspark/hooks'
 import { PySparkApp, PySparkAppStatus, SCDType, WriteMode } from '@/types/pyspark'
 
@@ -107,6 +113,9 @@ export function PySparkAppsListPage() {
   const { data: appsResponse, isLoading, error, refetch } = usePySparkApps()
   const deleteApp = useDeletePySparkApp()
   const generateCode = useGeneratePySparkCode()
+  const activateApp = useActivatePySparkApp()
+  const deactivateApp = useDeactivatePySparkApp()
+  const runApp = useRunPySparkApp()
   
   // Filter apps based on search query
   const filteredApps = appsResponse?.apps?.filter((app: PySparkApp) => 
@@ -156,6 +165,57 @@ export function PySparkAppsListPage() {
       toast({
         title: 'Error',
         description: 'Failed to generate code. Please try again.',
+        variant: 'destructive',
+      })
+    }
+  }
+  
+  // Handle activate
+  const handleActivate = async (app: PySparkApp) => {
+    try {
+      await activateApp.mutateAsync(app.id)
+      toast({
+        title: 'App Activated',
+        description: `"${app.name}" is now active and will appear in Dagster.`,
+      })
+    } catch (error: any) {
+      toast({
+        title: 'Activation Failed',
+        description: error?.response?.data?.message || 'Failed to activate app.',
+        variant: 'destructive',
+      })
+    }
+  }
+  
+  // Handle deactivate
+  const handleDeactivate = async (app: PySparkApp) => {
+    try {
+      await deactivateApp.mutateAsync(app.id)
+      toast({
+        title: 'App Deactivated',
+        description: `"${app.name}" has been deactivated.`,
+      })
+    } catch (error: any) {
+      toast({
+        title: 'Deactivation Failed',
+        description: error?.response?.data?.message || 'Failed to deactivate app.',
+        variant: 'destructive',
+      })
+    }
+  }
+  
+  // Handle run now
+  const handleRunNow = async (app: PySparkApp) => {
+    try {
+      const result = await runApp.mutateAsync(app.id)
+      toast({
+        title: 'Job Started',
+        description: `Started "${app.name}". Run ID: ${result.run_id}`,
+      })
+    } catch (error: any) {
+      toast({
+        title: 'Run Failed',
+        description: error?.response?.data?.message || 'Failed to start the job.',
         variant: 'destructive',
       })
     }
@@ -349,10 +409,28 @@ export function PySparkAppsListPage() {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleGenerateCode(app)}>
                               <Play className="h-4 w-4 mr-2" />
                               Generate Code
                             </DropdownMenuItem>
+                            {app.status === 'active' ? (
+                              <DropdownMenuItem onClick={() => handleDeactivate(app)}>
+                                <PowerOff className="h-4 w-4 mr-2" />
+                                Deactivate
+                              </DropdownMenuItem>
+                            ) : app.generated_code ? (
+                              <DropdownMenuItem onClick={() => handleActivate(app)}>
+                                <Power className="h-4 w-4 mr-2" />
+                                Activate
+                              </DropdownMenuItem>
+                            ) : null}
+                            {app.status === 'active' && app.generated_code && (
+                              <DropdownMenuItem onClick={() => handleRunNow(app)}>
+                                <Rocket className="h-4 w-4 mr-2" />
+                                Run Now
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleDeleteClick(app)}

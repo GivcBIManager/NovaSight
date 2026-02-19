@@ -408,3 +408,246 @@ def validate_pyspark_query():
     result = service.validate_query(connection_id, schema.query)
     
     return jsonify(result)
+
+
+@api_v1_bp.route("/pyspark-apps/<app_id>/activate", methods=["POST"])
+@jwt_required()
+@require_tenant_context
+@require_roles(["data_engineer", "tenant_admin"])
+def activate_pyspark_app(app_id: str):
+    """
+    Activate a PySpark app (set status to active).
+    
+    This makes the app visible to Dagster for scheduled execution.
+    Code must be generated before activation.
+    
+    Path Parameters:
+        - app_id: PySpark app UUID
+    
+    Returns:
+        Updated PySpark app details
+    """
+    identity = get_current_identity()
+    tenant_id = identity.tenant_id
+    
+    service = PySparkAppService(tenant_id)
+    app = service.get_app(app_id)
+    
+    if not app:
+        raise NotFoundError(f"PySpark app {app_id} not found")
+    
+    # Ensure code is generated before activating
+    if not app.generated_code:
+        raise ValidationError("Cannot activate app without generated code. Generate code first.")
+    
+    # Update status to active
+    app = service.update_app(app_id, status="active")
+    
+    # Trigger Dagster code location reload so it picks up the new asset
+    try:
+        _reload_dagster_code_location()
+    except Exception as e:
+        logger.warning(f"Failed to reload Dagster code location: {e}")
+    
+    return jsonify({
+        **app.to_dict(),
+        "message": "App activated successfully. It will appear in Dagster shortly."
+    })
+
+
+@api_v1_bp.route("/pyspark-apps/<app_id>/deactivate", methods=["POST"])
+@jwt_required()
+@require_tenant_context
+@require_roles(["data_engineer", "tenant_admin"])
+def deactivate_pyspark_app(app_id: str):
+    """
+    Deactivate a PySpark app (set status to inactive).
+    
+    This removes the app from Dagster scheduled execution.
+    
+    Path Parameters:
+        - app_id: PySpark app UUID
+    
+    Returns:
+        Updated PySpark app details
+    """
+    identity = get_current_identity()
+    tenant_id = identity.tenant_id
+    
+    service = PySparkAppService(tenant_id)
+    app = service.get_app(app_id)
+    
+    if not app:
+        raise NotFoundError(f"PySpark app {app_id} not found")
+    
+    # Update status to inactive
+    app = service.update_app(app_id, status="inactive")
+    
+    # Trigger Dagster code location reload
+    try:
+        _reload_dagster_code_location()
+    except Exception as e:
+        logger.warning(f"Failed to reload Dagster code location: {e}")
+    
+    return jsonify({
+        **app.to_dict(),
+        "message": "App deactivated successfully."
+    })
+
+
+@api_v1_bp.route("/pyspark-apps/<app_id>/run", methods=["POST"])
+@jwt_required()
+@require_tenant_context
+@require_roles(["data_engineer", "tenant_admin"])
+def run_pyspark_app(app_id: str):
+    """
+    Trigger an immediate execution of a PySpark app via Dagster.
+    
+    This materializes the corresponding Dagster asset.
+    
+    Path Parameters:
+        - app_id: PySpark app UUID
+    
+    Returns:
+        Run information including Dagster run_id
+    """
+    import requests
+    from flask import current_app
+    
+    identity = get_current_identity()
+    tenant_id = identity.tenant_id
+    
+    service = PySparkAppService(tenant_id)
+    app = service.get_app(app_id)
+    
+    if not app:
+        raise NotFoundError(f"PySpark app {app_id} not found")
+    
+    if app.status != PySparkAppStatus.ACTIVE:
+        raise ValidationError("Can only run active apps. Activate the app first.")
+    
+    if not app.generated_code:
+        raise ValidationError("Cannot run app without generated code. Generate code first.")
+    
+    # Build asset key for Dagster
+    safe_tenant_id = str(tenant_id).replace('-', '_')
+    safe_app_name = app.name.lower().replace(' ', '_').replace('-', '_')
+    asset_key = ["pyspark", safe_tenant_id, f"pyspark_{safe_app_name}"]
+    
+    # Call Dagster GraphQL to materialize the asset
+    dagster_url = current_app.config.get('DAGSTER_GRAPHQL_URL', 'http://localhost:3000/graphql')
+    
+    mutation = """
+    mutation LaunchAssetRun($assetKey: AssetKeyInput!) {
+        launchPipelineExecution(
+            executionParams: {
+                selector: {
+                    repositoryLocationName: "novasight"
+                    repositoryName: "__repository__"
+                    assetSelection: [$assetKey]
+                    assetCheckSelection: []
+                }
+                mode: "default"
+            }
+        ) {
+            ... on LaunchRunSuccess {
+                run {
+                    id
+                    runId
+                    status
+                }
+            }
+            ... on PipelineNotFoundError {
+                message
+            }
+            ... on InvalidSubsetError {
+                message
+            }
+            ... on RunConfigValidationInvalid {
+                errors {
+                    message
+                }
+            }
+            ... on PythonError {
+                message
+            }
+        }
+    }
+    """
+    
+    try:
+        response = requests.post(
+            dagster_url,
+            json={
+                "query": mutation,
+                "variables": {
+                    "assetKey": {"path": asset_key}
+                }
+            },
+            headers={"Content-Type": "application/json"},
+            timeout=30
+        )
+        response.raise_for_status()
+        result = response.json()
+        
+        if "errors" in result:
+            raise ValidationError(f"Dagster error: {result['errors'][0].get('message', 'Unknown error')}")
+        
+        launch_result = result.get("data", {}).get("launchPipelineExecution", {})
+        
+        if "run" in launch_result:
+            run_info = launch_result["run"]
+            return jsonify({
+                "success": True,
+                "run_id": run_info.get("runId"),
+                "dagster_run_id": run_info.get("id"),
+                "status": run_info.get("status"),
+                "message": f"PySpark job started successfully. Run ID: {run_info.get('runId')}"
+            })
+        else:
+            error_msg = launch_result.get("message", "Failed to launch run")
+            raise ValidationError(f"Failed to start run: {error_msg}")
+            
+    except requests.exceptions.ConnectionError:
+        raise ValidationError("Cannot connect to Dagster. Please ensure Dagster is running.")
+    except requests.exceptions.Timeout:
+        raise ValidationError("Request to Dagster timed out.")
+
+
+def _reload_dagster_code_location():
+    """
+    Trigger a reload of the Dagster code location to pick up new/changed assets.
+    """
+    import requests
+    from flask import current_app
+    
+    dagster_url = current_app.config.get('DAGSTER_GRAPHQL_URL', 'http://localhost:3000/graphql')
+    
+    mutation = """
+    mutation ReloadCodeLocation {
+        reloadRepositoryLocation(repositoryLocationName: "novasight") {
+            ... on WorkspaceLocationEntry {
+                name
+                loadStatus
+            }
+            ... on ReloadNotSupported {
+                message
+            }
+            ... on RepositoryLocationNotFound {
+                message
+            }
+            ... on PythonError {
+                message
+            }
+        }
+    }
+    """
+    
+    response = requests.post(
+        dagster_url,
+        json={"query": mutation},
+        headers={"Content-Type": "application/json"},
+        timeout=30
+    )
+    response.raise_for_status()
+    return response.json()

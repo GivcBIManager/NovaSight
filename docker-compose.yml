@@ -434,7 +434,7 @@ services:
       - novasight-network
 
   # ============================================
-  # NovaSight Backend API
+  # NovaSight Backend API (with Dagster)
   # ============================================
   backend:
     build:
@@ -443,7 +443,8 @@ services:
     container_name: novasight-backend
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5000:5000"    # Flask API
+      - "3000:3000"    # Dagster Webserver
     environment:
       FLASK_ENV: development
       FLASK_DEBUG: "1"
@@ -459,15 +460,35 @@ services:
       SECRET_KEY: dev-secret-key-change-in-production
       JWT_SECRET_KEY: jwt-dev-secret-key-change-in-production
       CREDENTIAL_ENCRYPTION_KEY: novasight-encryption-key-32byte!
+      # Dagster Configuration (Primary Orchestrator)
+      DAGSTER_HOME: /app/orchestration
+      DAGSTER_POSTGRES_URL: postgresql://novasight:novasight@postgres:5432/dagster
+      DAGSTER_HOST: localhost
+      DAGSTER_PORT: 3000
+      DAGSTER_GRAPHQL_URL: http://localhost:3000/graphql
+      DAGSTER_MAX_CONCURRENT_RUNS: 10
+      DAGSTER_SPARK_CONCURRENCY_LIMIT: 3
+      DAGSTER_DBT_CONCURRENCY_LIMIT: 2
+      DAGSTER_COMPUTE_LOGS_DIR: /var/dagster/logs
+      # Dagster resources configuration
+      DBT_PROJECT_DIR: /app/dbt
+      DBT_PROFILES_DIR: /app/dbt
     volumes:
       - ./backend:/app
       - ./infrastructure/airflow/dags:/opt/airflow/dags
       - ./infrastructure/spark/jobs:/opt/spark/jobs
+      - ./dbt:/app/dbt
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - novasight-network
 

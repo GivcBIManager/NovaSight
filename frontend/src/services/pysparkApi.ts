@@ -139,6 +139,44 @@ export async function validateQuery(
   return response.data
 }
 
+/**
+ * Activate a PySpark app (set status to active)
+ */
+export async function activatePySparkApp(
+  appId: string
+): Promise<PySparkApp & { message: string }> {
+  const response = await apiClient.post<PySparkApp & { message: string }>(`${BASE_URL}/${appId}/activate`, {})
+  return response.data
+}
+
+/**
+ * Deactivate a PySpark app (set status to inactive)
+ */
+export async function deactivatePySparkApp(
+  appId: string
+): Promise<PySparkApp & { message: string }> {
+  const response = await apiClient.post<PySparkApp & { message: string }>(`${BASE_URL}/${appId}/deactivate`, {})
+  return response.data
+}
+
+/**
+ * Run a PySpark app immediately via Dagster
+ */
+export interface RunPySparkAppResponse {
+  success: boolean
+  run_id: string
+  dagster_run_id: string
+  status: string
+  message: string
+}
+
+export async function runPySparkApp(
+  appId: string
+): Promise<RunPySparkAppResponse> {
+  const response = await apiClient.post<RunPySparkAppResponse>(`${BASE_URL}/${appId}/run`, {})
+  return response.data
+}
+
 // Export all functions as a namespace
 export const pysparkApi = {
   list: listPySparkApps,
@@ -150,6 +188,9 @@ export const pysparkApi = {
   getCode: getPySparkCode,
   previewCode: previewPySparkCode,
   validateQuery,
+  activate: activatePySparkApp,
+  deactivate: deactivatePySparkApp,
+  run: runPySparkApp,
 }
 
 export default pysparkApi

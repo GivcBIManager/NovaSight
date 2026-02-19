@@ -19,6 +19,7 @@ import {
   PieChart,
   LayoutDashboard,
   Sparkles,
+  Workflow,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
@@ -31,6 +32,7 @@ const mainNavigation = [
 
 // Orchestrate your Data section
 const orchestrateNavigation = [
+  { name: 'Orchestration', href: '/app/orchestration', icon: Workflow },
   { name: 'Extract & Load', href: '/app/pyspark', icon: Upload },
   { name: 'Task Scheduler', href: '/app/dags', icon: CalendarClock },
   { name: 'dbt Studio', href: '/app/dbt-studio', icon: GitBranch },

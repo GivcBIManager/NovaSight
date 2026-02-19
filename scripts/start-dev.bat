@@ -67,6 +67,11 @@ docker-compose up -d airflow-postgres airflow-init
 timeout /t 10 /nobreak > nul
 docker-compose up -d airflow-webserver airflow-scheduler %BUILD_FLAG%
 
+echo Starting Dagster services...
+docker-compose up -d dagster-postgres
+timeout /t 5 >nul
+docker-compose up -d dagster-webserver dagster-daemon %BUILD_FLAG%
+
 if "%NO_SPARK%"=="false" (
     echo Starting Spark cluster...
     docker-compose up -d spark-master spark-worker-1 spark-worker-2
@@ -104,6 +109,7 @@ echo.
 echo   Frontend:        http://localhost:5173
 echo   Backend API:     http://localhost:5000
 echo   Airflow UI:      http://localhost:8080  (airflow/airflow)
+echo   Dagster UI:      http://localhost:3000
 echo   Spark Master:    http://localhost:8081
 echo   ClickHouse:      http://localhost:8123
 echo   PostgreSQL:      localhost:5432

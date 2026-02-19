@@ -54,7 +54,15 @@ class BaseConfig:
     SPARK_EXECUTOR_MEMORY = os.getenv("SPARK_EXECUTOR_MEMORY", "2g")
     SPARK_EXECUTOR_CORES = int(os.getenv("SPARK_EXECUTOR_CORES", "2"))
     
-    # Airflow Configuration
+    # Dagster Configuration (Primary Orchestrator)
+    DAGSTER_HOST = os.getenv("DAGSTER_HOST", "localhost")
+    DAGSTER_PORT = int(os.getenv("DAGSTER_PORT", "3000"))
+    DAGSTER_GRAPHQL_URL = os.getenv("DAGSTER_GRAPHQL_URL", "http://localhost:3000/graphql")
+    DAGSTER_MAX_CONCURRENT_RUNS = int(os.getenv("DAGSTER_MAX_CONCURRENT_RUNS", "10"))
+    DAGSTER_SPARK_CONCURRENCY_LIMIT = int(os.getenv("DAGSTER_SPARK_CONCURRENCY_LIMIT", "3"))
+    DAGSTER_DBT_CONCURRENCY_LIMIT = int(os.getenv("DAGSTER_DBT_CONCURRENCY_LIMIT", "2"))
+    
+    # Airflow Configuration (Deprecated - use Dagster instead)
     AIRFLOW_BASE_URL = os.getenv("AIRFLOW_BASE_URL", "http://localhost:8080")
     AIRFLOW_USERNAME = os.getenv("AIRFLOW_USERNAME", "airflow")
     AIRFLOW_PASSWORD = os.getenv("AIRFLOW_PASSWORD", "airflow")

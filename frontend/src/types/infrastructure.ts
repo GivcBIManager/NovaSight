@@ -2,11 +2,11 @@
  * Infrastructure Configuration Types
  * 
  * Type definitions for infrastructure server configurations
- * (ClickHouse, Spark, Airflow)
+ * (ClickHouse, Spark, Dagster)
  */
 
 // Service types
-export type InfrastructureServiceType = 'clickhouse' | 'spark' | 'airflow' | 'ollama';
+export type InfrastructureServiceType = 'clickhouse' | 'spark' | 'dagster' | 'ollama';
 
 // Base configuration interface
 export interface InfrastructureConfig {
@@ -52,15 +52,15 @@ export interface SparkSettings {
   additional_configs: Record<string, string>;
 }
 
-// Airflow-specific settings
-export interface AirflowSettings {
-  base_url: string;
-  api_version: string;
-  username: string;
-  password?: string;
-  dag_folder: string;
+// Dagster-specific settings
+export interface DagsterSettings {
+  graphql_url: string;
   request_timeout: number;
   verify_ssl: boolean;
+  max_concurrent_runs: number;
+  spark_concurrency_limit: number;
+  dbt_concurrency_limit: number;
+  compute_logs_dir: string;
 }
 
 // Ollama-specific settings
@@ -90,7 +90,7 @@ export interface InfrastructureConfigUpdate {
   description?: string;
   host?: string;
   port?: number;
-  settings?: Partial<ClickHouseSettings | SparkSettings | AirflowSettings>;
+  settings?: Partial<ClickHouseSettings | SparkSettings | DagsterSettings>;
   is_active?: boolean;
 }
 
@@ -154,7 +154,7 @@ export interface InfrastructureConfigFormState {
 export const DEFAULT_PORTS: Record<InfrastructureServiceType, number> = {
   clickhouse: 8123,
   spark: 7077,
-  airflow: 8080,
+  dagster: 3000,
   ollama: 11434,
 };
 
@@ -162,7 +162,7 @@ export const DEFAULT_PORTS: Record<InfrastructureServiceType, number> = {
 export const SERVICE_LABELS: Record<InfrastructureServiceType, string> = {
   clickhouse: 'ClickHouse',
   spark: 'Apache Spark',
-  airflow: 'Apache Airflow',
+  dagster: 'Dagster',
   ollama: 'Ollama LLM',
 };
 
@@ -170,6 +170,6 @@ export const SERVICE_LABELS: Record<InfrastructureServiceType, string> = {
 export const SERVICE_DESCRIPTIONS: Record<InfrastructureServiceType, string> = {
   clickhouse: 'Column-oriented OLAP database for analytics workloads',
   spark: 'Distributed computing engine for big data processing',
-  airflow: 'Workflow orchestration platform for data pipelines',
+  dagster: 'Modern orchestration platform for data pipelines and PySpark jobs',
   ollama: 'Local LLM server for AI-powered natural language queries',
 };

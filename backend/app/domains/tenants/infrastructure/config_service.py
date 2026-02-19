@@ -5,7 +5,7 @@ NovaSight Tenants Domain — Infrastructure Config Service
 Canonical location: ``app.domains.tenants.infrastructure.config_service``
 
 CRUD, connection testing, and credential management for
-ClickHouse / Spark / Airflow / Ollama server configs.
+ClickHouse / Spark / Dagster / Ollama server configs.
 """
 
 import logging
@@ -56,10 +56,44 @@ class InfrastructureConfigService:
 
     Provides CRUD, connection testing, credential handling,
     and default initialisation.
+    
+    Changes are automatically propagated via Redis pub/sub for
+    real-time updates to Dagster resources and other consumers.
     """
 
     def __init__(self) -> None:
         self._credential_manager = None
+        self._config_cache = None
+
+    def _get_config_cache(self):
+        """Get the infrastructure config cache (lazy load)."""
+        if self._config_cache is None:
+            try:
+                from app.platform.infrastructure.config_cache import (
+                    get_config_cache,
+                )
+                self._config_cache = get_config_cache()
+            except Exception as e:
+                logger.warning("Failed to initialize config cache: %s", e)
+        return self._config_cache
+
+    def _invalidate_and_publish(
+        self,
+        service_type: str,
+        tenant_id: Optional[str],
+        action: str,
+        config_id: Optional[str] = None,
+    ) -> None:
+        """Invalidate cache and publish change event."""
+        cache = self._get_config_cache()
+        if cache:
+            cache.invalidate(service_type, tenant_id)
+            cache.publish_change(
+                service_type=service_type,
+                tenant_id=tenant_id,
+                action=action,
+                config_id=config_id,
+            )
 
     def _get_credential_manager(self, tenant_id: Optional[str] = None):
         from app.services.credential_manager import CredentialManager
@@ -205,6 +239,14 @@ class InfrastructureConfigService:
         db.session.add(config)
         db.session.commit()
 
+        # Invalidate cache and publish change
+        self._invalidate_and_publish(
+            service_type=service_type,
+            tenant_id=tenant_id,
+            action="created",
+            config_id=str(config.id),
+        )
+
         logger.info("Created infrastructure config: %s:%s", service_type, name)
         return config
 
@@ -246,6 +288,15 @@ class InfrastructureConfigService:
         config.updated_at = datetime.utcnow()
 
         db.session.commit()
+
+        # Invalidate cache and publish change
+        self._invalidate_and_publish(
+            service_type=config.service_type,
+            tenant_id=str(config.tenant_id) if config.tenant_id else None,
+            action="updated",
+            config_id=config_id,
+        )
+
         logger.info("Updated infrastructure config: %s", config_id)
         return config
 
@@ -261,8 +312,21 @@ class InfrastructureConfigService:
                 "Cannot delete system default configuration"
             )
 
+        # Capture info before deletion
+        service_type = config.service_type
+        tenant_id = str(config.tenant_id) if config.tenant_id else None
+
         db.session.delete(config)
         db.session.commit()
+
+        # Invalidate cache and publish change
+        self._invalidate_and_publish(
+            service_type=service_type,
+            tenant_id=tenant_id,
+            action="deleted",
+            config_id=config_id,
+        )
+
         logger.info("Deleted infrastructure config: %s", config_id)
         return True
 
@@ -331,6 +395,7 @@ class InfrastructureConfigService:
         test_methods = {
             InfrastructureType.CLICKHOUSE.value: self._test_clickhouse,
             InfrastructureType.SPARK.value: self._test_spark,
+            InfrastructureType.DAGSTER.value: self._test_dagster,
             InfrastructureType.AIRFLOW.value: self._test_airflow,
             InfrastructureType.OLLAMA.value: self._test_ollama,
         }
@@ -532,6 +597,83 @@ class InfrastructureConfigService:
                 f"Connection test failed: {e}"
             )
 
+    def _test_dagster(
+        self, host: str, port: int, settings: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Test Dagster GraphQL API connection."""
+        import httpx
+
+        graphql_url = settings.get(
+            "graphql_url", f"http://{host}:{port}/graphql"
+        )
+        timeout = settings.get("request_timeout", 30)
+
+        # GraphQL query to check Dagster is running and get version info
+        query = """
+        query DagsterHealthCheck {
+            version
+            workspaceLocationOrError: workspaceOrError {
+                ... on Workspace {
+                    locationEntries {
+                        name
+                        loadStatus
+                    }
+                }
+            }
+        }
+        """
+
+        try:
+            resp = httpx.post(
+                graphql_url,
+                json={"query": query},
+                timeout=timeout,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            if "errors" in data:
+                raise InfrastructureConnectionError(
+                    f"GraphQL errors: {data['errors']}"
+                )
+
+            version = data.get("data", {}).get("version", "unknown")
+            workspace_info = data.get("data", {}).get("workspaceLocationOrError", {})
+            locations = workspace_info.get("locationEntries", []) if workspace_info else []
+
+            loaded_locations = [
+                loc for loc in locations
+                if loc.get("loadStatus") == "LOADED"
+            ]
+
+            return {
+                "success": True,
+                "message": "Dagster is running and accessible",
+                "server_version": version,
+                "details": {
+                    "graphql_url": graphql_url,
+                    "total_locations": len(locations),
+                    "loaded_locations": len(loaded_locations),
+                    "locations": [loc.get("name") for loc in locations[:5]],
+                },
+            }
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                raise InfrastructureConnectionError(
+                    "Dagster GraphQL endpoint not found - check URL"
+                )
+            raise InfrastructureConnectionError(
+                f"HTTP error: {e.response.status_code}"
+            )
+        except httpx.ConnectError as e:
+            raise InfrastructureConnectionError(
+                f"Connection failed: {e}"
+            )
+        except Exception as e:
+            raise InfrastructureConnectionError(
+                f"Connection test failed: {e}"
+            )
+
     def _test_ollama(
         self, host: str, port: int, settings: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -647,6 +789,26 @@ class InfrastructureConfigService:
                 "min_executors": 1,
                 "max_executors": 10,
                 "spark_home": "/opt/spark",
+            }
+        if service_type == InfrastructureType.DAGSTER.value:
+            return {
+                "host": current_app.config.get("DAGSTER_HOST", "localhost"),
+                "port": current_app.config.get("DAGSTER_PORT", 3000),
+                "graphql_url": current_app.config.get(
+                    "DAGSTER_GRAPHQL_URL", "http://localhost:3000/graphql"
+                ),
+                "request_timeout": 30,
+                "verify_ssl": True,
+                "max_concurrent_runs": current_app.config.get(
+                    "DAGSTER_MAX_CONCURRENT_RUNS", 10
+                ),
+                "spark_concurrency_limit": current_app.config.get(
+                    "DAGSTER_SPARK_CONCURRENCY_LIMIT", 3
+                ),
+                "dbt_concurrency_limit": current_app.config.get(
+                    "DAGSTER_DBT_CONCURRENCY_LIMIT", 2
+                ),
+                "compute_logs_dir": "/var/dagster/logs",
             }
         if service_type == InfrastructureType.AIRFLOW.value:
             return {

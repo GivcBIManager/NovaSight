@@ -1,6 +1,6 @@
 # NovaSight Backend Development Dockerfile
 # =========================================
-# Simple single-stage build for development
+# Single-stage build with Flask + Dagster via supervisord
 
 FROM python:3.11-slim
 
@@ -11,10 +11,11 @@ ENV FLASK_APP=app
 ENV FLASK_ENV=development
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LD_LIBRARY_PATH=/opt/oracle/instantclient_23_5:$LD_LIBRARY_PATH
+ENV DAGSTER_HOME=/app/orchestration
 
 WORKDIR /app
 
-# Install runtime dependencies including Oracle Instant Client requirements
+# Install runtime dependencies including Oracle Instant Client requirements and supervisor
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     libpq-dev \
@@ -23,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libaio1t64 \
     wget \
     unzip \
+    supervisor \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
 
@@ -49,11 +51,17 @@ COPY . .
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh 2>/dev/null || true
 
-# Expose port
-EXPOSE 5000
+# Create supervisor log directory
+RUN mkdir -p /var/log/supervisor /var/dagster/logs
+
+# Copy supervisord configuration
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Expose ports (Flask: 5000, Dagster: 3000)
+EXPOSE 5000 3000
 
 # Entrypoint runs migrations + seed, then exec's CMD
 ENTRYPOINT ["/entrypoint.sh"]
 
-# Run with hot reload
-CMD ["flask", "run", "--host=0.0.0.0", "--reload", "--debug"]
+# Run with supervisord to manage Flask + Dagster
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

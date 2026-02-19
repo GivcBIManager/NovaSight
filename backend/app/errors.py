@@ -21,6 +21,6 @@ from app.platform.errors.exceptions import (   # noqa: F401
     ConnectionTestError,
     TemplateRenderError,
     AirflowAPIError,
+    DagsterAPIError,
     register_error_handlers,
 )
-

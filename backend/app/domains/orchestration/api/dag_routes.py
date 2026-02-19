@@ -2,7 +2,9 @@
 NovaSight Orchestration Domain — DAG Routes
 =============================================
 
-Apache Airflow DAG configuration and monitoring API endpoints.
+Dagster pipeline configuration and monitoring API endpoints.
+Provides REST API for managing DAG configurations, triggering runs,
+and monitoring pipeline execution.
 
 Canonical location: ``app.domains.orchestration.api.dag_routes``
 """
@@ -15,7 +17,7 @@ from app.platform.auth.identity import get_current_identity
 from app.domains.orchestration.application.dag_service import DagService
 from app.domains.orchestration.infrastructure.dag_generator import PySparkDAGGenerator
 from app.decorators import require_roles, require_tenant_context
-from app.errors import ValidationError, NotFoundError, AirflowAPIError
+from app.errors import ValidationError, NotFoundError, DagsterAPIError
 from app.services.audit_service import AuditService
 import logging
 

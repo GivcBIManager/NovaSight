@@ -22,6 +22,7 @@ import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { DagsListPage } from '@/pages/orchestration/DagsListPage'
 import { DagBuilderPage } from '@/pages/orchestration/DagBuilderPage'
 import { DagMonitorPage } from '@/pages/orchestration/DagMonitorPage'
+import { DagsterDashboardPage } from '@/pages/orchestration/DagsterDashboardPage'
 import { DataSourcesPage, DataSourceDetailPage } from '@/features/datasources'
 import { 
   PySparkAppsListPage, 
@@ -101,6 +102,7 @@ function App() {
             <Route path="datasources/:id" element={<DataSourceDetailPage />} />
             
             {/* Orchestration - DAGs */}
+            <Route path="orchestration" element={<DagsterDashboardPage />} />
             <Route path="dags" element={<DagsListPage />} />
             <Route path="dags/new" element={<DagBuilderPage />} />
             <Route path="dags/:dagId/edit" element={<DagBuilderPage />} />

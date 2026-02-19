@@ -75,3 +75,21 @@ black==24.10.0
 isort==5.13.2
 flake8==7.1.1
 mypy==1.14.1
+
+# ============================================
+# Dagster - Orchestration (replaces Airflow)
+# ============================================
+# Core Dagster (using 1.12.x for latest features, compatible with Python 3.11)
+dagster==1.12.14
+dagster-webserver==1.12.14
+dagster-graphql==1.12.14
+
+# Dagster Integrations (0.28.x matches dagster 1.12.x)
+dagster-dbt==0.28.14
+dagster-postgres==0.28.14
+
+# GraphQL Client (for custom API calls)
+gql[requests]>=3.5.0,<4.0.0
+
+# Process manager for running multiple services
+supervisor>=4.2.5

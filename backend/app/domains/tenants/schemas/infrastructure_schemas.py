@@ -29,7 +29,7 @@ class BaseInfrastructureConfigSchema(Schema):
     service_type = fields.Str(
         required=True,
         validate=validate.OneOf(
-            ["clickhouse", "spark", "airflow", "ollama"]
+            ["clickhouse", "spark", "dagster", "ollama", "airflow"]
         ),
         metadata={"description": "Infrastructure service type"},
     )
@@ -218,12 +218,70 @@ class AirflowSettingsSchema(Schema):
 
 
 class AirflowConfigCreateSchema(BaseInfrastructureConfigSchema):
+    """
+    .. deprecated:: Use DagsterConfigCreateSchema instead.
+    """
     service_type = fields.Str(
         dump_default="airflow",
         load_default="airflow",
         validate=validate.Equal("airflow"),
     )
     settings = fields.Nested(AirflowSettingsSchema, required=True)
+
+
+# =====================================================
+# Dagster (Primary Orchestrator)
+# =====================================================
+
+
+class DagsterSettingsSchema(Schema):
+    """Dagster orchestrator-specific settings."""
+
+    graphql_url = fields.Str(
+        required=True,
+        validate=validate.URL(schemes=["http", "https"]),
+        metadata={"description": "Dagster GraphQL endpoint URL"},
+    )
+    request_timeout = fields.Int(
+        load_default=30,
+        validate=validate.Range(min=5, max=300),
+        metadata={"description": "Request timeout in seconds"},
+    )
+    verify_ssl = fields.Bool(
+        load_default=True,
+        metadata={"description": "Verify SSL certificates"},
+    )
+    max_concurrent_runs = fields.Int(
+        load_default=10,
+        validate=validate.Range(min=1, max=100),
+        metadata={"description": "Maximum concurrent pipeline runs"},
+    )
+    spark_concurrency_limit = fields.Int(
+        load_default=3,
+        validate=validate.Range(min=1, max=50),
+        metadata={"description": "Max concurrent Spark jobs"},
+    )
+    dbt_concurrency_limit = fields.Int(
+        load_default=2,
+        validate=validate.Range(min=1, max=20),
+        metadata={"description": "Max concurrent dbt runs"},
+    )
+    compute_logs_dir = fields.Str(
+        load_default="/var/dagster/logs",
+        validate=validate.Length(max=255),
+        metadata={"description": "Directory for compute logs"},
+    )
+
+
+class DagsterConfigCreateSchema(BaseInfrastructureConfigSchema):
+    """Schema for creating Dagster configuration."""
+
+    service_type = fields.Str(
+        dump_default="dagster",
+        load_default="dagster",
+        validate=validate.Equal("dagster"),
+    )
+    settings = fields.Nested(DagsterSettingsSchema, required=True)
 
 
 # =====================================================
@@ -305,7 +363,7 @@ class InfrastructureConfigTestSchema(Schema):
     config_id = fields.UUID(allow_none=True)
     service_type = fields.Str(
         validate=validate.OneOf(
-            ["clickhouse", "spark", "airflow", "ollama"]
+            ["clickhouse", "spark", "dagster", "ollama", "airflow"]
         )
     )
     host = fields.Str(validate=validate.Length(min=1, max=255))

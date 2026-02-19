@@ -377,7 +377,7 @@ export const dbtProjectApi = {
   },
 
   /**
-   * Generate Airflow DAG for dbt
+   * Generate Dagster pipeline for dbt transformations
    */
   async generateDag(params: {
     dag_id: string

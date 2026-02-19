@@ -2,7 +2,7 @@
  * Infrastructure Configuration API Service
  * 
  * API client for managing infrastructure server configurations
- * (ClickHouse, Spark, Airflow)
+ * (ClickHouse, Spark, Dagster)
  */
 
 import { apiClient } from './apiClient';
@@ -121,11 +121,11 @@ export const infrastructureService = {
    * Get all active configurations for display/dashboard
    */
   async getAllActiveConfigs(tenantId?: string): Promise<Record<InfrastructureServiceType, InfrastructureConfigResponse | null>> {
-    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'airflow', 'ollama'];
+    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'dagster', 'ollama'];
     const results: Record<string, InfrastructureConfigResponse | null> = {
       clickhouse: null,
       spark: null,
-      airflow: null,
+      dagster: null,
       ollama: null,
     };
 
@@ -146,11 +146,11 @@ export const infrastructureService = {
    * Test all active configurations
    */
   async testAllConnections(tenantId?: string): Promise<Record<InfrastructureServiceType, InfrastructureConfigTestResult>> {
-    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'airflow', 'ollama'];
+    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'dagster', 'ollama'];
     const results: Record<string, InfrastructureConfigTestResult> = {
       clickhouse: { success: false, message: 'Not tested' },
       spark: { success: false, message: 'Not tested' },
-      airflow: { success: false, message: 'Not tested' },
+      dagster: { success: false, message: 'Not tested' },
       ollama: { success: false, message: 'Not tested' },
     };
 
@@ -188,7 +188,7 @@ export const infrastructureService = {
     const defaultPorts: Record<InfrastructureServiceType, number> = {
       clickhouse: 8123,
       spark: 7077,
-      airflow: 8080,
+      dagster: 3000,
       ollama: 11434,
     };
     return defaultPorts[serviceType];
@@ -221,14 +221,15 @@ export const infrastructureService = {
           spark_home: '/opt/spark',
           additional_configs: {},
         };
-      case 'airflow':
+      case 'dagster':
         return {
-          base_url: 'http://localhost:8080',
-          api_version: 'v1',
-          username: 'airflow',
-          dag_folder: '/opt/airflow/dags',
+          graphql_url: 'http://localhost:3000/graphql',
           request_timeout: 30,
           verify_ssl: true,
+          max_concurrent_runs: 10,
+          spark_concurrency_limit: 3,
+          dbt_concurrency_limit: 2,
+          compute_logs_dir: '/var/dagster/logs',
         };
       case 'ollama':
         return {
@@ -242,6 +243,104 @@ export const infrastructureService = {
       default:
         return {};
     }
+  },
+
+  // ============================================================================
+  // Tenant-Specific ClickHouse Configuration
+  // ============================================================================
+
+  /**
+   * Get ClickHouse configuration for a specific tenant
+   */
+  async getTenantClickHouseConfig(tenantId: string): Promise<InfrastructureConfigResponse & { source: string }> {
+    const response = await apiClient.get(`/api/v1/admin/tenants/${tenantId}/clickhouse-config`);
+    return response.data;
+  },
+
+  /**
+   * Create ClickHouse configuration for a specific tenant
+   */
+  async createTenantClickHouseConfig(
+    tenantId: string,
+    data: Omit<InfrastructureConfigCreate, 'service_type' | 'tenant_id'>
+  ): Promise<{ config: InfrastructureConfig; message: string }> {
+    const response = await apiClient.post(`/api/v1/admin/tenants/${tenantId}/clickhouse-config`, data);
+    return response.data;
+  },
+
+  /**
+   * Update ClickHouse configuration for a specific tenant
+   */
+  async updateTenantClickHouseConfig(
+    tenantId: string,
+    data: InfrastructureConfigUpdate
+  ): Promise<{ config: InfrastructureConfig; message: string }> {
+    const response = await apiClient.put(`/api/v1/admin/tenants/${tenantId}/clickhouse-config`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete ClickHouse configuration for a specific tenant
+   */
+  async deleteTenantClickHouseConfig(tenantId: string): Promise<{ message: string }> {
+    const response = await apiClient.delete(`/api/v1/admin/tenants/${tenantId}/clickhouse-config`);
+    return response.data;
+  },
+
+  /**
+   * Test ClickHouse connection for a specific tenant
+   */
+  async testTenantClickHouseConnection(
+    tenantId: string,
+    inlineConfig?: { host?: string; port?: number; settings?: Record<string, unknown> }
+  ): Promise<InfrastructureConfigTestResult> {
+    const response = await apiClient.post(
+      `/api/v1/admin/tenants/${tenantId}/clickhouse-config/test`,
+      inlineConfig || {}
+    );
+    return response.data;
+  },
+
+  // ============================================================================
+  // Global Spark Configuration
+  // ============================================================================
+
+  /**
+   * Get global Spark configuration
+   */
+  async getGlobalSparkConfig(): Promise<InfrastructureConfigResponse & { source: string }> {
+    const response = await apiClient.get('/api/v1/admin/settings/spark');
+    return response.data;
+  },
+
+  /**
+   * Create global Spark configuration
+   */
+  async createGlobalSparkConfig(
+    data: Omit<InfrastructureConfigCreate, 'service_type' | 'tenant_id'>
+  ): Promise<{ config: InfrastructureConfig; message: string }> {
+    const response = await apiClient.post('/api/v1/admin/settings/spark', data);
+    return response.data;
+  },
+
+  /**
+   * Update global Spark configuration
+   */
+  async updateGlobalSparkConfig(
+    data: InfrastructureConfigUpdate
+  ): Promise<{ config: InfrastructureConfig; message: string }> {
+    const response = await apiClient.put('/api/v1/admin/settings/spark', data);
+    return response.data;
+  },
+
+  /**
+   * Test global Spark connection
+   */
+  async testGlobalSparkConnection(
+    inlineConfig?: { host?: string; port?: number; settings?: Record<string, unknown> }
+  ): Promise<InfrastructureConfigTestResult> {
+    const response = await apiClient.post('/api/v1/admin/settings/spark/test', inlineConfig || {});
+    return response.data;
   },
 };
 

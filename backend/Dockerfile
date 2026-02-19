@@ -43,6 +43,9 @@ ENV FLASK_APP=app
 ENV FLASK_ENV=development
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LD_LIBRARY_PATH=/opt/oracle/instantclient_23_5:$LD_LIBRARY_PATH
+# Dagster environment
+ENV DAGSTER_HOME=/app/dagster_home
+ENV DAGSTER_COMPUTE_LOGS_DIR=/app/dagster_home/compute_logs
 
 WORKDIR /app
 
@@ -78,10 +81,15 @@ RUN if [ -f requirements-dev.txt ]; then pip install --no-cache-dir -r requireme
 # Copy application code
 COPY . .
 
-# Expose port
-EXPOSE 5000
+# Create Dagster home directory and copy config
+RUN mkdir -p $DAGSTER_HOME $DAGSTER_COMPUTE_LOGS_DIR /var/log/supervisor && \
+    cp orchestration/dagster.yaml $DAGSTER_HOME/dagster.yaml && \
+    cp orchestration/workspace.yaml $DAGSTER_HOME/workspace.yaml
 
-# Run with hot reload
+# Expose ports (5000=Flask, 3000=Dagster UI)
+EXPOSE 5000 3000
+
+# Run with hot reload (default for dev - use supervisord for all services)
 CMD ["flask", "run", "--host=0.0.0.0", "--reload", "--debug"]
 
 
@@ -97,6 +105,9 @@ ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=app
 ENV FLASK_ENV=production
 ENV LD_LIBRARY_PATH=/opt/oracle/instantclient_23_5:$LD_LIBRARY_PATH
+# Dagster environment
+ENV DAGSTER_HOME=/app/dagster_home
+ENV DAGSTER_COMPUTE_LOGS_DIR=/app/dagster_home/compute_logs
 
 WORKDIR /app
 
@@ -125,15 +136,18 @@ RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 # Copy application code
 COPY --chown=novasight:novasight . .
 
-# Switch to non-root user
-USER novasight
+# Create Dagster directories and supervisor log directory
+RUN mkdir -p $DAGSTER_HOME $DAGSTER_COMPUTE_LOGS_DIR /var/log/supervisor && \
+    cp orchestration/dagster.yaml $DAGSTER_HOME/dagster.yaml && \
+    cp orchestration/workspace.yaml $DAGSTER_HOME/workspace.yaml && \
+    chown -R novasight:novasight $DAGSTER_HOME /var/log/supervisor
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+# Health check - checks both Flask and Dagster
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
-# Expose port
-EXPOSE 5000
+# Expose ports (5000=Flask, 3000=Dagster UI)
+EXPOSE 5000 3000
 
-# Run with gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:create_app()"]
+# Run with supervisord (manages Flask + Dagster webserver + Dagster daemon)
+CMD ["supervisord", "-c", "/app/supervisord.conf"]

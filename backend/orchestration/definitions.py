@@ -1,0 +1,159 @@
+"""
+NovaSight Dagster Definitions
+==============================
+
+Main entry point for Dagster orchestration.
+Dynamically loads pipelines from database at startup.
+"""
+
+from dagster import Definitions, EnvVar
+from dagster_dbt import DbtCliResource
+import os
+import logging
+
+from orchestration.resources.spark_resource import SparkResource, DynamicSparkResource
+from orchestration.resources.clickhouse_resource import ClickHouseResource, DynamicClickHouseResource
+from orchestration.resources.database_resource import DatabaseResource
+from orchestration.assets.pyspark_builder import load_all_pyspark_assets
+from orchestration.schedules.pyspark_schedules import load_all_pyspark_schedules
+
+logger = logging.getLogger(__name__)
+
+
+def load_all_tenant_assets():
+    """
+    Load assets for all active DAG configurations across tenants.
+    
+    This runs at Dagster startup and when code location is reloaded.
+    """
+    all_assets = []
+    
+    try:
+        # Import Flask app to get database access
+        import sys
+        if '/app' not in sys.path:
+            sys.path.insert(0, '/app')
+        
+        from app import create_app
+        from app.extensions import db
+        from app.domains.orchestration.domain.models import DagConfig, DagStatus
+        from app.domains.orchestration.infrastructure.asset_factory import AssetFactory
+        
+        # Create Flask app context for database access
+        app = create_app()
+        with app.app_context():
+            # Query all deployed DAGs
+            deployed_dags = DagConfig.query.filter(
+                DagConfig.status.in_([DagStatus.ACTIVE, DagStatus.PAUSED])
+            ).all()
+            
+            logger.info(f"Loading assets for {len(deployed_dags)} DAG configurations")
+            
+            for dag in deployed_dags:
+                try:
+                    factory = AssetFactory(str(dag.tenant_id))
+                    assets = factory.build_assets_from_dag_config(dag)
+                    all_assets.extend(assets)
+                    logger.info(f"Loaded {len(assets)} assets for {dag.dag_id}")
+                except Exception as e:
+                    logger.error(f"Failed to load assets for {dag.dag_id}: {e}")
+    
+    except Exception as e:
+        logger.warning(f"Could not load tenant assets: {e}. Starting with empty assets.")
+    
+    return all_assets
+
+
+def load_all_schedules():
+    """
+    Load schedules for all active DAG configurations.
+    """
+    all_schedules = []
+    
+    try:
+        import sys
+        sys.path.insert(0, '/app/backend')
+        
+        from app import create_app
+        from app.domains.orchestration.domain.models import DagConfig, DagStatus
+        from app.domains.orchestration.infrastructure.schedule_factory import ScheduleFactory
+        
+        app = create_app()
+        with app.app_context():
+            deployed_dags = DagConfig.query.filter(
+                DagConfig.status.in_([DagStatus.ACTIVE, DagStatus.PAUSED])
+            ).all()
+            
+            logger.info(f"Loading schedules for {len(deployed_dags)} DAG configurations")
+            
+            for dag in deployed_dags:
+                try:
+                    factory = ScheduleFactory(str(dag.tenant_id))
+                    schedule = factory.build_schedule_from_dag_config(dag)
+                    if schedule:
+                        all_schedules.append(schedule)
+                        logger.info(f"Loaded schedule for {dag.dag_id}")
+                except Exception as e:
+                    logger.error(f"Failed to load schedule for {dag.dag_id}: {e}")
+    
+    except Exception as e:
+        logger.warning(f"Could not load schedules: {e}. Starting with no schedules.")
+    
+    return all_schedules
+
+
+# Load assets and schedules from database
+all_assets = load_all_tenant_assets()
+
+# Load PySpark assets from database
+pyspark_assets = load_all_pyspark_assets()
+all_assets.extend(pyspark_assets)
+logger.info(f"Loaded {len(pyspark_assets)} PySpark extraction/transformation assets")
+
+# Load DAG schedules
+all_schedules = load_all_schedules()
+
+# Load PySpark schedules from database
+pyspark_schedules = load_all_pyspark_schedules()
+all_schedules.extend(pyspark_schedules)
+logger.info(f"Loaded {len(pyspark_schedules)} PySpark job schedules")
+
+# Resource definitions
+# Static resources (for backwards compatibility)
+resources = {
+    "dbt": DbtCliResource(
+        project_dir=os.environ.get("DBT_PROJECT_DIR", "/app/dbt"),
+        profiles_dir=os.environ.get("DBT_PROFILES_DIR", "/app/dbt"),
+    ),
+    # Static Spark resource (uses environment config)
+    "spark": SparkResource(
+        master=os.environ.get("SPARK_MASTER", "spark://spark-master:7077"),
+        app_name="NovaSight",
+    ),
+    # Dynamic Spark resource (uses database config)
+    "spark_dynamic": DynamicSparkResource(
+        fallback_master=os.environ.get("SPARK_MASTER", "spark://spark-master:7077"),
+        fallback_app_name="NovaSight",
+    ),
+    # Static ClickHouse resource (uses environment config)
+    "clickhouse": ClickHouseResource(
+        host=os.environ.get("CLICKHOUSE_HOST", "clickhouse"),
+        port=int(os.environ.get("CLICKHOUSE_PORT", "9000")),
+    ),
+    # Dynamic ClickHouse resource (uses database config per tenant)
+    "clickhouse_dynamic": DynamicClickHouseResource(
+        fallback_host=os.environ.get("CLICKHOUSE_HOST", "clickhouse"),
+        fallback_port=int(os.environ.get("CLICKHOUSE_PORT", "9000")),
+    ),
+    "postgres": DatabaseResource(
+        connection_string=os.environ.get("DATABASE_URL", ""),
+    ),
+}
+
+# Create Dagster definitions
+defs = Definitions(
+    assets=all_assets,
+    schedules=all_schedules,
+    sensors=[],  # Can be extended with sensors later
+    resources=resources,
+)

@@ -151,3 +151,47 @@ export function useValidateQuery() {
     mutationFn: (data: QueryValidationRequest) => pysparkApi.validateQuery(data),
   })
 }
+
+/**
+ * Hook to activate a PySpark app
+ */
+export function useActivatePySparkApp() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (appId: string) => pysparkApi.activate(appId),
+    onSuccess: (_, appId) => {
+      queryClient.invalidateQueries({ queryKey: pysparkKeys.detail(appId) })
+      queryClient.invalidateQueries({ queryKey: pysparkKeys.lists() })
+    },
+  })
+}
+
+/**
+ * Hook to deactivate a PySpark app
+ */
+export function useDeactivatePySparkApp() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (appId: string) => pysparkApi.deactivate(appId),
+    onSuccess: (_, appId) => {
+      queryClient.invalidateQueries({ queryKey: pysparkKeys.detail(appId) })
+      queryClient.invalidateQueries({ queryKey: pysparkKeys.lists() })
+    },
+  })
+}
+
+/**
+ * Hook to run a PySpark app immediately
+ */
+export function useRunPySparkApp() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (appId: string) => pysparkApi.run(appId),
+    onSuccess: (_, appId) => {
+      queryClient.invalidateQueries({ queryKey: pysparkKeys.detail(appId) })
+    },
+  })
+}

@@ -98,9 +98,19 @@ class TemplateRenderError(NovaSightException):
 
 
 class AirflowAPIError(NovaSightException):
+    """
+    .. deprecated:: Use DagsterAPIError instead.
+    """
     status_code = 502
     error_code = "AIRFLOW_API_ERROR"
     message = "Airflow API error"
+
+
+class DagsterAPIError(NovaSightException):
+    """Dagster API communication error."""
+    status_code = 502
+    error_code = "DAGSTER_API_ERROR"
+    message = "Dagster API error"
 
 
 # ─── Error handler registration ────────────────────────────────────

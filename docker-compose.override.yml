@@ -5,7 +5,7 @@
 
 services:
   # ============================================
-  # Backend - Development Mode
+  # Backend - Development Mode (Flask + Dagster via supervisord)
   # ============================================
   backend:
     build:
@@ -21,7 +21,8 @@ services:
     volumes:
       - ./backend:/app
       - ./docker/backend/entrypoint.sh:/entrypoint.sh
-    command: flask run --host=0.0.0.0 --reload --debug
+    # Use supervisord to run Flask + Dagster together
+    command: supervisord -c /etc/supervisor/conf.d/supervisord.conf
 
   # ============================================
   # Frontend - Development Mode with HMR

@@ -1,0 +1,46 @@
+# =========================================
+# Dagster Instance Configuration
+# =========================================
+# Uses the main PostgreSQL server with a separate 'dagster' database
+# The database is created by infrastructure/postgres/init/03-create-dagster-db.sh
+
+# Storage configuration - uses PostgreSQL
+storage:
+  postgres:
+    postgres_url:
+      env: DAGSTER_POSTGRES_URL
+
+# Run launcher - uses default process launcher
+run_launcher:
+  module: dagster._core.launcher
+  class: DefaultRunLauncher
+
+# Run coordinator - queued for better control
+run_coordinator:
+  module: dagster._core.run_coordinator
+  class: QueuedRunCoordinator
+  config:
+    max_concurrent_runs: 10
+    tag_concurrency_limits:
+      - key: "dagster/concurrency_key"
+        value: "spark_jobs"
+        limit: 3
+      - key: "dagster/concurrency_key"
+        value: "dbt_runs"
+        limit: 2
+
+# Compute logs - local storage
+compute_logs:
+  module: dagster._core.storage.local_compute_log_manager
+  class: LocalComputeLogManager
+  config:
+    base_dir:
+      env: DAGSTER_COMPUTE_LOGS_DIR
+
+# Telemetry - disabled
+telemetry:
+  enabled: false
+
+# Code server timeout
+code_servers:
+  local_startup_timeout: 180

@@ -56,6 +56,16 @@ if %errorlevel%==0 (
     set /a UNHEALTHY+=1
 )
 
+REM Check Dagster
+curl -s -o nul -w "" --connect-timeout 2 http://localhost:3000/server_info 2>nul
+if %errorlevel%==0 (
+    echo   [OK] Dagster is healthy
+    set /a HEALTHY+=1
+) else (
+    echo   [WARN] Dagster is not responding (may be disabled)
+    set /a UNHEALTHY+=1
+)
+
 REM Check Spark
 curl -s -o nul -w "" --connect-timeout 2 http://localhost:8081 2>nul
 if %errorlevel%==0 (

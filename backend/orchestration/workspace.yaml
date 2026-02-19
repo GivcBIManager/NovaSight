@@ -1,0 +1,5 @@
+load_from:
+  - python_module:
+      module_name: orchestration.definitions
+      location_name: novasight
+      working_directory: /app
