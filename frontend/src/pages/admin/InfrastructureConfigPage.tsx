@@ -1,11 +1,45 @@
 /**
  * Infrastructure Configuration Page
- * 
+ *
  * Admin page for configuring infrastructure server connections
- * (ClickHouse, Spark, Airflow)
+ * (ClickHouse, Spark, Ollama) — uses shadcn/ui design system.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Database,
+  Cpu,
+  BrainCircuit,
+  RefreshCw,
+  Zap,
+  Settings2,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Clock,
+  Server,
+  Shield,
+  Info,
+  Circle,
+} from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { infrastructureService } from '../../services/infrastructureService';
 import type {
   InfrastructureConfig,
@@ -14,62 +48,76 @@ import type {
   InfrastructureConfigTestResult,
 } from '../../types/infrastructure';
 
-// Icons for each service
-const ServiceIcon: React.FC<{ type: InfrastructureServiceType; className?: string }> = ({ type, className = 'w-6 h-6' }) => {
-  switch (type) {
-    case 'clickhouse':
-      return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-          <path d="M21.333 10H24v4h-2.667v-4zM16 10h2.667v4H16v-4zm-5.333 0H13.333v4h-2.666v-4zM5.333 10H8v4H5.333v-4zM0 10h2.667v4H0v-4z" />
-        </svg>
-      );
-    case 'spark':
-      return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-        </svg>
-      );
-    case 'airflow':
-      return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-        </svg>
-      );
-    case 'ollama':
-      return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7zm2 14h-4v-1h4v1zm1.5-4.37l-.77.54-.73.51V14h-4v-1.32l-.73-.51-.77-.54A4.98 4.98 0 0 1 7 9a5 5 0 0 1 10 0c0 1.67-.82 3.14-2.5 4.13zM10 20h4v1a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1z" />
-        </svg>
-      );
-    default:
-      return null;
-  }
+// ─── Service Metadata ──────────────────────────────────────────────────────────
+
+interface ServiceMeta {
+  label: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;        // accent ring/badge color class
+  iconBg: string;       // icon wrapper bg
+  iconColor: string;    // lucide icon fill
+  gradient: string;     // top-bar gradient
+}
+
+const SERVICE_META: Record<InfrastructureServiceType, ServiceMeta> = {
+  clickhouse: {
+    label: 'ClickHouse',
+    description: 'Column-oriented OLAP database for analytics',
+    icon: Database,
+    color: 'text-amber-600',
+    iconBg: 'bg-amber-100 dark:bg-amber-950/40',
+    iconColor: 'text-amber-600 dark:text-amber-400',
+    gradient: 'from-amber-500 to-orange-500',
+  },
+  spark: {
+    label: 'Apache Spark',
+    description: 'Distributed computing for big data processing',
+    icon: Cpu,
+    color: 'text-orange-600',
+    iconBg: 'bg-orange-100 dark:bg-orange-950/40',
+    iconColor: 'text-orange-600 dark:text-orange-400',
+    gradient: 'from-orange-500 to-red-500',
+  },
+  ollama: {
+    label: 'Ollama LLM',
+    description: 'Local AI server for natural language queries',
+    icon: BrainCircuit,
+    color: 'text-violet-600',
+    iconBg: 'bg-violet-100 dark:bg-violet-950/40',
+    iconColor: 'text-violet-600 dark:text-violet-400',
+    gradient: 'from-violet-500 to-purple-500',
+  },
 };
 
-// Status badge component
-const StatusBadge: React.FC<{ status: 'connected' | 'disconnected' | 'testing' | 'unknown' }> = ({ status }) => {
-  const styles = {
-    connected: 'bg-green-100 text-green-800 border-green-200',
-    disconnected: 'bg-red-100 text-red-800 border-red-200',
-    testing: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    unknown: 'bg-gray-100 text-gray-800 border-gray-200',
-  };
+const SERVICE_TYPES: InfrastructureServiceType[] = ['clickhouse', 'spark', 'ollama'];
 
-  const labels = {
-    connected: 'Connected',
-    disconnected: 'Disconnected',
-    testing: 'Testing...',
-    unknown: 'Not Tested',
-  };
+// ─── Status Badge ───────────────────────────────────────────────────────────────
 
+type ConnectionStatus = 'connected' | 'disconnected' | 'testing' | 'unknown';
+
+const StatusIndicator: React.FC<{ status: ConnectionStatus }> = ({ status }) => {
+  const config: Record<ConnectionStatus, { variant: 'success' | 'destructive' | 'warning' | 'outline'; label: string; dot: string }> = {
+    connected:    { variant: 'success',     label: 'Connected',    dot: 'bg-green-500'  },
+    disconnected: { variant: 'destructive', label: 'Disconnected', dot: 'bg-red-500'    },
+    testing:      { variant: 'warning',     label: 'Testing…',     dot: 'bg-yellow-500' },
+    unknown:      { variant: 'outline',     label: 'Not Tested',   dot: 'bg-gray-400'   },
+  };
+  const c = config[status];
   return (
-    <span className={`px-2 py-1 text-xs font-medium rounded-full border ${styles[status]}`}>
-      {labels[status]}
-    </span>
+    <Badge variant={c.variant} className="gap-1.5 font-medium">
+      {status === 'testing' ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : (
+        <Circle className={`h-2 w-2 fill-current ${c.dot}`} />
+      )}
+      {c.label}
+    </Badge>
   );
 };
 
-// Service card component
+// ─── Service Card ───────────────────────────────────────────────────────────────
+
 interface ServiceCardProps {
   serviceType: InfrastructureServiceType;
   config: InfrastructureConfig | null;
@@ -78,7 +126,6 @@ interface ServiceCardProps {
   isTesting: boolean;
   onEdit: () => void;
   onTest: () => void;
-  onActivate?: () => void;
 }
 
 const ServiceCard: React.FC<ServiceCardProps> = ({
@@ -90,126 +137,172 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
   onEdit,
   onTest,
 }) => {
-  const labels: Record<InfrastructureServiceType, string> = {
-    clickhouse: 'ClickHouse',
-    spark: 'Apache Spark',
-    airflow: 'Apache Airflow',
-    ollama: 'Ollama LLM',
-  };
+  const meta = SERVICE_META[serviceType];
+  const Icon = meta.icon;
 
-  const descriptions: Record<InfrastructureServiceType, string> = {
-    clickhouse: 'Column-oriented OLAP database for analytics workloads',
-    spark: 'Distributed computing engine for big data processing',
-    airflow: 'Workflow orchestration platform for data pipelines',
-    ollama: 'Local LLM server for AI-powered natural language queries',
-  };
-
-  const getStatus = (): 'connected' | 'disconnected' | 'testing' | 'unknown' => {
+  const getStatus = (): ConnectionStatus => {
     if (isTesting) return 'testing';
     if (testResult === null) return 'unknown';
     return testResult.success ? 'connected' : 'disconnected';
   };
 
+  const status = getStatus();
+
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center space-x-3">
-          <div className={`p-2 rounded-lg ${serviceType === 'clickhouse' ? 'bg-yellow-100 text-yellow-600' : serviceType === 'spark' ? 'bg-orange-100 text-orange-600' : serviceType === 'ollama' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
-            <ServiceIcon type={serviceType} />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{labels[serviceType]}</h3>
-            <p className="text-sm text-gray-500">{descriptions[serviceType]}</p>
-          </div>
-        </div>
-        <StatusBadge status={getStatus()} />
-      </div>
+    <Card className="group relative overflow-hidden transition-all duration-200 hover:shadow-md">
+      {/* Colored top accent bar */}
+      <div className={`h-1 bg-gradient-to-r ${meta.gradient}`} />
 
-      <div className="mt-4 space-y-2">
-        <div className="flex items-center text-sm">
-          <span className="text-gray-500 w-20">Host:</span>
-          <span className="text-gray-900 font-mono">{config?.host || 'localhost'}</span>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${meta.iconBg}`}>
+              <Icon className={`h-5 w-5 ${meta.iconColor}`} />
+            </div>
+            <div>
+              <CardTitle className="text-base">{meta.label}</CardTitle>
+              <CardDescription className="text-xs mt-0.5">{meta.description}</CardDescription>
+            </div>
+          </div>
+          <StatusIndicator status={status} />
         </div>
-        <div className="flex items-center text-sm">
-          <span className="text-gray-500 w-20">Port:</span>
-          <span className="text-gray-900 font-mono">{config?.port || infrastructureService.getDefaultPort(serviceType)}</span>
+      </CardHeader>
+
+      <CardContent className="space-y-3 pb-3">
+        {/* Connection details */}
+        <div className="rounded-lg border bg-muted/40 p-3 space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Server className="h-3.5 w-3.5" />
+              Host
+            </span>
+            <span className="font-mono text-xs font-medium">{config?.host || 'localhost'}</span>
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Shield className="h-3.5 w-3.5" />
+              Port
+            </span>
+            <span className="font-mono text-xs font-medium">{config?.port || infrastructureService.getDefaultPort(serviceType)}</span>
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Info className="h-3.5 w-3.5" />
+              Source
+            </span>
+            <Badge variant={source === 'database' ? 'info' : 'secondary'} className="text-[10px] px-1.5 py-0">
+              {source === 'database' ? 'Custom' : 'Default'}
+            </Badge>
+          </div>
         </div>
-        <div className="flex items-center text-sm">
-          <span className="text-gray-500 w-20">Source:</span>
-          <span className={`px-2 py-0.5 text-xs rounded ${source === 'database' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
-            {source === 'database' ? 'Custom' : 'Default'}
-          </span>
-        </div>
+
+        {/* Test result details */}
         {testResult && (
-          <div className="flex items-center text-sm">
-            <span className="text-gray-500 w-20">Latency:</span>
-            <span className="text-gray-900">{testResult.latency_ms?.toFixed(0) || '-'} ms</span>
+          <div className={`rounded-lg border p-3 text-sm ${
+            testResult.success
+              ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30'
+              : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30'
+          }`}>
+            {testResult.success ? (
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 font-medium text-green-700 dark:text-green-300">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Connection successful
+                </div>
+                <div className="flex items-center gap-3 text-xs text-green-600 dark:text-green-400">
+                  {testResult.latency_ms != null && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {testResult.latency_ms.toFixed(0)} ms
+                    </span>
+                  )}
+                  {testResult.server_version && (
+                    <span>v{testResult.server_version}</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 font-medium text-red-700 dark:text-red-300">
+                  <XCircle className="h-3.5 w-3.5" />
+                  Connection failed
+                </div>
+                <p className="text-xs text-red-600 dark:text-red-400 line-clamp-2">
+                  {testResult.message}
+                </p>
+              </div>
+            )}
           </div>
         )}
-        {testResult?.server_version && (
-          <div className="flex items-center text-sm">
-            <span className="text-gray-500 w-20">Version:</span>
-            <span className="text-gray-900">{testResult.server_version}</span>
-          </div>
-        )}
-      </div>
+      </CardContent>
 
-      {testResult && !testResult.success && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-700">{testResult.message}</p>
-        </div>
-      )}
-
-      <div className="mt-6 flex space-x-3">
-        <button
-          onClick={onTest}
+      <CardFooter className="gap-2 pt-0">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1"
           disabled={isTesting}
-          className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={onTest}
         >
-          {isTesting ? 'Testing...' : 'Test Connection'}
-        </button>
-        <button
+          {isTesting ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Zap className="h-3.5 w-3.5" />
+          )}
+          {isTesting ? 'Testing…' : 'Test'}
+        </Button>
+        <Button
+          size="sm"
+          className="flex-1"
           onClick={onEdit}
-          className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
         >
+          <Settings2 className="h-3.5 w-3.5" />
           Configure
-        </button>
-      </div>
-    </div>
+        </Button>
+      </CardFooter>
+    </Card>
   );
 };
 
-// Configuration form modal
-interface ConfigFormProps {
+// ─── Configuration Dialog ───────────────────────────────────────────────────────
+
+interface ConfigDialogProps {
+  open: boolean;
   serviceType: InfrastructureServiceType;
   existingConfig: InfrastructureConfig | null;
   onSave: (config: InfrastructureConfigCreate) => Promise<void>;
-  onCancel: () => void;
+  onClose: () => void;
   onTest: (config: Partial<InfrastructureConfigCreate>) => Promise<InfrastructureConfigTestResult>;
 }
 
-const ConfigForm: React.FC<ConfigFormProps> = ({
+const ConfigDialog: React.FC<ConfigDialogProps> = ({
+  open,
   serviceType,
   existingConfig,
   onSave,
-  onCancel,
+  onClose,
   onTest,
 }) => {
-  const labels: Record<InfrastructureServiceType, string> = {
-    clickhouse: 'ClickHouse',
-    spark: 'Apache Spark',
-    airflow: 'Apache Airflow',
-    ollama: 'Ollama LLM',
+  const meta = SERVICE_META[serviceType];
+  const Icon = meta.icon;
+  const defaultSettings = infrastructureService.getDefaultSettings(serviceType);
+
+  // Strip host/port from settings — the backend env fallback injects them
+  // into settings, but they belong at the top level of the config.
+  const cleanSettings = (raw: Record<string, unknown> | undefined) => {
+    if (!raw) return {};
+    const { host, port, ...rest } = raw as Record<string, unknown> & { host?: unknown; port?: unknown };
+    return rest;
   };
 
-  const defaultSettings = infrastructureService.getDefaultSettings(serviceType);
-  
   const [formData, setFormData] = useState({
-    name: existingConfig?.name || `${labels[serviceType]} Connection`,
+    name: existingConfig?.name || `${meta.label} Connection`,
     description: existingConfig?.description || '',
     host: existingConfig?.host || 'localhost',
     port: existingConfig?.port || infrastructureService.getDefaultPort(serviceType),
-    settings: { ...defaultSettings, ...existingConfig?.settings } as Record<string, unknown>,
+    settings: { ...defaultSettings, ...cleanSettings(existingConfig?.settings) } as Record<string, unknown>,
     is_active: existingConfig?.is_active ?? true,
   });
 
@@ -218,19 +311,32 @@ const ConfigForm: React.FC<ConfigFormProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Reset state when dialog opens with new service
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        name: existingConfig?.name || `${meta.label} Connection`,
+        description: existingConfig?.description || '',
+        host: existingConfig?.host || 'localhost',
+        port: existingConfig?.port || infrastructureService.getDefaultPort(serviceType),
+        settings: { ...defaultSettings, ...cleanSettings(existingConfig?.settings) } as Record<string, unknown>,
+        is_active: existingConfig?.is_active ?? true,
+      });
+      setTestResult(null);
+      setError(null);
+    }
+  }, [open, serviceType]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseInt(value, 10) : value,
+      [name]: type === 'number' ? parseInt(value, 10) || 0 : value,
     }));
   };
 
-  const handleSettingChange = (key: string, value: unknown) => {
-    setFormData(prev => ({
-      ...prev,
-      settings: { ...prev.settings, [key]: value },
-    }));
+  const updateSetting = (key: string, value: unknown) => {
+    setFormData(prev => ({ ...prev, settings: { ...prev.settings, [key]: value } }));
   };
 
   const handleTest = async () => {
@@ -241,7 +347,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({
         service_type: serviceType,
         host: formData.host,
         port: formData.port,
-        settings: formData.settings as Record<string, unknown>,
+        settings: formData.settings,
       });
       setTestResult(result);
     } catch (err) {
@@ -270,423 +376,276 @@ const ConfigForm: React.FC<ConfigFormProps> = ({
     }
   };
 
-  // Render settings fields based on service type
-  const renderSettingsFields = () => {
+  // ── Field helper ──────────────────────────────────────────────────────────
+  const field = (label: string, name: string, opts?: {
+    type?: string; placeholder?: string; hint?: string;
+    min?: number; max?: number; step?: number;
+  }) => {
+    const val = formData.settings[name];
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor={`s-${name}`}>{label}</Label>
+        <Input
+          id={`s-${name}`}
+          type={opts?.type || 'text'}
+          value={val as string | number ?? ''}
+          placeholder={opts?.placeholder}
+          min={opts?.min}
+          max={opts?.max}
+          step={opts?.step}
+          onChange={(e) => {
+            const v = opts?.type === 'number'
+              ? (opts?.step && opts.step < 1 ? parseFloat(e.target.value) : parseInt(e.target.value, 10))
+              : e.target.value;
+            updateSetting(name, v);
+          }}
+        />
+        {opts?.hint && <p className="text-[11px] text-muted-foreground">{opts.hint}</p>}
+      </div>
+    );
+  };
+
+  // ── Per-service settings ──────────────────────────────────────────────────
+  const renderSettings = () => {
     switch (serviceType) {
       case 'clickhouse':
         return (
-          <>
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Database</label>
-                <input
-                  type="text"
-                  value={formData.settings.database as string || ''}
-                  onChange={(e) => handleSettingChange('database', e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">User</label>
-                <input
-                  type="text"
-                  value={formData.settings.user as string || ''}
-                  onChange={(e) => handleSettingChange('user', e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+              {field('Database', 'database', { placeholder: 'novasight' })}
+              {field('User', 'user', { placeholder: 'default' })}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <input
+            <div className="space-y-1.5">
+              <Label htmlFor="s-password">Password</Label>
+              <Input
+                id="s-password"
                 type="password"
                 value={formData.settings.password as string || ''}
-                onChange={(e) => handleSettingChange('password', e.target.value)}
                 placeholder="Leave empty to keep existing"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChange={(e) => updateSetting('password', e.target.value)}
               />
             </div>
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.settings.secure as boolean || false}
-                  onChange={(e) => handleSettingChange('secure', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Use TLS/SSL</span>
-              </label>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="s-secure"
+                checked={formData.settings.secure as boolean || false}
+                onCheckedChange={(v) => updateSetting('secure', v)}
+              />
+              <Label htmlFor="s-secure" className="cursor-pointer">Use TLS/SSL encryption</Label>
             </div>
-          </>
+          </div>
         );
-      
+
       case 'spark':
         return (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Master URL</label>
-              <input
-                type="text"
-                value={formData.settings.master_url as string || ''}
-                onChange={(e) => handleSettingChange('master_url', e.target.value)}
-                placeholder="spark://localhost:7077"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
-            </div>
+          <div className="space-y-4">
+            {field('Master URL', 'master_url', { placeholder: 'spark://spark-master:7077' })}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Driver Memory</label>
-                <input
-                  type="text"
-                  value={formData.settings.driver_memory as string || ''}
-                  onChange={(e) => handleSettingChange('driver_memory', e.target.value)}
-                  placeholder="2g"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Executor Memory</label>
-                <input
-                  type="text"
-                  value={formData.settings.executor_memory as string || ''}
-                  onChange={(e) => handleSettingChange('executor_memory', e.target.value)}
-                  placeholder="2g"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+              {field('Driver Memory', 'driver_memory', { placeholder: '2g' })}
+              {field('Executor Memory', 'executor_memory', { placeholder: '2g' })}
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Executor Cores</label>
-                <input
-                  type="number"
-                  value={formData.settings.executor_cores as number || 2}
-                  onChange={(e) => handleSettingChange('executor_cores', parseInt(e.target.value))}
-                  min={1}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Min Executors</label>
-                <input
-                  type="number"
-                  value={formData.settings.min_executors as number || 1}
-                  onChange={(e) => handleSettingChange('min_executors', parseInt(e.target.value))}
-                  min={0}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Max Executors</label>
-                <input
-                  type="number"
-                  value={formData.settings.max_executors as number || 10}
-                  onChange={(e) => handleSettingChange('max_executors', parseInt(e.target.value))}
-                  min={1}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+              {field('Executor Cores', 'executor_cores', { type: 'number', min: 1 })}
+              {field('Min Executors', 'min_executors', { type: 'number', min: 0 })}
+              {field('Max Executors', 'max_executors', { type: 'number', min: 1 })}
             </div>
-          </>
+          </div>
         );
-      
-      case 'airflow':
-        return (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Base URL</label>
-              <input
-                type="text"
-                value={formData.settings.base_url as string || ''}
-                onChange={(e) => handleSettingChange('base_url', e.target.value)}
-                placeholder="http://localhost:8080"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Username</label>
-                <input
-                  type="text"
-                  value={formData.settings.username as string || ''}
-                  onChange={(e) => handleSettingChange('username', e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Password</label>
-                <input
-                  type="password"
-                  value={formData.settings.password as string || ''}
-                  onChange={(e) => handleSettingChange('password', e.target.value)}
-                  placeholder="Leave empty to keep existing"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">DAG Folder</label>
-              <input
-                type="text"
-                value={formData.settings.dag_folder as string || ''}
-                onChange={(e) => handleSettingChange('dag_folder', e.target.value)}
-                placeholder="/opt/airflow/dags"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
-            </div>
-          </>
-        );
-      
+
       case 'ollama':
         return (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Base URL</label>
-              <input
-                type="text"
-                value={formData.settings.base_url as string || ''}
-                onChange={(e) => handleSettingChange('base_url', e.target.value)}
-                placeholder="http://localhost:11434"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
-            </div>
+          <div className="space-y-4">
+            {field('Base URL', 'base_url', { placeholder: 'http://ollama:11434' })}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Default Model</label>
-                <input
-                  type="text"
-                  value={formData.settings.default_model as string || ''}
-                  onChange={(e) => handleSettingChange('default_model', e.target.value)}
-                  placeholder="llama3.2"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-                <p className="mt-1 text-xs text-gray-500">Model name available on the Ollama server</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Request Timeout (s)</label>
-                <input
-                  type="number"
-                  value={formData.settings.request_timeout as number || 120}
-                  onChange={(e) => handleSettingChange('request_timeout', parseInt(e.target.value))}
-                  min={10}
-                  max={600}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+              {field('Default Model', 'default_model', { placeholder: 'llama3.2', hint: 'Model name available on the Ollama server' })}
+              {field('Request Timeout', 'request_timeout', { type: 'number', min: 10, max: 600, hint: 'Seconds' })}
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Context Window</label>
-                <input
-                  type="number"
-                  value={formData.settings.num_ctx as number || 4096}
-                  onChange={(e) => handleSettingChange('num_ctx', parseInt(e.target.value))}
-                  min={512}
-                  step={512}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-                <p className="mt-1 text-xs text-gray-500">Tokens</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Temperature</label>
-                <input
-                  type="number"
-                  value={formData.settings.temperature as number || 0.7}
-                  onChange={(e) => handleSettingChange('temperature', parseFloat(e.target.value))}
-                  min={0}
-                  max={2}
-                  step={0.1}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Keep Alive</label>
-                <input
-                  type="text"
-                  value={formData.settings.keep_alive as string || '5m'}
-                  onChange={(e) => handleSettingChange('keep_alive', e.target.value)}
-                  placeholder="5m"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-                <p className="mt-1 text-xs text-gray-500">e.g., 5m, 1h</p>
-              </div>
+              {field('Context Window', 'num_ctx', { type: 'number', min: 512, step: 512, hint: 'Tokens' })}
+              {field('Temperature', 'temperature', { type: 'number', min: 0, max: 2, step: 0.1 })}
+              {field('Keep Alive', 'keep_alive', { placeholder: '5m', hint: 'e.g. 5m, 1h' })}
             </div>
-          </>
+          </div>
         );
-      
+
       default:
         return null;
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        {/* Backdrop */}
-        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={onCancel} />
-
-        {/* Modal */}
-        <div className="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Configure {labels[serviceType]}
-            </h2>
-            <button
-              onClick={onCancel}
-              className="text-gray-400 hover:text-gray-500"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${meta.iconBg}`}>
+              <Icon className={`h-4.5 w-4.5 ${meta.iconColor}`} />
+            </div>
+            <div>
+              <DialogTitle>Configure {meta.label}</DialogTitle>
+              <DialogDescription>Update connection settings for {meta.label}.</DialogDescription>
+            </div>
           </div>
+        </DialogHeader>
 
+        <div className="space-y-6 py-2">
+          {/* ── Basic info ─────────────────────────────────────────── */}
           <div className="space-y-4">
-            {/* Basic Info */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Configuration Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-name">Configuration Name</Label>
+              <Input id="cfg-name" name="name" value={formData.name} onChange={handleInputChange} />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                rows={2}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
+            <div className="space-y-1.5">
+              <Label htmlFor="cfg-desc">Description</Label>
+              <Textarea id="cfg-desc" name="description" value={formData.description} onChange={handleInputChange} rows={2} className="resize-none" />
             </div>
+          </div>
 
-            {/* Connection */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Host</label>
-                <input
-                  type="text"
-                  name="host"
-                  value={formData.host}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
+          <Separator />
+
+          {/* ── Connection ─────────────────────────────────────────── */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <Server className="h-4 w-4 text-muted-foreground" />
+              Connection
+            </h4>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="cfg-host">Host</Label>
+                <Input id="cfg-host" name="host" value={formData.host} onChange={handleInputChange} />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Port</label>
-                <input
-                  type="number"
-                  name="port"
-                  value={formData.port}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
+              <div className="space-y-1.5">
+                <Label htmlFor="cfg-port">Port</Label>
+                <Input id="cfg-port" name="port" type="number" value={formData.port} onChange={handleInputChange} />
               </div>
             </div>
+          </div>
 
-            {/* Service-specific settings */}
-            <div className="pt-4 border-t border-gray-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-4">Service Settings</h3>
-              <div className="space-y-4">
-                {renderSettingsFields()}
-              </div>
-            </div>
+          <Separator />
 
-            {/* Test Result */}
-            {testResult && (
-              <div className={`p-4 rounded-md ${testResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                <div className="flex items-center">
-                  <span className={`text-sm font-medium ${testResult.success ? 'text-green-800' : 'text-red-800'}`}>
-                    {testResult.success ? '✓ Connection successful' : '✗ Connection failed'}
+          {/* ── Service-specific settings ──────────────────────────── */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <Settings2 className="h-4 w-4 text-muted-foreground" />
+              {meta.label} Settings
+            </h4>
+            {renderSettings()}
+          </div>
+
+          {/* ── Test result ────────────────────────────────────────── */}
+          {testResult && (
+            <div className={`rounded-lg border p-4 ${
+              testResult.success
+                ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30'
+                : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30'
+            }`}>
+              <div className="flex items-center gap-2">
+                {testResult.success ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-600" />
+                )}
+                <span className={`text-sm font-medium ${testResult.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                  {testResult.success ? 'Connection successful' : 'Connection failed'}
+                </span>
+                {testResult.latency_ms != null && (
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {testResult.latency_ms.toFixed(0)} ms
                   </span>
-                  {testResult.latency_ms && (
-                    <span className="ml-2 text-sm text-gray-500">({testResult.latency_ms.toFixed(0)} ms)</span>
-                  )}
-                </div>
-                {testResult.server_version && (
-                  <p className="mt-1 text-sm text-gray-600">Version: {testResult.server_version}</p>
-                )}
-                {!testResult.success && (
-                  <p className="mt-1 text-sm text-red-700">{testResult.message}</p>
                 )}
               </div>
-            )}
+              {testResult.server_version && (
+                <p className="text-xs text-muted-foreground mt-1">Server version: {testResult.server_version}</p>
+              )}
+              {!testResult.success && testResult.message && (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{testResult.message}</p>
+              )}
+            </div>
+          )}
 
-            {/* Error */}
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="mt-6 flex justify-end space-x-3">
-            <button
-              onClick={onCancel}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleTest}
-              disabled={isTesting}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-            >
-              {isTesting ? 'Testing...' : 'Test Connection'}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {isSaving ? 'Saving...' : 'Save Configuration'}
-            </button>
-          </div>
+          {/* ── Error ──────────────────────────────────────────────── */}
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30 p-3">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            </div>
+          )}
         </div>
-      </div>
-    </div>
+
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={handleTest} disabled={isTesting}>
+            {isTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+            {isTesting ? 'Testing…' : 'Test Connection'}
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            {isSaving ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
-// Main page component
+// ─── Loading Skeleton ───────────────────────────────────────────────────────────
+
+const CardSkeleton: React.FC = () => (
+  <Card className="overflow-hidden">
+    <div className="h-1 bg-muted" />
+    <CardHeader className="pb-3">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-10 w-10 rounded-lg" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+        </div>
+        <Skeleton className="h-5 w-20 rounded-full" />
+      </div>
+    </CardHeader>
+    <CardContent className="pb-3">
+      <Skeleton className="h-24 w-full rounded-lg" />
+    </CardContent>
+    <CardFooter className="gap-2 pt-0">
+      <Skeleton className="h-8 flex-1 rounded-md" />
+      <Skeleton className="h-8 flex-1 rounded-md" />
+    </CardFooter>
+  </Card>
+);
+
+// ─── Main Page ──────────────────────────────────────────────────────────────────
+
 const InfrastructureConfigPage: React.FC = () => {
   const [configs, setConfigs] = useState<Record<InfrastructureServiceType, { config: InfrastructureConfig | null; source: 'database' | 'environment' }>>({
     clickhouse: { config: null, source: 'environment' },
     spark: { config: null, source: 'environment' },
-    airflow: { config: null, source: 'environment' },
     ollama: { config: null, source: 'environment' },
   });
   const [testResults, setTestResults] = useState<Record<InfrastructureServiceType, InfrastructureConfigTestResult | null>>({
     clickhouse: null,
     spark: null,
-    airflow: null,
     ollama: null,
   });
   const [testingServices, setTestingServices] = useState<Set<InfrastructureServiceType>>(new Set());
   const [editingService, setEditingService] = useState<InfrastructureServiceType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Load all configurations
-  const loadConfigs = useCallback(async () => {
-    setIsLoading(true);
+  const loadConfigs = useCallback(async (showRefresh = false) => {
+    if (showRefresh) setIsRefreshing(true); else setIsLoading(true);
     try {
       const allConfigs = await infrastructureService.getAllActiveConfigs();
       const newConfigs: typeof configs = {
         clickhouse: { config: null, source: 'environment' },
         spark: { config: null, source: 'environment' },
-        airflow: { config: null, source: 'environment' },
         ollama: { config: null, source: 'environment' },
       };
 
       for (const [type, response] of Object.entries(allConfigs)) {
-        if (response) {
+        if (response && type in newConfigs) {
           newConfigs[type as InfrastructureServiceType] = {
             config: response.config,
             source: response.source || 'environment',
@@ -695,10 +654,12 @@ const InfrastructureConfigPage: React.FC = () => {
       }
 
       setConfigs(newConfigs);
+      setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load configurations');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -742,19 +703,15 @@ const InfrastructureConfigPage: React.FC = () => {
     }
   };
 
-  // Test all services
   const handleTestAll = async () => {
-    const services: InfrastructureServiceType[] = ['clickhouse', 'spark', 'airflow', 'ollama'];
-    await Promise.all(services.map(s => handleTest(s)));
+    await Promise.all(SERVICE_TYPES.map(s => handleTest(s)));
   };
 
-  // Handle save configuration
   const handleSave = async (config: InfrastructureConfigCreate) => {
     const serviceType = config.service_type;
     const existingConfig = configs[serviceType].config;
 
-    if (existingConfig?.id && !existingConfig.is_system_default) {
-      // Update existing
+    if (existingConfig?.id) {
       await infrastructureService.updateConfig(existingConfig.id, {
         name: config.name,
         description: config.description,
@@ -764,15 +721,13 @@ const InfrastructureConfigPage: React.FC = () => {
         is_active: config.is_active,
       });
     } else {
-      // Create new
       await infrastructureService.createConfig(config);
     }
 
     setEditingService(null);
-    await loadConfigs();
+    await loadConfigs(true);
   };
 
-  // Handle inline test from form
   const handleFormTest = async (config: Partial<InfrastructureConfigCreate>): Promise<InfrastructureConfigTestResult> => {
     return infrastructureService.testConnection({
       service_type: config.service_type,
@@ -782,93 +737,146 @@ const InfrastructureConfigPage: React.FC = () => {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  // ── Quick stats ──────────────────────────────────────────────────────────
+  const connectedCount = SERVICE_TYPES.filter(s => testResults[s]?.success).length;
+  const testedCount = SERVICE_TYPES.filter(s => testResults[s] !== null).length;
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Infrastructure Configuration</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Configure connections to your infrastructure servers. Default settings are used for development and testing.
-        </p>
-      </div>
-
-      {/* Error Alert */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-700">{error}</p>
-          <button
-            onClick={() => setError(null)}
-            className="mt-2 text-sm text-red-600 underline hover:no-underline"
-          >
-            Dismiss
-          </button>
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* ── Header ──────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Infrastructure</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage connections to your core infrastructure services.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadConfigs(true)}
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Reload all configurations</TooltipContent>
+            </Tooltip>
+            <Button
+              size="sm"
+              onClick={handleTestAll}
+              disabled={testingServices.size > 0}
+            >
+              <Zap className="h-4 w-4" />
+              Test All
+            </Button>
+          </div>
         </div>
-      )}
 
-      {/* Quick Actions */}
-      <div className="mb-6 flex space-x-4">
-        <button
-          onClick={handleTestAll}
-          disabled={testingServices.size > 0}
-          className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50"
-        >
-          Test All Connections
-        </button>
-        <button
-          onClick={loadConfigs}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-        >
-          Refresh
-        </button>
-      </div>
+        {/* ── Stats bar ───────────────────────────────────────────── */}
+        <div className="grid grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Services</CardTitle>
+              <Server className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{SERVICE_TYPES.length}</div>
+              <p className="text-xs text-muted-foreground">Configured services</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Connected</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {testedCount > 0 ? `${connectedCount}/${testedCount}` : '—'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {testedCount > 0 ? 'Passed connectivity test' : 'Run tests to check'}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Status</CardTitle>
+              <Shield className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {testedCount === 0
+                  ? '—'
+                  : connectedCount === SERVICE_TYPES.length
+                    ? 'Healthy'
+                    : connectedCount > 0
+                      ? 'Partial'
+                      : 'Down'}
+              </div>
+              <p className="text-xs text-muted-foreground">Overall health</p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Service Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {(['clickhouse', 'spark', 'airflow', 'ollama'] as InfrastructureServiceType[]).map(serviceType => (
-          <ServiceCard
-            key={serviceType}
-            serviceType={serviceType}
-            config={configs[serviceType].config}
-            source={configs[serviceType].source}
-            testResult={testResults[serviceType]}
-            isTesting={testingServices.has(serviceType)}
-            onEdit={() => setEditingService(serviceType)}
-            onTest={() => handleTest(serviceType)}
+        {/* ── Error alert ─────────────────────────────────────────── */}
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30 p-4 flex items-start gap-3">
+            <XCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">Configuration Error</p>
+              <p className="text-sm text-red-600 dark:text-red-400 mt-0.5">{error}</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setError(null)} className="shrink-0 text-red-600 hover:text-red-700">
+              Dismiss
+            </Button>
+          </div>
+        )}
+
+        {/* ── Service cards ───────────────────────────────────────── */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {SERVICE_TYPES.map(serviceType => (
+              <ServiceCard
+                key={serviceType}
+                serviceType={serviceType}
+                config={configs[serviceType].config}
+                source={configs[serviceType].source}
+                testResult={testResults[serviceType]}
+                isTesting={testingServices.has(serviceType)}
+                onEdit={() => setEditingService(serviceType)}
+                onTest={() => handleTest(serviceType)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* ── Configuration dialog ────────────────────────────────── */}
+        {editingService && (
+          <ConfigDialog
+            open
+            serviceType={editingService}
+            existingConfig={configs[editingService].config}
+            onSave={handleSave}
+            onClose={() => setEditingService(null)}
+            onTest={handleFormTest}
           />
-        ))}
+        )}
       </div>
-
-      {/* Configuration Form Modal */}
-      {editingService && (
-        <ConfigForm
-          serviceType={editingService}
-          existingConfig={configs[editingService].config}
-          onSave={handleSave}
-          onCancel={() => setEditingService(null)}
-          onTest={handleFormTest}
-        />
-      )}
-
-      {/* Help Text */}
-      <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-md">
-        <h3 className="text-sm font-medium text-blue-800">About Infrastructure Configuration</h3>
-        <ul className="mt-2 text-sm text-blue-700 list-disc list-inside space-y-1">
-          <li>Default configurations are loaded from environment variables if no custom config is set</li>
-          <li>Custom configurations are stored securely in the database</li>
-          <li>Credentials are encrypted before storage</li>
-          <li>Test connections before saving to ensure connectivity</li>
-          <li>Only one active configuration per service type is allowed</li>
-        </ul>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 };
 

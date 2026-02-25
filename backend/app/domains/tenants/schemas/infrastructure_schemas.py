@@ -14,6 +14,7 @@ from marshmallow import (
     validates,
     validates_schema,
     ValidationError,
+    EXCLUDE,
 )
 
 
@@ -87,6 +88,9 @@ class BaseInfrastructureConfigSchema(Schema):
 class ClickHouseSettingsSchema(Schema):
     """ClickHouse-specific settings."""
 
+    class Meta:
+        unknown = EXCLUDE
+
     database = fields.Str(
         required=True,
         validate=validate.Length(min=1, max=100),
@@ -133,6 +137,9 @@ class ClickHouseConfigCreateSchema(BaseInfrastructureConfigSchema):
 
 class SparkSettingsSchema(Schema):
     """Spark-specific settings."""
+
+    class Meta:
+        unknown = EXCLUDE
 
     master_url = fields.Str(
         required=True, validate=validate.Length(min=1, max=255)
@@ -207,6 +214,9 @@ class SparkConfigCreateSchema(BaseInfrastructureConfigSchema):
 class AirflowSettingsSchema(Schema):
     """Airflow-specific settings."""
 
+    class Meta:
+        unknown = EXCLUDE
+
     base_url = fields.Str(
         required=True, validate=validate.URL(schemes=["http", "https"])
     )
@@ -243,6 +253,9 @@ class AirflowConfigCreateSchema(BaseInfrastructureConfigSchema):
 
 class DagsterSettingsSchema(Schema):
     """Dagster orchestrator-specific settings."""
+
+    class Meta:
+        unknown = EXCLUDE
 
     graphql_url = fields.Str(
         required=True,
@@ -298,6 +311,9 @@ class DagsterConfigCreateSchema(BaseInfrastructureConfigSchema):
 
 class OllamaSettingsSchema(Schema):
     """Ollama LLM server-specific settings."""
+
+    class Meta:
+        unknown = EXCLUDE
 
     base_url = fields.Str(
         required=True, validate=validate.URL(schemes=["http", "https"])

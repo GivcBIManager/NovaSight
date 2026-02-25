@@ -8,12 +8,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Book,
-  Key,
-  FileText,
   Code2,
   Users,
-  Server,
-  Building2,
+  Shield,
   Upload,
   PieChart,
   LayoutDashboard,
@@ -53,13 +50,7 @@ const adminNavigation = [
   { name: 'Settings', href: '/app/settings', icon: Settings },
 ]
 
-// Portal Management (Super Admin only)
-const portalNavigation = [
-  { name: 'Infrastructure', href: '/app/portal/infrastructure', icon: Server },
-  { name: 'Tenant Management', href: '/app/portal/tenants', icon: Building2 },
-  { name: 'Roles & Permissions', href: '/app/admin/roles', icon: Key },
-  { name: 'Audit Logs', href: '/app/admin/audit', icon: FileText },
-]
+
 
 export function Sidebar() {
   const location = useLocation()
@@ -223,12 +214,18 @@ export function Sidebar() {
         {/* Portal Management (Super Admin only) */}
         {isSuperAdmin && (
           <div>
-            {!collapsed && (
-              <p className="px-3 mb-2 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-                Portal Management
-              </p>
-            )}
-            {portalNavigation.map((item) => renderNavItem(item))}
+            <Link
+              to="/app/portal"
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                location.pathname.startsWith('/app/portal')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              )}
+            >
+              <Shield className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>Portal Management</span>}
+            </Link>
           </div>
         )}
       </nav>

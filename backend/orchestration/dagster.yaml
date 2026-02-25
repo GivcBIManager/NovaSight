@@ -27,7 +27,7 @@ run_coordinator:
         limit: 3
       - key: "dagster/concurrency_key"
         value: "dbt_runs"
-        limit: 2
+        limit: 10
 
 # Compute logs - local storage
 compute_logs:

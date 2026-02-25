@@ -2,7 +2,7 @@
  * Infrastructure Configuration API Service
  * 
  * API client for managing infrastructure server configurations
- * (ClickHouse, Spark, Dagster)
+ * (ClickHouse, Spark, Ollama)
  */
 
 import { apiClient } from './apiClient';
@@ -121,11 +121,10 @@ export const infrastructureService = {
    * Get all active configurations for display/dashboard
    */
   async getAllActiveConfigs(tenantId?: string): Promise<Record<InfrastructureServiceType, InfrastructureConfigResponse | null>> {
-    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'dagster', 'ollama'];
+    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'ollama'];
     const results: Record<string, InfrastructureConfigResponse | null> = {
       clickhouse: null,
       spark: null,
-      dagster: null,
       ollama: null,
     };
 
@@ -146,11 +145,10 @@ export const infrastructureService = {
    * Test all active configurations
    */
   async testAllConnections(tenantId?: string): Promise<Record<InfrastructureServiceType, InfrastructureConfigTestResult>> {
-    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'dagster', 'ollama'];
+    const serviceTypes: InfrastructureServiceType[] = ['clickhouse', 'spark', 'ollama'];
     const results: Record<string, InfrastructureConfigTestResult> = {
       clickhouse: { success: false, message: 'Not tested' },
       spark: { success: false, message: 'Not tested' },
-      dagster: { success: false, message: 'Not tested' },
       ollama: { success: false, message: 'Not tested' },
     };
 
@@ -188,7 +186,6 @@ export const infrastructureService = {
     const defaultPorts: Record<InfrastructureServiceType, number> = {
       clickhouse: 8123,
       spark: 7077,
-      dagster: 3000,
       ollama: 11434,
     };
     return defaultPorts[serviceType];
@@ -203,14 +200,15 @@ export const infrastructureService = {
         return {
           database: 'novasight',
           user: 'default',
+          password: '',
           secure: false,
           connect_timeout: 10,
           send_receive_timeout: 300,
-          verify_ssl: true,
+          verify_ssl: false,
         };
       case 'spark':
         return {
-          master_url: 'spark://localhost:7077',
+          master_url: 'spark://spark-master:7077',
           deploy_mode: 'client',
           driver_memory: '2g',
           executor_memory: '2g',
@@ -221,19 +219,9 @@ export const infrastructureService = {
           spark_home: '/opt/spark',
           additional_configs: {},
         };
-      case 'dagster':
-        return {
-          graphql_url: 'http://localhost:3000/graphql',
-          request_timeout: 30,
-          verify_ssl: true,
-          max_concurrent_runs: 10,
-          spark_concurrency_limit: 3,
-          dbt_concurrency_limit: 2,
-          compute_logs_dir: '/var/dagster/logs',
-        };
       case 'ollama':
         return {
-          base_url: 'http://localhost:11434',
+          base_url: 'http://ollama:11434',
           default_model: 'llama3.2',
           request_timeout: 120,
           num_ctx: 4096,

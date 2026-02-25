@@ -163,6 +163,8 @@ function App() {
               <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
               <Route path="users" element={<UserManagementPage />} />
               <Route path="infrastructure" element={<InfrastructureConfigPage />} />
+              <Route path="roles" element={<RolesManagementPage />} />
+              <Route path="audit" element={<AuditLogsPage />} />
             </Route>
             
             {/* Settings */}

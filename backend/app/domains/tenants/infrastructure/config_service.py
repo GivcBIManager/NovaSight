@@ -256,15 +256,11 @@ class InfrastructureConfigService:
         updated_by: Optional[str] = None,
         **kwargs: Any,
     ) -> InfrastructureConfig:
-        """Update an existing config. System defaults are read-only."""
+        """Update an existing config (including system defaults)."""
         config = self.get_config(config_id)
         if not config:
             raise InfrastructureConfigNotFoundError(
                 f"Config not found: {config_id}"
-            )
-        if config.is_system_default:
-            raise InfrastructureConfigError(
-                "Cannot modify system default configuration"
             )
 
         if "settings" in kwargs:

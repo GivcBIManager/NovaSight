@@ -3,7 +3,7 @@ NovaSight Admin Infrastructure Configuration API
 =================================================
 
 API endpoints for managing infrastructure server configurations.
-Allows portal admins to configure ClickHouse, Spark, and Airflow connections.
+Allows portal admins to configure ClickHouse, Spark, and Ollama connections.
 """
 
 from flask import request, jsonify
@@ -23,7 +23,6 @@ from app.schemas.infrastructure_schemas import (
     InfrastructureConfigTestResultSchema,
     ClickHouseConfigCreateSchema,
     SparkConfigCreateSchema,
-    AirflowConfigCreateSchema,
     OllamaConfigCreateSchema,
 )
 from app.errors import ValidationError, NotFoundError
@@ -36,7 +35,6 @@ logger = logging.getLogger(__name__)
 CREATE_SCHEMAS = {
     'clickhouse': ClickHouseConfigCreateSchema,
     'spark': SparkConfigCreateSchema,
-    'airflow': AirflowConfigCreateSchema,
     'ollama': OllamaConfigCreateSchema,
 }
 
@@ -49,7 +47,7 @@ def list_infrastructure_configs():
     List all infrastructure configurations.
     
     Query Parameters:
-        - service_type: Filter by service type (clickhouse, spark, airflow)
+        - service_type: Filter by service type (clickhouse, spark, ollama)
         - tenant_id: Filter by tenant ID
         - include_global: Include global configs (default: true)
         - page: Page number (default: 1)
@@ -108,7 +106,7 @@ def get_active_infrastructure_config(service_type):
     Get the active configuration for a service type.
     
     Args:
-        service_type: Service type (clickhouse, spark, airflow)
+        service_type: Service type (clickhouse, spark, ollama)
     
     Query Parameters:
         - tenant_id: Optional tenant ID for tenant-specific config
@@ -116,7 +114,7 @@ def get_active_infrastructure_config(service_type):
     Returns:
         Active configuration or default settings
     """
-    if service_type not in ['clickhouse', 'spark', 'airflow', 'ollama']:
+    if service_type not in ['clickhouse', 'spark', 'ollama']:
         raise ValidationError(f"Invalid service type: {service_type}")
     
     tenant_id = request.args.get('tenant_id')
@@ -153,7 +151,7 @@ def create_infrastructure_config():
     Create a new infrastructure configuration.
     
     Request Body:
-        - service_type: Service type (clickhouse, spark, airflow) - required
+        - service_type: Service type (clickhouse, spark, ollama) - required
         - name: Display name - required
         - host: Server hostname - required
         - port: Server port - required

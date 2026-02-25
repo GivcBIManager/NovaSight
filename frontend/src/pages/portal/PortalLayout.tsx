@@ -19,6 +19,8 @@ import {
   ChevronLeft,
   PanelLeftClose,
   PanelLeft,
+  Key,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -49,6 +51,18 @@ const portalNav = [
     href: '/app/portal/infrastructure', 
     icon: Server,
     description: 'Server configurations',
+  },
+  { 
+    name: 'Roles & Permissions', 
+    href: '/app/portal/roles', 
+    icon: Key,
+    description: 'Manage roles & access control',
+  },
+  { 
+    name: 'Audit Logs', 
+    href: '/app/portal/audit', 
+    icon: FileText,
+    description: 'Activity & security logs',
   },
 ]
 
