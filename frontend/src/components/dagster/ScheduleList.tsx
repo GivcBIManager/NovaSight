@@ -121,11 +121,16 @@ export function ScheduleList({ className = '', maxItems, showHeader = true }: Sc
   }
 
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load schedules';
+    const isDagsterDown = errorMessage.toLowerCase().includes('dagster') || errorMessage.toLowerCase().includes('unavailable');
+
     return (
       <Card className={className}>
         <CardContent className="flex h-32 flex-col items-center justify-center">
-          <AlertTriangle className="h-8 w-8 text-red-500 mb-2" />
-          <p className="text-sm text-muted-foreground">Failed to load schedules</p>
+          <AlertTriangle className={`h-8 w-8 mb-2 ${isDagsterDown ? 'text-yellow-500' : 'text-red-500'}`} />
+          <p className="text-sm text-muted-foreground">
+            {isDagsterDown ? 'Dagster service is unavailable' : 'Failed to load schedules'}
+          </p>
           <Button variant="ghost" size="sm" onClick={() => refetch()} className="mt-2">
             <RefreshCw className="mr-2 h-4 w-4" />
             Retry

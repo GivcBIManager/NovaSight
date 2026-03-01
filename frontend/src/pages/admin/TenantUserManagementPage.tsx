@@ -73,24 +73,7 @@ import {
   UserPlus,
   Building2,
 } from 'lucide-react'
-
-// Status & role color maps
-const statusColors: Record<string, string> = {
-  active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-  pending: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  locked: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-}
-
-const roleColors: Record<string, string> = {
-  super_admin: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400',
-  tenant_admin: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400',
-  data_engineer: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
-  bi_developer: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400',
-  analyst: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400',
-  viewer: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-400',
-  auditor: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400',
-}
+import { getStatusClasses, getRoleClasses } from '@/lib/colors'
 
 export const TenantUserManagementPage: React.FC = () => {
   const navigate = useNavigate()
@@ -379,7 +362,7 @@ export const TenantUserManagementPage: React.FC = () => {
                               <Badge
                                 key={role.id || role.name}
                                 variant="outline"
-                                className={`text-xs ${roleColors[role.name] || roleColors.viewer}`}
+                                className={`text-xs ${getRoleClasses(role.name)}`}
                               >
                                 {getRoleDisplayName(role)}
                               </Badge>
@@ -392,7 +375,7 @@ export const TenantUserManagementPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="p-3">
-                          <Badge variant="outline" className={statusColors[usr.status] || statusColors.inactive}>
+                          <Badge variant="outline" className={getStatusClasses(usr.status)}>
                             {usr.status}
                           </Badge>
                         </td>
@@ -645,7 +628,7 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ user, onClose }) =>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status</span>
-              <Badge variant="outline" className={statusColors[user.status] || ''}>
+              <Badge variant="outline" className={getStatusClasses(user.status)}>
                 {user.status}
               </Badge>
             </div>
@@ -658,7 +641,7 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({ user, onClose }) =>
                   <Badge
                     key={role.id || role.name}
                     variant="outline"
-                    className={`text-xs ${roleColors[role.name] || roleColors.viewer}`}
+                    className={`text-xs ${getRoleClasses(role.name)}`}
                   >
                     {role.display_name || role.name}
                   </Badge>

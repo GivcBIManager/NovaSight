@@ -24,29 +24,10 @@ interface HeatmapProps {
   }
 }
 
-// Color scales for different themes
-const COLOR_SCALES: Record<string, { light: string[]; dark: string[] }> = {
-  blue: {
-    light: ['#EFF6FF', '#BFDBFE', '#60A5FA', '#2563EB', '#1D4ED8'],
-    dark: ['#1E3A5F', '#1E40AF', '#2563EB', '#3B82F6', '#60A5FA'],
-  },
-  green: {
-    light: ['#ECFDF5', '#A7F3D0', '#34D399', '#059669', '#047857'],
-    dark: ['#064E3B', '#047857', '#059669', '#10B981', '#34D399'],
-  },
-  red: {
-    light: ['#FEF2F2', '#FECACA', '#F87171', '#DC2626', '#B91C1C'],
-    dark: ['#7F1D1D', '#B91C1C', '#DC2626', '#EF4444', '#F87171'],
-  },
-  purple: {
-    light: ['#F5F3FF', '#DDD6FE', '#A78BFA', '#7C3AED', '#6D28D9'],
-    dark: ['#4C1D95', '#6D28D9', '#7C3AED', '#8B5CF6', '#A78BFA'],
-  },
-  orange: {
-    light: ['#FFFBEB', '#FDE68A', '#FBBF24', '#D97706', '#B45309'],
-    dark: ['#78350F', '#B45309', '#D97706', '#F59E0B', '#FBBF24'],
-  },
-}
+import { HEATMAP_SCALES } from '@/lib/colors'
+
+// Color scales sourced from centralized design tokens
+const COLOR_SCALES = HEATMAP_SCALES
 
 export function Heatmap({ data, config = {} }: HeatmapProps) {
   const {

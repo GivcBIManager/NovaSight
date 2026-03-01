@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { getModelTypeClasses } from '@/lib/colors'
 import type { SemanticModel } from '../types'
 
 interface ModelCardProps {
@@ -32,13 +33,6 @@ const modelTypeIcons: Record<string, React.ReactNode> = {
   view: <Eye className="h-4 w-4" />,
 }
 
-const modelTypeColors: Record<string, string> = {
-  fact: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  dimension: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  aggregate: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-  view: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-}
-
 export function ModelCard({ model, compact = false, onEdit, onDelete, onDuplicate }: ModelCardProps) {
   if (compact) {
     // Compact/list view
@@ -47,7 +41,7 @@ export function ModelCard({ model, compact = false, onEdit, onDelete, onDuplicat
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1 min-w-0">
-              <Badge variant="secondary" className={modelTypeColors[model.model_type]}>
+              <Badge variant="secondary" className={getModelTypeClasses(model.model_type)}>
                 {modelTypeIcons[model.model_type]}
               </Badge>
               <div className="min-w-0">
@@ -112,7 +106,7 @@ export function ModelCard({ model, compact = false, onEdit, onDelete, onDuplicat
         <div className="space-y-3">
           {/* Model Type Badge */}
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className={modelTypeColors[model.model_type]}>
+            <Badge variant="secondary" className={getModelTypeClasses(model.model_type)}>
               {modelTypeIcons[model.model_type]}
               <span className="ml-1 capitalize">{model.model_type}</span>
             </Badge>

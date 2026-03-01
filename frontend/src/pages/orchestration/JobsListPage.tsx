@@ -57,6 +57,7 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from '@/components/ui/use-toast'
+import { getStatusClasses } from '@/lib/colors'
 
 export function JobsListPage() {
   const queryClient = useQueryClient()
@@ -154,15 +155,15 @@ export function JobsListPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    const styles: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }> = {
-      draft: { variant: 'outline', className: 'border-gray-400 text-gray-600' },
-      active: { variant: 'default', className: 'bg-green-100 text-green-800 hover:bg-green-100' },
-      paused: { variant: 'secondary', className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' },
-      archived: { variant: 'destructive', className: 'bg-red-100 text-red-800' },
+    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      draft: 'outline',
+      active: 'default',
+      paused: 'secondary',
+      archived: 'destructive',
     }
-    const style = styles[status] || styles.draft
+    const variant = variants[status] || 'outline'
     return (
-      <Badge variant={style.variant} className={style.className}>
+      <Badge variant={variant} className={getStatusClasses(status)}>
         {status}
       </Badge>
     )

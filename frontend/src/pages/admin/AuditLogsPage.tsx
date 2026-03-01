@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/components/ui/use-toast'
 import api from '@/lib/api'
+import { getActionClasses, getSeverityIconClass } from '@/lib/colors'
 
 interface AuditLog {
   id: string
@@ -66,61 +67,12 @@ interface SecurityEvent {
   created_at: string
 }
 
-const ACTION_COLORS: Record<string, string> = {
-  // Direct matches
-  create: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  update: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  delete: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  login: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  logout: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-  // Dotted action patterns
-  'auth.login': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  'auth.logout': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-  'auth.login_failed': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  'auth.password_changed': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  'user.created': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  'user.updated': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  'user.deleted': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  'user.role_changed': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-  'connection.created': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  'connection.updated': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  'connection.deleted': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  'connection.tested': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
-  'dashboard.created': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  'dashboard.updated': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  'dashboard.deleted': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  'dashboard.shared': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
-  'dag.created': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  'dag.updated': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  'dag.deleted': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  'dag.deployed': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
-  'dag.triggered': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-  'dag.paused': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-  'dag.unpaused': 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
-}
-
 const SEVERITY_ICONS: Record<string, React.ReactNode> = {
-  critical: <AlertTriangle className="h-4 w-4 text-red-500" />,
-  high: <AlertTriangle className="h-4 w-4 text-orange-500" />,
-  medium: <Info className="h-4 w-4 text-yellow-500" />,
-  low: <Info className="h-4 w-4 text-blue-500" />,
-  info: <CheckCircle className="h-4 w-4 text-green-500" />,
-}
-
-// Helper to get action color with fallback based on action suffix
-function getActionColor(action: string): string {
-  if (ACTION_COLORS[action]) return ACTION_COLORS[action]
-  // Fallback: check if action ends with common suffixes
-  if (action.endsWith('.created') || action.endsWith('_created')) {
-    return ACTION_COLORS['create']
-  }
-  if (action.endsWith('.updated') || action.endsWith('_updated')) {
-    return ACTION_COLORS['update']
-  }
-  if (action.endsWith('.deleted') || action.endsWith('_deleted')) {
-    return ACTION_COLORS['delete']
-  }
-  return '' // Default styling
+  critical: <AlertTriangle className={`h-4 w-4 ${getSeverityIconClass('critical')}`} />,
+  high: <AlertTriangle className={`h-4 w-4 ${getSeverityIconClass('high')}`} />,
+  medium: <Info className={`h-4 w-4 ${getSeverityIconClass('medium')}`} />,
+  low: <Info className={`h-4 w-4 ${getSeverityIconClass('low')}`} />,
+  info: <CheckCircle className={`h-4 w-4 ${getSeverityIconClass('info')}`} />,
 }
 
 export function AuditLogsPage() {
@@ -364,7 +316,7 @@ export function AuditLogsPage() {
                               </div>
                             </td>
                             <td className="p-3">
-                              <Badge variant="outline" className={getActionColor(log.action)}>
+                              <Badge variant="outline" className={getActionClasses(log.action)}>
                                 {log.action}
                               </Badge>
                             </td>

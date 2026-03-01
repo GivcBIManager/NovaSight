@@ -36,6 +36,7 @@ import {
   Loader2,
   XCircle,
 } from 'lucide-react';
+import { getStatusClasses } from '@/lib/colors';
 
 export function DagsterDashboardPage() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -359,15 +360,7 @@ function RunDetailsSheet({
                 <p className="text-sm text-muted-foreground">Status</p>
                 <Badge
                   variant="outline"
-                  className={
-                    run.status === 'SUCCESS'
-                      ? 'bg-green-100 text-green-800'
-                      : run.status === 'FAILURE'
-                      ? 'bg-red-100 text-red-800'
-                      : run.status === 'STARTED'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }
+                  className={getStatusClasses(run.status)}
                 >
                   {run.status}
                 </Badge>

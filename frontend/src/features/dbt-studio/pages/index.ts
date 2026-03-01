@@ -5,4 +5,5 @@
  */
 
 export { DbtStudioPage } from './DbtStudioPage'
+export { EnhancedDbtStudioPage } from './EnhancedDbtStudioPage'
 export { ModelDetailPage } from './ModelDetailPage'

@@ -42,6 +42,7 @@ import {
   useSemanticModels,
 } from '../hooks/useSemanticModels'
 import { useToast } from '@/components/ui/use-toast'
+import { getJoinTypeClasses } from '@/lib/colors'
 import type { Relationship, RelationshipType, JoinType } from '../types'
 
 interface RelationshipDiagramProps {
@@ -54,13 +55,6 @@ const relationshipTypeLabels: Record<RelationshipType, string> = {
   one_to_many: '1:N',
   many_to_one: 'N:1',
   many_to_many: 'N:N',
-}
-
-const joinTypeColors: Record<JoinType, string> = {
-  LEFT: 'bg-blue-100 text-blue-800',
-  INNER: 'bg-green-100 text-green-800',
-  RIGHT: 'bg-orange-100 text-orange-800',
-  FULL: 'bg-purple-100 text-purple-800',
 }
 
 export function RelationshipDiagram({ modelId }: RelationshipDiagramProps) {
@@ -221,7 +215,7 @@ export function RelationshipDiagram({ modelId }: RelationshipDiagramProps) {
                             {relationshipTypeLabels[relationship.relationship_type]}
                           </Badge>
                           <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                          <Badge className={joinTypeColors[relationship.join_type]}>
+                          <Badge className={getJoinTypeClasses(relationship.join_type)}>
                             {relationship.join_type}
                           </Badge>
                         </div>

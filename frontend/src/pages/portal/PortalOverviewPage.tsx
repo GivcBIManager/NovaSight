@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { portalAdminService, type PortalStats } from '@/services/portalAdminService'
 import { Building2, Users, Activity, Server, ArrowRight, Loader2 } from 'lucide-react'
+import { getRoleClasses } from '@/lib/colors'
 
 export const PortalOverviewPage: React.FC = () => {
   const [stats, setStats] = useState<PortalStats | null>(null)
@@ -252,18 +253,8 @@ export const PortalOverviewPage: React.FC = () => {
 
 // Role badge component
 const RoleBadge: React.FC<{ role: string }> = ({ role }) => {
-  const colors: Record<string, string> = {
-    super_admin: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    tenant_admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-    data_engineer: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    bi_developer: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    analyst: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    viewer: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-    auditor: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  }
-
   return (
-    <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${colors[role] || colors.viewer}`}>
+    <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${getRoleClasses(role)}`}>
       {role.charAt(0).toUpperCase()}
     </div>
   )

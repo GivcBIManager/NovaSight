@@ -134,11 +134,16 @@ export function SensorList({ className = '', maxItems, showHeader = true }: Sens
   }
 
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load sensors';
+    const isDagsterDown = errorMessage.toLowerCase().includes('dagster') || errorMessage.toLowerCase().includes('unavailable');
+
     return (
       <Card className={className}>
         <CardContent className="flex h-32 flex-col items-center justify-center">
-          <AlertTriangle className="h-8 w-8 text-red-500 mb-2" />
-          <p className="text-sm text-muted-foreground">Failed to load sensors</p>
+          <AlertTriangle className={`h-8 w-8 mb-2 ${isDagsterDown ? 'text-yellow-500' : 'text-red-500'}`} />
+          <p className="text-sm text-muted-foreground">
+            {isDagsterDown ? 'Dagster service is unavailable' : 'Failed to load sensors'}
+          </p>
           <Button variant="ghost" size="sm" onClick={() => refetch()} className="mt-2">
             <RefreshCw className="mr-2 h-4 w-4" />
             Retry

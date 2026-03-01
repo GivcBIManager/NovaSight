@@ -315,7 +315,14 @@ def trigger_job(job_id: str):
         raise NotFoundError("Job not found")
     
     if not result.get("success"):
-        raise ValidationError(result.get("error", "Failed to trigger job"))
+        error_type = result.get("error_type", "unknown_error")
+        error_msg = result.get("error", "Failed to trigger job")
+        
+        if error_type in ("dagster_unavailable", "dagster_timeout"):
+            from app.errors import DagsterAPIError
+            raise DagsterAPIError(error_msg)
+        else:
+            raise ValidationError(error_msg)
     
     logger.info(f"Triggered job {job_id}: run_id={result.get('run_id')}")
     
@@ -327,6 +334,8 @@ def trigger_job(job_id: str):
         extra_data={'run_id': result.get('run_id')},
     )
     
+    # Remove internal error_type field before sending response
+    result.pop('error_type', None)
     return jsonify(result)
 
 

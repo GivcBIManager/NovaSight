@@ -19,34 +19,34 @@
 
 @layer base {
   :root {
-    /* Shadcn default tokens - Light mode */
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Shadcn tokens - Light mode */
+    --background: var(--color-neutral-50);
+    --foreground: var(--color-neutral-950);
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: var(--color-neutral-950);
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: var(--color-neutral-950);
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: var(--color-primary-600);
+    --primary-foreground: var(--color-neutral-50);
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: var(--color-neutral-100);
+    --secondary-foreground: var(--color-neutral-900);
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: var(--color-neutral-100);
+    --muted-foreground: var(--color-neutral-500);
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: var(--color-neutral-100);
+    --accent-foreground: var(--color-neutral-900);
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: var(--color-danger-500);
+    --destructive-foreground: var(--color-neutral-50);
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: var(--color-neutral-200);
+    --input: var(--color-neutral-200);
+    --ring: var(--color-primary-500);
 
     --radius: 0.5rem;
   }
@@ -54,64 +54,64 @@
   /* Dark mode as default for NovaSight */
   .dark,
   :root:not(.light) {
-    --background: 240 33% 4%;
-    --foreground: 0 0% 98%;
+    --background: var(--color-neutral-950);
+    --foreground: var(--color-neutral-50);
 
-    --card: 240 20% 8%;
-    --card-foreground: 0 0% 98%;
+    --card: var(--color-neutral-900);
+    --card-foreground: var(--color-neutral-50);
 
-    --popover: 240 20% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: var(--color-neutral-900);
+    --popover-foreground: var(--color-neutral-50);
 
-    --primary: 239 84% 67%;
-    --primary-foreground: 0 0% 98%;
+    --primary: var(--color-primary-500);
+    --primary-foreground: var(--color-neutral-50);
 
-    --secondary: 240 18% 12%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: var(--color-neutral-800);
+    --secondary-foreground: var(--color-neutral-50);
 
-    --muted: 240 18% 12%;
-    --muted-foreground: 240 5% 65%;
+    --muted: var(--color-neutral-800);
+    --muted-foreground: var(--color-neutral-400);
 
-    --accent: 258 90% 66%;
-    --accent-foreground: 0 0% 98%;
+    --accent: var(--color-accent-700);
+    --accent-foreground: var(--color-neutral-50);
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: var(--color-danger-700);
+    --destructive-foreground: var(--color-neutral-50);
 
-    --border: 240 5% 18%;
-    --input: 240 5% 18%;
-    --ring: 239 84% 67%;
+    --border: var(--color-neutral-800);
+    --input: var(--color-neutral-800);
+    --ring: var(--color-primary-500);
   }
 
   /* Light mode override */
   .light {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: var(--color-neutral-50);
+    --foreground: var(--color-neutral-950);
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: var(--color-neutral-950);
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: var(--color-neutral-950);
 
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: var(--color-primary-600);
+    --primary-foreground: var(--color-neutral-50);
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: var(--color-neutral-100);
+    --secondary-foreground: var(--color-neutral-900);
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: var(--color-neutral-100);
+    --muted-foreground: var(--color-neutral-500);
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: var(--color-neutral-100);
+    --accent-foreground: var(--color-neutral-900);
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: var(--color-danger-500);
+    --destructive-foreground: var(--color-neutral-50);
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --border: var(--color-neutral-200);
+    --input: var(--color-neutral-200);
+    --ring: var(--color-primary-500);
   }
 }
 

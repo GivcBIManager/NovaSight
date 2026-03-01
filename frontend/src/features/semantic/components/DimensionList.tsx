@@ -27,19 +27,13 @@ import {
 import { DimensionEditor } from './DimensionEditor'
 import { useDeleteDimension } from '../hooks/useSemanticModels'
 import { useToast } from '@/components/ui/use-toast'
+import { getDimensionTypeClasses } from '@/lib/colors'
 import type { Dimension, Column } from '../types'
 
 interface DimensionListProps {
   modelId: string
   dimensions: Dimension[]
   availableColumns?: Column[]
-}
-
-const typeColors = {
-  categorical: 'bg-blue-100 text-blue-800',
-  temporal: 'bg-orange-100 text-orange-800',
-  numeric: 'bg-green-100 text-green-800',
-  hierarchical: 'bg-purple-100 text-purple-800',
 }
 
 export function DimensionList({ modelId, dimensions, availableColumns = [] }: DimensionListProps) {
@@ -149,7 +143,7 @@ export function DimensionList({ modelId, dimensions, availableColumns = [] }: Di
                   <TableCell>
                     <Badge 
                       variant="secondary"
-                      className={typeColors[dimension.type]}
+                      className={getDimensionTypeClasses(dimension.type)}
                     >
                       {dimension.type}
                     </Badge>

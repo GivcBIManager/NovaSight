@@ -30,6 +30,7 @@ import {
   Maximize,
 } from 'lucide-react';
 import type { DagsterAssetGraph, DagsterAssetGraphNode } from '@/types/dagster';
+import { palette, getStatusClasses } from '@/lib/colors';
 
 interface AssetGraphProps {
   onAssetSelect?: (assetKey: string[]) => void;
@@ -161,18 +162,7 @@ export function AssetGraph({ onAssetSelect, selectedAssetKey, className = '' }: 
   };
 
   const getStatusColor = (status: DagsterAssetGraphNode['status']) => {
-    switch (status) {
-      case 'fresh':
-        return 'border-green-500 bg-green-50';
-      case 'materializing':
-        return 'border-blue-500 bg-blue-50';
-      case 'failed':
-        return 'border-red-500 bg-red-50';
-      case 'stale':
-        return 'border-yellow-500 bg-yellow-50';
-      default:
-        return 'border-gray-300 bg-gray-50';
-    }
+    return getStatusClasses(status);
   };
 
   const getComputeKindIcon = (computeKind: string | null) => {
@@ -200,11 +190,26 @@ export function AssetGraph({ onAssetSelect, selectedAssetKey, className = '' }: 
   }
 
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load asset graph';
+    const isDagsterDown = errorMessage.toLowerCase().includes('dagster') || errorMessage.toLowerCase().includes('unavailable') || errorMessage.toLowerCase().includes('cannot connect');
+
     return (
       <Card className={className}>
         <CardContent className="flex h-64 flex-col items-center justify-center text-center">
-          <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-          <p className="text-muted-foreground mb-4">Failed to load asset graph</p>
+          {isDagsterDown ? (
+            <>
+              <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" />
+              <p className="font-medium mb-2">Dagster Service Unavailable</p>
+              <p className="text-muted-foreground mb-4 max-w-md">
+                The Dagster orchestration service is not running. Start Dagster to view the asset graph, schedules, and sensor data.
+              </p>
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+              <p className="text-muted-foreground mb-4">{errorMessage}</p>
+            </>
+          )}
           <Button variant="outline" onClick={() => refetch()}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Retry
@@ -275,7 +280,7 @@ export function AssetGraph({ onAssetSelect, selectedAssetKey, className = '' }: 
                 refY="3.5"
                 orient="auto"
               >
-                <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+                <polygon points="0 0, 10 3.5, 0 7" fill={palette.neutral[400]} />
               </marker>
             </defs>
 
@@ -292,7 +297,7 @@ export function AssetGraph({ onAssetSelect, selectedAssetKey, className = '' }: 
                   y1={sourcePos.y + 30}
                   x2={targetPos.x}
                   y2={targetPos.y - 30}
-                  stroke="#94a3b8"
+                  stroke={palette.neutral[400]}
                   strokeWidth="2"
                   markerEnd="url(#arrowhead)"
                 />
@@ -323,7 +328,7 @@ export function AssetGraph({ onAssetSelect, selectedAssetKey, className = '' }: 
                             isSelected ? 'stroke-2 stroke-primary' : 'stroke-1'
                           }`}
                           fill="white"
-                          stroke={isSelected ? '#3b82f6' : '#e2e8f0'}
+                          stroke={isSelected ? palette.primary[500] : palette.neutral[200]}
                           strokeWidth={isSelected ? 2 : 1}
                         />
                         <foreignObject x="8" y="8" width="164" height="44">

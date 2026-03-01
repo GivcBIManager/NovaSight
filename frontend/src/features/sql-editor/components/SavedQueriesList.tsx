@@ -58,6 +58,7 @@ import {
 import { useSavedQueries, useUpdateSavedQuery, useDeleteSavedQuery } from '../hooks/useSavedQueries'
 import type { SavedQuery } from '../types'
 import { cn } from '@/lib/utils'
+import { getQueryTypeConfig } from '@/lib/colors'
 
 interface SavedQueriesListProps {
   /** Callback when a query is selected to run */
@@ -66,13 +67,6 @@ interface SavedQueriesListProps {
   viewMode?: 'grid' | 'table'
   /** Filter by query type */
   queryTypeFilter?: 'adhoc' | 'pyspark' | 'dbt' | 'report'
-}
-
-const QUERY_TYPE_CONFIG = {
-  adhoc: { label: 'Ad-hoc', color: 'bg-gray-100 text-gray-700' },
-  pyspark: { label: 'PySpark', color: 'bg-orange-100 text-orange-700' },
-  dbt: { label: 'dbt', color: 'bg-green-100 text-green-700' },
-  report: { label: 'Report', color: 'bg-blue-100 text-blue-700' },
 }
 
 export function SavedQueriesList({
@@ -301,9 +295,9 @@ export function SavedQueriesList({
                   <TableCell>
                     <Badge
                       variant="outline"
-                      className={cn('text-xs', QUERY_TYPE_CONFIG[query.query_type]?.color)}
+                      className={cn('text-xs', getQueryTypeConfig(query.query_type).classes)}
                     >
-                      {QUERY_TYPE_CONFIG[query.query_type]?.label || query.query_type}
+                      {getQueryTypeConfig(query.query_type).label}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -459,7 +453,7 @@ interface SavedQueryCardProps {
 }
 
 function SavedQueryCard({ query, onEdit, onDelete, onCopy, onRun }: SavedQueryCardProps) {
-  const typeConfig = QUERY_TYPE_CONFIG[query.query_type] || QUERY_TYPE_CONFIG.adhoc
+  const typeConfig = getQueryTypeConfig(query.query_type)
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -471,7 +465,7 @@ function SavedQueryCard({ query, onEdit, onDelete, onCopy, onRun }: SavedQueryCa
           <div className="space-y-1 min-w-0 flex-1">
             <h3 className="font-semibold text-sm truncate">{query.name}</h3>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className={cn('text-xs', typeConfig.color)}>
+              <Badge variant="outline" className={cn('text-xs', typeConfig.classes)}>
                 {typeConfig.label}
               </Badge>
               {query.is_clickhouse && (

@@ -81,7 +81,7 @@ class UnifiedJobService:
         # Enrich with execution status from Dagster
         jobs = []
         for dag in dags:
-            job_data = dag.to_dict(include_tasks=False)
+            job_data = self._dag_to_job_dict(dag, include_tasks=False)
             job_data["last_run"] = self._get_last_run_status(dag.dag_id)
             jobs.append(job_data)
         
@@ -350,10 +350,18 @@ class UnifiedJobService:
         tags: Optional[Dict[str, str]] = None,
     ) -> Optional[Dict[str, Any]]:
         """Trigger an immediate job run."""
-        dag = DagConfig.query.filter(
-            DagConfig.id == job_id,
-            DagConfig.tenant_id == self.tenant_id,
-        ).first()
+        try:
+            dag = DagConfig.query.filter(
+                DagConfig.id == job_id,
+                DagConfig.tenant_id == self.tenant_id,
+            ).first()
+        except Exception as e:
+            logger.error(f"Database error looking up job {job_id}: {e}")
+            return {
+                "success": False,
+                "error": "Failed to look up job",
+                "error_type": "database_error",
+            }
         
         if not dag:
             return None
@@ -361,6 +369,8 @@ class UnifiedJobService:
         # Call Dagster API to trigger the job
         try:
             job_name = self._get_dagster_job_name(dag)
+            repo_name = "__repository__"
+            location_name = "novasight"
             
             response = requests.post(
                 f"{self._dagster_url}/graphql",
@@ -381,6 +391,9 @@ class UnifiedJobService:
                                 ... on RunConfigValidationInvalid {
                                     errors { message }
                                 }
+                                ... on PipelineNotFoundError {
+                                    message
+                                }
                                 ... on PythonError {
                                     message
                                 }
@@ -390,6 +403,8 @@ class UnifiedJobService:
                     "variables": {
                         "selector": {
                             "jobName": job_name,
+                            "repositoryName": repo_name,
+                            "repositoryLocationName": location_name,
                         },
                         "runConfigData": run_config or {},
                     },
@@ -399,7 +414,7 @@ class UnifiedJobService:
             
             result = response.json()
             
-            if "data" in result and "launchRun" in result["data"]:
+            if result.get("data") and "launchRun" in result["data"]:
                 launch_result = result["data"]["launchRun"]
                 
                 if launch_result["__typename"] == "LaunchRunSuccess":
@@ -413,18 +428,37 @@ class UnifiedJobService:
                     return {
                         "success": False,
                         "error": error_msg,
+                        "error_type": "dagster_error",
                     }
             
             return {
                 "success": False,
-                "error": "Invalid response from Dagster",
+                "error": self._extract_graphql_error(result, "Invalid response from Dagster"),
+                "error_type": "dagster_error",
+            }
+        
+        except requests.exceptions.ConnectionError:
+            logger.error(f"Cannot connect to Dagster at {self._dagster_url} to trigger job {job_id}")
+            return {
+                "success": False,
+                "error": "Cannot connect to Dagster. Please ensure the orchestration service is running.",
+                "error_type": "dagster_unavailable",
+            }
+        
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout connecting to Dagster for job {job_id}")
+            return {
+                "success": False,
+                "error": "Dagster request timed out. Please try again.",
+                "error_type": "dagster_timeout",
             }
         
         except Exception as e:
             logger.error(f"Failed to trigger job {job_id}: {e}")
             return {
                 "success": False,
-                "error": str(e),
+                "error": f"Failed to trigger job: {str(e)}",
+                "error_type": "unknown_error",
             }
     
     def pause_job(self, job_id: str) -> Optional[bool]:
@@ -520,7 +554,7 @@ class UnifiedJobService:
             
             result = response.json()
             
-            if "data" in result:
+            if result.get("data"):
                 runs_data = result["data"].get("runsOrError", {})
                 if runs_data.get("__typename") == "Runs":
                     runs = runs_data.get("results", [])
@@ -586,7 +620,7 @@ class UnifiedJobService:
             
             result = response.json()
             
-            if "data" in result:
+            if result.get("data"):
                 run_data = result["data"].get("runOrError", {})
                 if run_data.get("__typename") == "Run":
                     return {
@@ -632,7 +666,7 @@ class UnifiedJobService:
             
             result = response.json()
             
-            if "data" in result:
+            if result.get("data"):
                 logs_data = result["data"].get("logsForRun", {})
                 events = logs_data.get("events", [])
                 
@@ -680,7 +714,7 @@ class UnifiedJobService:
             
             result = response.json()
             
-            if "data" in result:
+            if result.get("data"):
                 terminate_data = result["data"].get("terminateRun", {})
                 return terminate_data.get("__typename") == "TerminateRunSuccess"
         
@@ -884,14 +918,60 @@ class UnifiedJobService:
         """Convert DagConfig to job dictionary."""
         result = dag.to_dict(include_tasks=include_tasks)
         result["job_name"] = self._get_dagster_job_name(dag)
-        result["type"] = "pipeline" if "pipeline" in dag.tags else "spark"
+        tags = dag.tags or []
+        result["type"] = "pipeline" if "pipeline" in tags else "spark"
+        # Ensure tags is always a list in the response
+        if result.get("tags") is None:
+            result["tags"] = []
         return result
     
     def _get_dagster_job_name(self, dag: DagConfig) -> str:
-        """Get the Dagster job name for a DagConfig."""
+        """
+        Get the Dagster job name for a DagConfig.
+        
+        Must match the naming convention in DagsterJobBuilder.build_job_for_pyspark_app:
+          safe_name = _make_safe_name(app_config.app_name)
+          job_name  = f"spark_job_{safe_tenant}_{safe_name}"
+        
+        Since create_job stores dag_id = f"spark_{app_name}" we strip the
+        'spark_' prefix.  For pipeline jobs (dag_id = "pipeline_...") we strip
+        'pipeline_'.  Falls back to using dag_id as-is for unknown patterns.
+        
+        If the DagConfig has a task with a pyspark_app_id we try loading the app
+        name directly — this is the most reliable path.
+        """
+        import re
         safe_tenant = str(dag.tenant_id).replace('-', '_')
-        safe_name = dag.dag_id.replace('-', '_')
-        return f"spark_job_{safe_tenant}_{safe_name}"
+        
+        # Try to resolve app name from the PySpark app itself (most reliable)
+        try:
+            tasks = list(dag.tasks) if dag.tasks else []
+            for task in tasks:
+                app_id = (task.config or {}).get("pyspark_app_id")
+                if app_id:
+                    app = PySparkApp.query.get(app_id)
+                    if app:
+                        safe_name = re.sub(r'[^a-z0-9_]', '_', app.name.lower())[:50]
+                        return f"spark_job_{safe_tenant}_{safe_name}"
+        except Exception:
+            pass  # Fallback to dag_id-based derivation
+        
+        # Fallback: derive from dag_id by stripping the prefix that create_job added
+        raw_name = dag.dag_id.replace('-', '_')
+        if raw_name.startswith('spark_'):
+            raw_name = raw_name[len('spark_'):]
+        elif raw_name.startswith('pipeline_'):
+            raw_name = raw_name[len('pipeline_'):]
+        
+        return f"spark_job_{safe_tenant}_{raw_name}"
+    
+    @staticmethod
+    def _extract_graphql_error(result: dict, fallback: str = "Unknown error") -> str:
+        """Extract a human-readable error message from a Dagster GraphQL response."""
+        errors = result.get("errors")
+        if errors and isinstance(errors, list) and len(errors) > 0:
+            return errors[0].get("message", fallback)
+        return fallback
     
     def _get_last_run_status(self, dag_id: str) -> Optional[Dict[str, Any]]:
         """Get last run status from Dagster."""

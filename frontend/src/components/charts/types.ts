@@ -127,16 +127,8 @@ export interface ChartFolder {
   childrenCount: number;
 }
 
-// Default colors palette
-export const DEFAULT_CHART_COLORS = [
-  '#3B82F6', // Blue
-  '#10B981', // Emerald
-  '#F59E0B', // Amber
-  '#EF4444', // Red
-  '#8B5CF6', // Violet
-  '#06B6D4', // Cyan
-  '#F97316', // Orange
-  '#84CC16', // Lime
-  '#EC4899', // Pink
-  '#6366F1', // Indigo
-];
+// Default colors palette — sourced from centralized design tokens
+import { CHART_COLORS } from '@/lib/colors';
+
+/** @deprecated Import CHART_COLORS from '@/lib/colors' instead */
+export const DEFAULT_CHART_COLORS = [...CHART_COLORS];

@@ -79,6 +79,7 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from '@/components/ui/use-toast'
+import { getStatusClasses } from '@/lib/colors'
 
 export function SchedulingPage() {
   const queryClient = useQueryClient()
@@ -156,10 +157,20 @@ export function SchedulingPage() {
         })
       }
     },
-    onError: (err: Error) => {
+    onError: (err: unknown) => {
+      // Extract error message from API response
+      let message = 'Failed to trigger job'
+      if (err && typeof err === 'object') {
+        const axiosErr = err as { response?: { data?: { error?: { message?: string } } }; message?: string }
+        if (axiosErr.response?.data?.error?.message) {
+          message = axiosErr.response.data.error.message
+        } else if (axiosErr.message) {
+          message = axiosErr.message
+        }
+      }
       toast({
         title: 'Error',
-        description: err.message,
+        description: message,
         variant: 'destructive',
       })
     },
@@ -214,15 +225,15 @@ export function SchedulingPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    const styles: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }> = {
-      draft: { variant: 'outline', className: 'border-gray-400 text-gray-600' },
-      active: { variant: 'default', className: 'bg-green-100 text-green-800 hover:bg-green-100' },
-      paused: { variant: 'secondary', className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' },
-      archived: { variant: 'destructive', className: 'bg-red-100 text-red-800' },
+    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      draft: 'outline',
+      active: 'default',
+      paused: 'secondary',
+      archived: 'destructive',
     }
-    const style = styles[status] || styles.draft
+    const variant = variants[status] || 'outline'
     return (
-      <Badge variant={style.variant} className={style.className}>
+      <Badge variant={variant} className={getStatusClasses(status)}>
         {status}
       </Badge>
     )
@@ -709,15 +720,7 @@ function RunDetailsSheet({
                 <p className="text-sm text-muted-foreground">Status</p>
                 <Badge
                   variant="outline"
-                  className={
-                    run.status === 'SUCCESS'
-                      ? 'bg-green-100 text-green-800'
-                      : run.status === 'FAILURE'
-                      ? 'bg-red-100 text-red-800'
-                      : run.status === 'STARTED'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }
+                  className={getStatusClasses(run.status)}
                 >
                   {run.status}
                 </Badge>

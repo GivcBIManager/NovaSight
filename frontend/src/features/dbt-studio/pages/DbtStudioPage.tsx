@@ -30,6 +30,7 @@ import { ModelCanvas, LineageViewer, MCPQueryBuilder, ProjectViewer } from '@/fe
 import { useModels, useMetrics, useServerStatus, useStartServer, useStopServer, useDbtRun, useDbtTest } from '@/features/dbt-studio/hooks/useDbtStudio'
 import type { VisualModelDefinition } from '@/features/dbt-studio/types'
 import type { Node, Edge } from 'reactflow'
+import { palette } from '@/lib/colors'
 
 export function DbtStudioPage() {
   const navigate = useNavigate()
@@ -105,25 +106,25 @@ export function DbtStudioPage() {
       label: 'Models',
       value: modelsData?.models?.length || 0,
       icon: FileCode2,
-      color: '#10b981',
+      color: palette.success[500],
     },
     {
       label: 'Metrics',
       value: metricsData?.metrics?.length || 0,
       icon: BarChart2,
-      color: '#6366f1',
+      color: palette.primary[500],
     },
     {
       label: 'Sources',
       value: modelsData?.models?.filter((m) => m.resource_type === 'source').length || 0,
       icon: Database,
-      color: '#8b5cf6',
+      color: palette.accent[500],
     },
     {
       label: 'Tests',
       value: 0, // Would come from test results
       icon: TestTube,
-      color: '#06b6d4',
+      color: palette.info[500],
     },
   ]
 

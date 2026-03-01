@@ -53,7 +53,7 @@ export type ModelLayer = 'source' | 'staging' | 'intermediate' | 'mart' | 'marts
 export type Materialization = 'view' | 'table' | 'incremental' | 'ephemeral'
 
 /** Join types */
-export type JoinType = 'inner' | 'left' | 'right' | 'full'
+export type JoinType = 'inner' | 'left' | 'right' | 'full' | 'cross'
 
 
 // ============================================================================

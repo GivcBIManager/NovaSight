@@ -71,15 +71,9 @@ import { useDataSources } from '@/features/datasources/hooks/useDataSources'
 import type { QueryTab, DatasourceOption, SavedQuery } from '../types'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
+import { getQueryTypeConfig } from '@/lib/colors'
 
 const TENANT_CLICKHOUSE_ID = '__tenant_clickhouse__'
-
-const QUERY_TYPE_CONFIG = {
-  adhoc: { label: 'Ad-hoc', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
-  pyspark: { label: 'PySpark', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
-  dbt: { label: 'dbt', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  report: { label: 'Report', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-}
 
 export function SqlEditorPage() {
   const newTabId = useId()
@@ -985,7 +979,7 @@ interface SavedQueryItemProps {
 }
 
 function SavedQueryItem({ query, isActive, onEdit, onCopy, onDelete }: SavedQueryItemProps) {
-  const typeConfig = QUERY_TYPE_CONFIG[query.query_type] || QUERY_TYPE_CONFIG.adhoc
+  const typeConfig = getQueryTypeConfig(query.query_type)
 
   return (
     <div
@@ -1008,7 +1002,7 @@ function SavedQueryItem({ query, isActive, onEdit, onCopy, onDelete }: SavedQuer
             )}
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
-            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", typeConfig.color)}>
+            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", typeConfig.classes)}>
               {typeConfig.label}
             </Badge>
             {query.is_clickhouse && (

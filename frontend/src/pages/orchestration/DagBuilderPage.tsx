@@ -38,14 +38,15 @@ import {
   Trash2,
   Eye,
 } from 'lucide-react'
+import { NODE_TYPE_COLORS } from '@/lib/colors'
 
 const taskTypes = [
-  { type: 'spark_submit', label: 'Spark Submit', icon: Database, color: '#ef4444' },
-  { type: 'dbt_run', label: 'dbt Run', icon: Code2, color: '#10b981' },
-  { type: 'dbt_test', label: 'dbt Test', icon: Code2, color: '#06b6d4' },
-  { type: 'email', label: 'Email', icon: Mail, color: '#8b5cf6' },
-  { type: 'http_sensor', label: 'HTTP Sensor', icon: Timer, color: '#f59e0b' },
-  { type: 'bash_operator', label: 'Bash Script', icon: Terminal, color: '#6b7280' },
+  { type: 'spark_submit', label: 'Spark Submit', icon: Database, color: NODE_TYPE_COLORS.spark_submit },
+  { type: 'dbt_run', label: 'dbt Run', icon: Code2, color: NODE_TYPE_COLORS.dbt_run },
+  { type: 'dbt_test', label: 'dbt Test', icon: Code2, color: NODE_TYPE_COLORS.dbt_test },
+  { type: 'email', label: 'Email', icon: Mail, color: NODE_TYPE_COLORS.email },
+  { type: 'http_sensor', label: 'HTTP Sensor', icon: Timer, color: NODE_TYPE_COLORS.http_sensor },
+  { type: 'bash_operator', label: 'Bash Script', icon: Terminal, color: NODE_TYPE_COLORS.bash },
 ]
 
 export function DagBuilderPage() {
@@ -161,7 +162,7 @@ export function DagBuilderPage() {
             ...connection,
             type: 'smoothstep',
             animated: true,
-            style: { stroke: '#6366f1' },
+            style: { stroke: NODE_TYPE_COLORS.edge },
           },
           eds
         )

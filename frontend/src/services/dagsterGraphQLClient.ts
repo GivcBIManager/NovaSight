@@ -63,7 +63,7 @@ const ASSET_NODE_FRAGMENT = `
     groupName
     opNames
     graphName
-    isSource
+    isMaterializable
     isObservable
     isPartitioned
     computeKind
@@ -74,7 +74,7 @@ const ASSET_NODE_FRAGMENT = `
     dependedByKeys {
       path
     }
-    latestMaterialization {
+    assetMaterializations(limit: 1) {
       timestamp
       runId
     }
@@ -247,7 +247,7 @@ const RUN_LOGS_QUERY = `
 
 const ASSETS_QUERY = `
   ${ASSET_NODE_FRAGMENT}
-  query AssetsQuery($groups: [AssetGroupSelector!], $prefix: [String!]) {
+  query AssetsQuery($prefix: [String!]) {
     assetsOrError(prefix: $prefix) {
       __typename
       ... on AssetConnection {
@@ -282,7 +282,7 @@ const ASSET_DETAILS_QUERY = `
           description
           groupName
           computeKind
-          isSource
+          isMaterializable
           isObservable
           isPartitioned
           opNames
@@ -625,14 +625,38 @@ class DagsterGraphQLClient {
       }
     }
 
-    const response = await fetch(this.graphqlUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ query, variables }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(this.graphqlUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ query, variables }),
+      });
+    } catch (networkError) {
+      throw new Error('Cannot connect to the server. Please check your network connection.');
+    }
 
     if (!response.ok) {
-      throw new Error(`GraphQL request failed: ${response.statusText}`);
+      // Try to extract error details from the response body
+      try {
+        const errorBody = await response.json();
+        if (errorBody?.errors?.[0]?.message) {
+          throw new Error(errorBody.errors[0].message);
+        }
+        if (errorBody?.errors?.[0]?.extensions?.code === 'DAGSTER_UNAVAILABLE') {
+          throw new Error('Dagster orchestration service is not running. Please start Dagster to view assets, schedules, and runs.');
+        }
+      } catch (parseErr) {
+        if (parseErr instanceof Error && parseErr.message !== 'Cannot connect to the server. Please check your network connection.') {
+          if (parseErr.message.includes('Dagster') || parseErr.message.includes('Cannot connect')) {
+            throw parseErr;
+          }
+        }
+      }
+      if (response.status === 503) {
+        throw new Error('Dagster orchestration service is unavailable. Please ensure Dagster is running.');
+      }
+      throw new Error(`GraphQL request failed: ${response.statusText} (${response.status})`);
     }
 
     const result: DagsterGraphQLResponse<T> = await response.json();
@@ -788,12 +812,21 @@ class DagsterGraphQLClient {
       const assetNode = node as unknown as { 
         id: string;
         key: DagsterAssetKey;
-        definition?: DagsterAssetNode;
+        definition?: DagsterAssetNode & {
+          isMaterializable?: boolean;
+          assetMaterializations?: Array<{ timestamp: string; runId: string }>;
+        };
       };
+      const def = assetNode.definition || {} as DagsterAssetNode;
       return {
-        ...(assetNode.definition || {} as DagsterAssetNode),
+        ...def,
         id: assetNode.id,
         assetKey: assetNode.key || { path: [] },
+        // Derive isSource from isMaterializable (source assets are not materializable)
+        isSource: def.isMaterializable === false && !def.isObservable,
+        isMaterializable: def.isMaterializable ?? true,
+        // Derive latestMaterialization from assetMaterializations array
+        latestMaterialization: def.assetMaterializations?.[0] || null,
       } as DagsterAssetNode;
     });
   }
@@ -804,7 +837,9 @@ class DagsterGraphQLClient {
         __typename: string;
         id?: string;
         key?: DagsterAssetKey;
-        definition?: DagsterAssetNode;
+        definition?: DagsterAssetNode & {
+          isMaterializable?: boolean;
+        };
         assetMaterializations?: Array<{
           timestamp: string;
           runId: string;
@@ -819,10 +854,13 @@ class DagsterGraphQLClient {
       return null;
     }
 
+    const def = data.assetOrError.definition;
     return {
-      ...data.assetOrError.definition,
+      ...def,
       assetKey: data.assetOrError.key,
       latestMaterialization: data.assetOrError.assetMaterializations?.[0] || null,
+      isSource: def?.isMaterializable === false && !def?.isObservable,
+      isMaterializable: def?.isMaterializable ?? true,
     } as DagsterAssetNode;
   }
 

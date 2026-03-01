@@ -14,3 +14,12 @@ export { MCPQueryBuilder } from './MCPQueryBuilder'
 export type { MCPQueryBuilderProps } from './MCPQueryBuilder'
 
 export { ProjectViewer } from './ProjectViewer'
+
+// ── Visual Builder Components ─────────────────────────────────────────
+export * from './nodes'
+export * from './edges'
+export * from './sql-builder'
+export * from './test-builder'
+export * from './execution'
+export * from './semantic-layer'
+export * from './shared'

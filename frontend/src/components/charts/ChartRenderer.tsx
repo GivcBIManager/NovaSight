@@ -123,17 +123,17 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
       case 'bar':
         return (
           <BarChart {...commonProps}>
-            {config.showGrid !== false && <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />}
+            {config.showGrid !== false && <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-chart-grid" />}
             <XAxis 
               dataKey={xAxisKey} 
               label={config.xAxisLabel ? { value: config.xAxisLabel, position: 'bottom' } : undefined}
               tick={{ fontSize: 12 }}
-              stroke="#9ca3af"
+              className="[&>line]:stroke-chart-axis [&>text]:fill-chart-label"
             />
             <YAxis 
               label={config.yAxisLabel ? { value: config.yAxisLabel, angle: -90, position: 'insideLeft' } : undefined}
               tick={{ fontSize: 12 }}
-              stroke="#9ca3af"
+              className="[&>line]:stroke-chart-axis [&>text]:fill-chart-label"
             />
             <Tooltip content={<ChartTooltip />} />
             {legendProps && <Legend {...legendProps} />}
@@ -153,17 +153,17 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
       case 'line':
         return (
           <LineChart {...commonProps}>
-            {config.showGrid !== false && <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />}
+            {config.showGrid !== false && <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-chart-grid" />}
             <XAxis 
               dataKey={xAxisKey}
               label={config.xAxisLabel ? { value: config.xAxisLabel, position: 'bottom' } : undefined}
               tick={{ fontSize: 12 }}
-              stroke="#9ca3af"
+              className="[&>line]:stroke-chart-axis [&>text]:fill-chart-label"
             />
             <YAxis 
               label={config.yAxisLabel ? { value: config.yAxisLabel, angle: -90, position: 'insideLeft' } : undefined}
               tick={{ fontSize: 12 }}
-              stroke="#9ca3af"
+              className="[&>line]:stroke-chart-axis [&>text]:fill-chart-label"
             />
             <Tooltip content={<ChartTooltip />} />
             {legendProps && <Legend {...legendProps} />}
@@ -184,13 +184,13 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
       case 'area':
         return (
           <AreaChart {...commonProps}>
-            {config.showGrid !== false && <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />}
+            {config.showGrid !== false && <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-chart-grid" />}
             <XAxis 
               dataKey={xAxisKey}
               tick={{ fontSize: 12 }}
-              stroke="#9ca3af"
+              className="[&>line]:stroke-chart-axis [&>text]:fill-chart-label"
             />
-            <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
+            <YAxis tick={{ fontSize: 12 }} className="[&>line]:stroke-chart-axis [&>text]:fill-chart-label" />
             <Tooltip content={<ChartTooltip />} />
             {legendProps && <Legend {...legendProps} />}
             {yAxisKeys.map((key, index) => (
@@ -244,18 +244,18 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
         
         return (
           <ScatterChart {...commonProps}>
-            {config.showGrid !== false && <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />}
+            {config.showGrid !== false && <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-chart-grid" />}
             <XAxis 
               dataKey={xKey} 
               name={xKey}
               tick={{ fontSize: 12 }}
-              stroke="#9ca3af"
+              className="[&>line]:stroke-chart-axis [&>text]:fill-chart-label"
             />
             <YAxis 
               dataKey={yKey} 
               name={yKey}
               tick={{ fontSize: 12 }}
-              stroke="#9ca3af"
+              className="[&>line]:stroke-chart-axis [&>text]:fill-chart-label"
             />
             <Tooltip content={<ChartTooltip />} cursor={{ strokeDasharray: '3 3' }} />
             {legendProps && <Legend {...legendProps} />}

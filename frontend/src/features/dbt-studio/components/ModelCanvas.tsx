@@ -65,6 +65,7 @@ import type {
   ModelLayer,
   Materialization,
 } from '../types'
+import { NODE_TYPE_COLORS } from '@/lib/colors'
 
 // ============================================================================
 // Node Type Definitions
@@ -76,11 +77,11 @@ interface ModelNodeData extends CanvasNodeData {
 }
 
 const layerConfig: Record<ModelLayer, { color: string; icon: typeof Database; label: string }> = {
-  source: { color: '#6366f1', icon: Database, label: 'Source' },
-  staging: { color: '#10b981', icon: Table2, label: 'Staging' },
-  intermediate: { color: '#f59e0b', icon: Layers, label: 'Intermediate' },
-  mart: { color: '#ef4444', icon: BarChart2, label: 'Mart' },
-  marts: { color: '#ef4444', icon: BarChart2, label: 'Marts' },
+  source: { color: NODE_TYPE_COLORS.source, icon: Database, label: 'Source' },
+  staging: { color: NODE_TYPE_COLORS.staging, icon: Table2, label: 'Staging' },
+  intermediate: { color: NODE_TYPE_COLORS.intermediate, icon: Layers, label: 'Intermediate' },
+  mart: { color: NODE_TYPE_COLORS.mart, icon: BarChart2, label: 'Mart' },
+  marts: { color: NODE_TYPE_COLORS.marts, icon: BarChart2, label: 'Marts' },
 }
 
 // Custom node component for model nodes
@@ -585,10 +586,10 @@ export function ModelCanvas({
             ...connection,
             type: 'smoothstep',
             animated: true,
-            style: { stroke: '#6366f1', strokeWidth: 2 },
+            style: { stroke: NODE_TYPE_COLORS.edge, strokeWidth: 2 },
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              color: '#6366f1',
+              color: NODE_TYPE_COLORS.edge,
             },
           },
           eds

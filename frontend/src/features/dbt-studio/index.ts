@@ -16,13 +16,18 @@ export * from './types'
 
 // Hooks
 export * from './hooks/useDbtStudio'
+export * from './hooks/useVisualModels'
+export * from './hooks/useWarehouseSchema'
+export * from './hooks/useWebSocket'
+export * from './hooks/useCodePreview'
 
 // Components
 export { ModelCanvas, LineageViewer, MCPQueryBuilder } from './components'
 export type { ModelCanvasProps, LineageViewerProps, MCPQueryBuilderProps } from './components'
 
 // Pages
-export { DbtStudioPage, ModelDetailPage } from './pages'
+export { DbtStudioPage, EnhancedDbtStudioPage, ModelDetailPage } from './pages'
 
 // Services
 export { dbtStudioApi, dbtCoreApi } from './services/dbtStudioApi'
+export * from './services/visualModelApi'

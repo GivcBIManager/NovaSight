@@ -33,6 +33,7 @@ from app.domains.analytics.api import chart_routes  # noqa: F401
 from app.domains.transformation.api import semantic_routes  # noqa: F401
 from app.domains.transformation.api import dbt_routes  # noqa: F401
 from app.domains.transformation.api import mcp_routes  # noqa: F401
+from app.domains.transformation.api import visual_model_routes  # noqa: F401
 
 # Compute domain routes (canonical)
 from app.domains.compute.api import pyspark_routes  # noqa: F401

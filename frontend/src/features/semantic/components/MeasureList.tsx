@@ -27,24 +27,13 @@ import {
 import { MeasureEditor } from './MeasureEditor'
 import { useDeleteMeasure } from '../hooks/useSemanticModels'
 import { useToast } from '@/components/ui/use-toast'
+import { getAggregationClasses } from '@/lib/colors'
 import type { Measure, Column } from '../types'
 
 interface MeasureListProps {
   modelId: string
   measures: Measure[]
   availableColumns?: Column[]
-}
-
-const aggregationColors: Record<string, string> = {
-  sum: 'bg-green-100 text-green-800',
-  count: 'bg-blue-100 text-blue-800',
-  count_distinct: 'bg-indigo-100 text-indigo-800',
-  avg: 'bg-orange-100 text-orange-800',
-  min: 'bg-cyan-100 text-cyan-800',
-  max: 'bg-red-100 text-red-800',
-  median: 'bg-purple-100 text-purple-800',
-  percentile: 'bg-pink-100 text-pink-800',
-  raw: 'bg-gray-100 text-gray-800',
 }
 
 const formatIcons: Record<string, string> = {
@@ -160,7 +149,7 @@ export function MeasureList({ modelId, measures, availableColumns = [] }: Measur
                   <TableCell>
                     <Badge 
                       variant="secondary"
-                      className={aggregationColors[measure.aggregation] || 'bg-gray-100'}
+                      className={getAggregationClasses(measure.aggregation)}
                     >
                       {measure.aggregation.toUpperCase().replace('_', ' ')}
                     </Badge>

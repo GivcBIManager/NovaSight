@@ -25,6 +25,7 @@ import { DagMonitorPage } from '@/pages/orchestration/DagMonitorPage'
 import { DagsterDashboardPage } from '@/pages/orchestration/DagsterDashboardPage'
 import { SchedulingPage } from '@/pages/orchestration/SchedulingPage'
 import { JobBuilderPage } from '@/pages/orchestration/JobBuilderPage'
+import { JobDetailPage } from '@/pages/orchestration/JobDetailPage'
 import { SparkConfigPage } from '@/pages/orchestration/SparkConfigPage'
 import { DataSourcesPage, DataSourceDetailPage } from '@/features/datasources'
 import { 
@@ -33,7 +34,7 @@ import {
   PySparkAppDetailPage 
 } from '@/pages/pyspark'
 import { SemanticModelsPage, ModelDetailPage } from '@/features/semantic'
-import { DbtStudioPage, ModelDetailPage as DbtModelDetailPage } from '@/features/dbt-studio'
+import { EnhancedDbtStudioPage, ModelDetailPage as DbtModelDetailPage } from '@/features/dbt-studio'
 import { DashboardsListPage, DashboardBuilderPage } from '@/features/dashboards'
 import { QueryPage } from '@/features/query'
 import { SqlEditorPage } from '@/features/sql-editor'
@@ -114,7 +115,9 @@ function App() {
             {/* Scheduling - Unified Job & Run Management */}
             <Route path="jobs" element={<SchedulingPage />} />
             <Route path="jobs/new" element={<JobBuilderPage />} />
+            <Route path="jobs/:jobId" element={<JobDetailPage />} />
             <Route path="jobs/:jobId/edit" element={<JobBuilderPage />} />
+            <Route path="jobs/:jobId/runs" element={<JobDetailPage />} />
             <Route path="jobs/spark-config" element={<SparkConfigPage />} />
             
             {/* PySpark Apps */}
@@ -128,7 +131,7 @@ function App() {
             <Route path="semantic/models/:modelId" element={<ModelDetailPage />} />
             
             {/* dbt Studio - No-code/Low-code dbt Builder */}
-            <Route path="dbt-studio" element={<DbtStudioPage />} />
+            <Route path="dbt-studio" element={<EnhancedDbtStudioPage />} />
             <Route path="dbt-studio/models/:modelName" element={<DbtModelDetailPage />} />
             
             {/* Analytics Dashboards */}

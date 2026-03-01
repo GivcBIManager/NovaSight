@@ -47,6 +47,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { getStatusClasses } from '@/lib/colors';
 import type { DagsterRunsFilter } from '@/types/dagster';
 
 interface RunsListProps {
@@ -118,16 +119,8 @@ export function RunsList({
 
   const getStatusBadge = (status: UnifiedRun['status']) => {
     const statusInfo = dagsterService.formatRunStatus(status);
-    const colorClasses: Record<string, string> = {
-      green: 'bg-green-100 text-green-800 border-green-200',
-      red: 'bg-red-100 text-red-800 border-red-200',
-      yellow: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      blue: 'bg-blue-100 text-blue-800 border-blue-200',
-      gray: 'bg-gray-100 text-gray-800 border-gray-200',
-    };
-
     return (
-      <Badge variant="outline" className={colorClasses[statusInfo.color]}>
+      <Badge variant="outline" className={getStatusClasses(status)}>
         {statusInfo.label}
       </Badge>
     );
@@ -156,11 +149,16 @@ export function RunsList({
   }
 
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load runs';
+    const isDagsterDown = errorMessage.toLowerCase().includes('dagster') || errorMessage.toLowerCase().includes('unavailable');
+
     return (
       <Card className={className}>
         <CardContent className="flex h-32 flex-col items-center justify-center">
-          <AlertTriangle className="h-8 w-8 text-red-500 mb-2" />
-          <p className="text-sm text-muted-foreground">Failed to load runs</p>
+          <AlertTriangle className={`h-8 w-8 mb-2 ${isDagsterDown ? 'text-yellow-500' : 'text-red-500'}`} />
+          <p className="text-sm text-muted-foreground">
+            {isDagsterDown ? 'Dagster service is unavailable' : 'Failed to load runs'}
+          </p>
           <Button variant="ghost" size="sm" onClick={() => refetch()} className="mt-2">
             <RefreshCw className="mr-2 h-4 w-4" />
             Retry
@@ -183,12 +181,12 @@ export function RunsList({
               {statusCounts && (
                 <div className="flex items-center gap-2 text-sm">
                   {statusCounts.running && (
-                    <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                    <Badge variant="outline" className={getStatusClasses('running')}>
                       {statusCounts.running} running
                     </Badge>
                   )}
                   {statusCounts.queued && (
-                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
+                    <Badge variant="outline" className={getStatusClasses('queued')}>
                       {statusCounts.queued} queued
                     </Badge>
                   )}

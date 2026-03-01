@@ -137,6 +137,7 @@ export interface DagsterAssetNode {
   opNames: string[];
   graphName: string | null;
   isSource: boolean;
+  isMaterializable: boolean;
   isObservable: boolean;
   isPartitioned: boolean;
   computeKind: string | null;
@@ -144,6 +145,7 @@ export interface DagsterAssetNode {
   dependencyKeys: DagsterAssetKey[];
   dependedByKeys: DagsterAssetKey[];
   latestMaterialization: DagsterMaterializationEvent | null;
+  assetMaterializations?: DagsterMaterializationEvent[];
   latestRun: DagsterRun | null;
   freshnessPolicy: DagsterFreshnessPolicy | null;
   freshnessInfo: DagsterAssetFreshnessInfo | null;
@@ -443,6 +445,7 @@ export interface DagsterAssetGraphNode {
   lastMaterialization: string | null;
   computeKind: string | null;
   isSource: boolean;
+  isMaterializable?: boolean;
 }
 
 export interface DagsterAssetGraphEdge {

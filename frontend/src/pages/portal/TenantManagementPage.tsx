@@ -66,19 +66,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-
-const statusColors: Record<string, string> = {
-  active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  suspended: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  pending: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  archived: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-}
-
-const planColors: Record<string, string> = {
-  basic: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-  professional: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  enterprise: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-}
+import { getStatusClasses, getPlanClasses } from '@/lib/colors'
 
 export const TenantManagementPage: React.FC = () => {
   const navigate = useNavigate()
@@ -283,12 +271,12 @@ export const TenantManagementPage: React.FC = () => {
                           <code className="text-xs bg-muted px-2 py-1 rounded">{tenant.slug}</code>
                         </td>
                         <td className="p-3">
-                          <Badge variant="outline" className={planColors[tenant.plan] || planColors.basic}>
+                          <Badge variant="outline" className={getPlanClasses(tenant.plan)}>
                             {tenant.plan}
                           </Badge>
                         </td>
                         <td className="p-3">
-                          <Badge variant="outline" className={statusColors[tenant.status] || statusColors.pending}>
+                          <Badge variant="outline" className={getStatusClasses(tenant.status)}>
                             {tenant.status}
                           </Badge>
                         </td>

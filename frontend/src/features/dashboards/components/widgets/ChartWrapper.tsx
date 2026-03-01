@@ -32,14 +32,9 @@ interface ChartWrapperProps {
   config: VizConfig
 }
 
-const DEFAULT_COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-]
+import { CHART_COLORS, CHART_AXIS } from '@/lib/colors'
+
+const DEFAULT_COLORS = [...CHART_COLORS]
 
 export function ChartWrapper({ type, data, config }: ChartWrapperProps) {
   const { theme } = useTheme()
@@ -57,16 +52,17 @@ export function ChartWrapper({ type, data, config }: ChartWrapperProps) {
   const showLegend = config.showLegend !== false
   const showGrid = config.showGrid !== false
   
-  // Theme-aware axis styling
+  // Theme-aware axis styling from design tokens
+  const mode = isDark ? 'dark' : 'light'
   const axisStyle = {
-    stroke: isDark ? '#6B7280' : '#9CA3AF',
+    stroke: CHART_AXIS[mode].axis,
     fontSize: 12,
-    tickLine: { stroke: isDark ? '#4B5563' : '#D1D5DB' },
+    tickLine: { stroke: CHART_AXIS[mode].tick },
   }
   
   const gridStyle = {
     strokeDasharray: '3 3',
-    stroke: isDark ? '#374151' : '#E5E7EB',
+    stroke: CHART_AXIS[mode].grid,
   }
   
   const commonProps = {

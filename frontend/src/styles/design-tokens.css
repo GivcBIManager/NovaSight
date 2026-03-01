@@ -1,49 +1,219 @@
 /**
- * NovaSight Design Tokens
+ * NovaSight Design Tokens v2.0
  * 
- * A comprehensive design token system for the NovaSight UI.
- * Dark-first design with glass morphism and AI-inspired aesthetics.
+ * Comprehensive design token system aligned to NovaSight's brand identity.
+ * 
+ * Brand Identity:
+ *   - Primary: Blue (#2563EB → #3B82F6) — trust, corporate clarity
+ *   - Secondary: Cyan (#0891B2 → #06B6D4) — clean, refreshing
+ *   - Accent: Violet (#6D28D9 → #8B5CF6) — creative intelligence
+ * 
+ * Color Scale Convention: 50 (lightest) → 950 (darkest)
+ * All HSL values are provided without hsl() wrapper for Tailwind compatibility.
+ * 
+ * WCAG AA Compliance:
+ *   - Normal text (4.5:1 contrast) — Use 600+ on light, 300- on dark
+ *   - Large text (3:1 contrast) — Use 500+ on light, 400- on dark
+ *   - UI components (3:1 contrast) — Use 500+ on light, 400- on dark
  */
 
 :root {
   /* ========================================
-   * COLOR TOKENS
+   * PRIMARY – Blue
+   * Trust & clarity. Main CTAs, links,
+   * key interactive elements, focus rings.
    * ======================================== */
-  
-  /* Background Colors */
-  --color-bg-primary: 240 33% 4%;         /* #0a0a0f */
-  --color-bg-secondary: 240 20% 8%;       /* #12121a */
-  --color-bg-tertiary: 240 18% 12%;       /* #1a1a25 */
-  --color-bg-elevated: 240 15% 15%;       /* #22222f */
-  
-  /* Accent Colors */
-  --color-accent-indigo: 239 84% 67%;     /* #6366f1 */
-  --color-accent-purple: 258 90% 66%;     /* #8b5cf6 */
-  --color-accent-violet: 271 91% 65%;     /* #a855f7 */
-  
-  /* Neon Colors */
-  --color-neon-cyan: 187 94% 53%;         /* #22d3ee */
-  --color-neon-pink: 330 81% 60%;         /* #ec4899 */
-  --color-neon-green: 160 84% 39%;        /* #10b981 */
-  
-  /* Text Colors */
-  --color-text-primary: 0 0% 98%;         /* #fafafa */
-  --color-text-secondary: 240 5% 65%;     /* #a1a1aa */
-  --color-text-muted: 240 4% 46%;         /* #71717a */
-  --color-text-disabled: 240 4% 35%;      /* #52525b */
-  
-  /* Border Colors */
-  --color-border-default: 240 5% 18%;     /* #2a2a35 */
-  --color-border-subtle: 240 5% 12%;      /* #1e1e26 */
-  --color-border-accent: 239 84% 67% / 0.5; /* indigo/50% */
-  
-  /* Status Colors */
-  --color-success: 160 84% 39%;           /* #10b981 */
-  --color-warning: 38 92% 50%;            /* #f59e0b */
-  --color-error: 0 84% 60%;               /* #ef4444 */
-  --color-info: 199 89% 48%;              /* #0ea5e9 */
-  
-  /* Glass Morphism */
+  --color-primary-50:  214 100% 97%;      /* #eff6ff */
+  --color-primary-100: 214 95% 93%;       /* #dbeafe */
+  --color-primary-200: 213 97% 87%;       /* #bfdbfe */
+  --color-primary-300: 212 96% 78%;       /* #93c5fd */
+  --color-primary-400: 213 94% 68%;       /* #60a5fa */
+  --color-primary-500: 217 91% 60%;       /* #3b82f6 */
+  --color-primary-600: 221 83% 53%;       /* #2563eb */
+  --color-primary-700: 224 76% 48%;       /* #1d4ed8 */
+  --color-primary-800: 226 71% 40%;       /* #1e40af */
+  --color-primary-900: 224 64% 33%;       /* #1e3a8a */
+  --color-primary-950: 226 57% 21%;       /* #172554 */
+
+  /* ========================================
+   * SECONDARY – Cyan
+   * Clean & refreshing. Supporting actions,
+   * secondary buttons, navigation active states.
+   * ======================================== */
+  --color-secondary-50:  183 100% 96%;    /* #ecfeff */
+  --color-secondary-100: 185 96% 90%;     /* #cffafe */
+  --color-secondary-200: 186 94% 82%;     /* #a5f3fc */
+  --color-secondary-300: 187 92% 69%;     /* #67e8f9 */
+  --color-secondary-400: 188 86% 53%;     /* #22d3ee */
+  --color-secondary-500: 189 94% 43%;     /* #06b6d4 */
+  --color-secondary-600: 192 91% 36%;     /* #0891b2 */
+  --color-secondary-700: 193 82% 31%;     /* #0e7490 */
+  --color-secondary-800: 194 70% 27%;     /* #155e75 */
+  --color-secondary-900: 196 64% 24%;     /* #164e63 */
+  --color-secondary-950: 197 79% 15%;     /* #083344 */
+
+  /* ========================================
+   * ACCENT – Violet
+   * AI features, intelligence indicators,
+   * premium highlights, brand gradient endpoint.
+   * ======================================== */
+  --color-accent-50:  250 100% 98%;       /* #f5f3ff */
+  --color-accent-100: 251 91% 95%;        /* #ede9fe */
+  --color-accent-200: 251 95% 92%;        /* #ddd6fe */
+  --color-accent-300: 252 95% 85%;        /* #c4b5fd */
+  --color-accent-400: 255 92% 76%;        /* #a78bfa */
+  --color-accent-500: 258 90% 66%;        /* #8b5cf6 */
+  --color-accent-600: 262 83% 58%;        /* #7c3aed */
+  --color-accent-700: 263 70% 50%;        /* #6d28d9 */
+  --color-accent-800: 263 69% 42%;        /* #5b21b6 */
+  --color-accent-900: 264 67% 35%;        /* #4c1d95 */
+  --color-accent-950: 261 73% 23%;        /* #2e1065 */
+
+  /* ========================================
+   * SUCCESS – Emerald
+   * Confirmations, completed states, positive
+   * feedback, healthy status indicators.
+   * ======================================== */
+  --color-success-50:  152 81% 96%;       /* #ecfdf5 */
+  --color-success-100: 149 80% 90%;       /* #d1fae5 */
+  --color-success-200: 152 76% 80%;       /* #a7f3d0 */
+  --color-success-300: 156 72% 67%;       /* #6ee7b7 */
+  --color-success-400: 158 64% 52%;       /* #34d399 */
+  --color-success-500: 160 84% 39%;       /* #10b981 */
+  --color-success-600: 161 94% 30%;       /* #059669 */
+  --color-success-700: 163 94% 24%;       /* #047857 */
+  --color-success-800: 163 88% 20%;       /* #065f46 */
+  --color-success-900: 164 86% 16%;       /* #064e3b */
+  --color-success-950: 166 91% 9%;        /* #022c22 */
+
+  /* ========================================
+   * WARNING – Amber
+   * Alerts, caution states, pending actions,
+   * queued items, attention-needed indicators.
+   * ======================================== */
+  --color-warning-50:  48 100% 96%;       /* #fffbeb */
+  --color-warning-100: 48 96% 89%;        /* #fef3c7 */
+  --color-warning-200: 48 97% 77%;        /* #fde68a */
+  --color-warning-300: 46 97% 65%;        /* #fcd34d */
+  --color-warning-400: 43 96% 56%;        /* #fbbf24 */
+  --color-warning-500: 38 92% 50%;        /* #f59e0b */
+  --color-warning-600: 32 95% 44%;        /* #d97706 */
+  --color-warning-700: 26 90% 37%;        /* #b45309 */
+  --color-warning-800: 23 83% 31%;        /* #92400e */
+  --color-warning-900: 22 78% 26%;        /* #78350f */
+  --color-warning-950: 21 92% 14%;        /* #451a03 */
+
+  /* ========================================
+   * DANGER – Red
+   * Destructive actions, error states,
+   * form validation failures, critical alerts.
+   * ======================================== */
+  --color-danger-50:  0 86% 97%;          /* #fef2f2 */
+  --color-danger-100: 0 93% 94%;          /* #fee2e2 */
+  --color-danger-200: 0 96% 89%;          /* #fecaca */
+  --color-danger-300: 0 94% 82%;          /* #fca5a5 */
+  --color-danger-400: 0 91% 71%;          /* #f87171 */
+  --color-danger-500: 0 84% 60%;          /* #ef4444 */
+  --color-danger-600: 0 72% 51%;          /* #dc2626 */
+  --color-danger-700: 0 74% 42%;          /* #b91c1c */
+  --color-danger-800: 0 70% 35%;          /* #991b1b */
+  --color-danger-900: 0 63% 31%;          /* #7f1d1d */
+  --color-danger-950: 0 75% 15%;          /* #450a0a */
+
+  /* ========================================
+   * INFO – Sky
+   * Informational states, help text, links,
+   * currently-running indicators.
+   * ======================================== */
+  --color-info-50:  204 100% 97%;         /* #f0f9ff */
+  --color-info-100: 204 94% 94%;          /* #e0f2fe */
+  --color-info-200: 201 94% 86%;          /* #bae6fd */
+  --color-info-300: 199 95% 74%;          /* #7dd3fc */
+  --color-info-400: 198 93% 60%;          /* #38bdf8 */
+  --color-info-500: 199 89% 48%;          /* #0ea5e9 */
+  --color-info-600: 200 98% 39%;          /* #0284c7 */
+  --color-info-700: 201 96% 32%;          /* #0369a1 */
+  --color-info-800: 201 90% 27%;          /* #075985 */
+  --color-info-900: 202 80% 24%;          /* #0c4a6e */
+  --color-info-950: 204 80% 16%;          /* #082f49 */
+
+  /* ========================================
+   * NEUTRAL – Zinc
+   * Backgrounds, cards, dividers, disabled
+   * states, text hierarchy, surface colors.
+   * ======================================== */
+  --color-neutral-50:  0 0% 98%;          /* #fafafa */
+  --color-neutral-100: 240 5% 96%;        /* #f4f4f5 */
+  --color-neutral-200: 240 6% 90%;        /* #e4e4e7 */
+  --color-neutral-300: 240 5% 84%;        /* #d4d4d8 */
+  --color-neutral-400: 240 4% 65%;        /* #a1a1aa */
+  --color-neutral-500: 240 4% 46%;        /* #71717a */
+  --color-neutral-600: 240 5% 34%;        /* #52525b */
+  --color-neutral-700: 240 5% 26%;        /* #3f3f46 */
+  --color-neutral-800: 240 4% 16%;        /* #27272a */
+  --color-neutral-900: 240 6% 10%;        /* #18181b */
+  --color-neutral-950: 240 10% 4%;        /* #09090b */
+
+  /* ========================================
+   * SEMANTIC SURFACE COLORS (Dark Mode Default)
+   * ======================================== */
+
+  /* Backgrounds */
+  --color-bg-primary: var(--color-neutral-950);
+  --color-bg-secondary: var(--color-neutral-900);
+  --color-bg-tertiary: var(--color-neutral-800);
+  --color-bg-elevated: var(--color-neutral-700);
+
+  /* Text */
+  --color-text-primary: var(--color-neutral-50);
+  --color-text-secondary: var(--color-neutral-400);
+  --color-text-muted: var(--color-neutral-500);
+  --color-text-disabled: var(--color-neutral-600);
+
+  /* Borders */
+  --color-border-default: var(--color-neutral-800);
+  --color-border-subtle: var(--color-neutral-900);
+  --color-border-accent: var(--color-primary-500);
+
+  /* Semantic Status (single-value aliases) */
+  --color-success: var(--color-success-500);
+  --color-warning: var(--color-warning-500);
+  --color-error: var(--color-danger-500);
+  --color-info: var(--color-info-500);
+
+  /* Legacy aliases — prefer new token names in new code */
+  --color-accent-indigo: var(--color-primary-500);
+  --color-accent-purple: var(--color-accent-700);
+  --color-accent-violet: var(--color-accent-500);
+  --color-neon-cyan: var(--color-secondary-400);
+  --color-neon-pink: var(--color-danger-400);
+  --color-neon-green: var(--color-success-500);
+
+  /* ========================================
+   * CHART COLORS
+   * Accessible palette for data visualization.
+   * Ordered for maximum adjacent contrast.
+   * ======================================== */
+  --color-chart-1: var(--color-primary-500);     /* #3b82f6 Blue */
+  --color-chart-2: var(--color-secondary-500);   /* #06b6d4 Cyan */
+  --color-chart-3: var(--color-warning-500);      /* #f59e0b Amber */
+  --color-chart-4: var(--color-danger-500);       /* #ef4444 Red */
+  --color-chart-5: var(--color-accent-500);       /* #8b5cf6 Violet */
+  --color-chart-6: var(--color-info-500);         /* #0ea5e9 Sky */
+  --color-chart-7: 25 95% 53%;                    /* #f97316 Orange */
+  --color-chart-8: 84 81% 44%;                    /* #84cc16 Lime */
+  --color-chart-9: 330 81% 60%;                   /* #ec4899 Pink */
+  --color-chart-10: var(--color-success-500);     /* #10b981 Emerald */
+
+  /* Chart Axis & Grid */
+  --color-chart-axis: var(--color-neutral-400);
+  --color-chart-grid: var(--color-neutral-800);
+  --color-chart-tick: var(--color-neutral-600);
+  --color-chart-label: var(--color-neutral-400);
+
+  /* ========================================
+   * GLASS MORPHISM
+   * ======================================== */
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-bg-hover: rgba(255, 255, 255, 0.06);
   --glass-bg-active: rgba(255, 255, 255, 0.08);
@@ -51,14 +221,18 @@
   --glass-border-hover: rgba(255, 255, 255, 0.12);
   --glass-blur: 12px;
   --glass-blur-lg: 20px;
-  
-  /* Gradient Definitions */
-  --gradient-primary: linear-gradient(135deg, hsl(var(--color-accent-indigo)), hsl(var(--color-accent-purple)));
-  --gradient-accent: linear-gradient(135deg, hsl(var(--color-accent-purple)), hsl(var(--color-accent-violet)));
-  --gradient-neon: linear-gradient(135deg, hsl(var(--color-neon-cyan)), hsl(var(--color-neon-pink)));
-  --gradient-ai: linear-gradient(90deg, hsl(var(--color-accent-purple)), hsl(var(--color-neon-pink)), hsl(var(--color-accent-purple)));
-  --gradient-glow: radial-gradient(ellipse at center, hsl(var(--color-accent-indigo) / 0.15) 0%, transparent 70%);
-  
+
+  /* ========================================
+   * GRADIENT DEFINITIONS
+   * ======================================== */
+  --gradient-primary: linear-gradient(135deg, hsl(var(--color-primary-500)), hsl(var(--color-accent-700)));
+  --gradient-accent: linear-gradient(135deg, hsl(var(--color-accent-700)), hsl(var(--color-accent-500)));
+  --gradient-brand: linear-gradient(135deg, hsl(var(--color-primary-600)), hsl(var(--color-accent-700)));
+  --gradient-teal: linear-gradient(135deg, hsl(var(--color-secondary-400)), hsl(var(--color-secondary-600)));
+  --gradient-neon: linear-gradient(135deg, hsl(var(--color-secondary-400)), hsl(var(--color-danger-400)));
+  --gradient-ai: linear-gradient(90deg, hsl(var(--color-accent-700)), hsl(var(--color-danger-400)), hsl(var(--color-accent-700)));
+  --gradient-glow: radial-gradient(ellipse at center, hsl(var(--color-primary-500) / 0.15) 0%, transparent 70%);
+
   /* ========================================
    * TYPOGRAPHY TOKENS
    * ======================================== */
@@ -158,11 +332,11 @@
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   
   /* Glow Shadows */
-  --shadow-glow-sm: 0 0 10px hsl(var(--color-accent-indigo) / 0.3);
-  --shadow-glow-md: 0 0 20px hsl(var(--color-accent-indigo) / 0.4);
-  --shadow-glow-lg: 0 0 30px hsl(var(--color-accent-indigo) / 0.5);
-  --shadow-glow-neon: 0 0 20px hsl(var(--color-neon-cyan) / 0.5);
-  --shadow-glow-pink: 0 0 20px hsl(var(--color-neon-pink) / 0.5);
+  --shadow-glow-sm: 0 0 10px hsl(var(--color-primary-500) / 0.3);
+  --shadow-glow-md: 0 0 20px hsl(var(--color-primary-500) / 0.4);
+  --shadow-glow-lg: 0 0 30px hsl(var(--color-primary-500) / 0.5);
+  --shadow-glow-neon: 0 0 20px hsl(var(--color-secondary-400) / 0.5);
+  --shadow-glow-pink: 0 0 20px hsl(var(--color-danger-400) / 0.5);
   
   /* ========================================
    * TRANSITION TOKENS
@@ -228,22 +402,28 @@
  * ======================================== */
 
 .light {
-  /* Background Colors */
-  --color-bg-primary: 0 0% 100%;          /* #ffffff */
-  --color-bg-secondary: 0 0% 98%;         /* #fafafa */
-  --color-bg-tertiary: 0 0% 96%;          /* #f5f5f5 */
+  /* Backgrounds */
+  --color-bg-primary: var(--color-neutral-50);
+  --color-bg-secondary: var(--color-neutral-100);
+  --color-bg-tertiary: var(--color-neutral-200);
   --color-bg-elevated: 0 0% 100%;         /* #ffffff */
-  
-  /* Text Colors */
-  --color-text-primary: 240 10% 4%;       /* #09090b */
-  --color-text-secondary: 240 4% 46%;     /* #71717a */
-  --color-text-muted: 240 5% 65%;         /* #a1a1aa */
-  --color-text-disabled: 240 5% 75%;      /* #c4c4c4 */
-  
-  /* Border Colors */
-  --color-border-default: 240 6% 90%;     /* #e4e4e7 */
-  --color-border-subtle: 240 6% 94%;      /* #f0f0f2 */
-  
+
+  /* Text */
+  --color-text-primary: var(--color-neutral-950);
+  --color-text-secondary: var(--color-neutral-500);
+  --color-text-muted: var(--color-neutral-400);
+  --color-text-disabled: var(--color-neutral-300);
+
+  /* Borders */
+  --color-border-default: var(--color-neutral-200);
+  --color-border-subtle: var(--color-neutral-100);
+
+  /* Chart Axis & Grid — lighter for light mode */
+  --color-chart-axis: var(--color-neutral-400);
+  --color-chart-grid: var(--color-neutral-200);
+  --color-chart-tick: var(--color-neutral-300);
+  --color-chart-label: var(--color-neutral-500);
+
   /* Glass Morphism - Light */
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-bg-hover: rgba(255, 255, 255, 0.8);

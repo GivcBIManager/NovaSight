@@ -18,10 +18,9 @@ import {
 import { useTheme } from '@/contexts/ThemeContext'
 import { ScatterTooltip } from './CustomTooltip'
 
-const DEFAULT_COLORS = [
-  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
-  '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
-]
+import { CHART_COLORS, CHART_AXIS } from '@/lib/colors'
+
+const DEFAULT_COLORS = [...CHART_COLORS]
 
 interface ScatterPlotProps {
   data: Array<Record<string, unknown>>
@@ -46,10 +45,11 @@ export function ScatterPlot({ data, config }: ScatterPlotProps) {
   const colors = config.colors || DEFAULT_COLORS
   const dotSize = config.dotSize || 60
   
+  const mode = isDark ? 'dark' : 'light'
   const axisStyle = {
-    stroke: isDark ? '#6B7280' : '#9CA3AF',
+    stroke: CHART_AXIS[mode].axis,
     fontSize: 12,
-    tickLine: { stroke: isDark ? '#4B5563' : '#D1D5DB' },
+    tickLine: { stroke: CHART_AXIS[mode].tick },
   }
 
   if (!data || data.length === 0) {
@@ -81,7 +81,7 @@ export function ScatterPlot({ data, config }: ScatterPlotProps) {
         {config.showGrid !== false && (
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke={isDark ? '#374151' : '#E5E7EB'}
+            stroke={CHART_AXIS[mode].grid}
           />
         )}
         
@@ -96,7 +96,7 @@ export function ScatterPlot({ data, config }: ScatterPlotProps) {
                   value: config.xAxisLabel,
                   position: 'bottom',
                   offset: 0,
-                  fill: isDark ? '#9CA3AF' : '#6B7280',
+                  fill: CHART_AXIS[mode].label,
                 }
               : undefined
           }
@@ -113,7 +113,7 @@ export function ScatterPlot({ data, config }: ScatterPlotProps) {
                   value: config.yAxisLabel,
                   angle: -90,
                   position: 'insideLeft',
-                  fill: isDark ? '#9CA3AF' : '#6B7280',
+                  fill: CHART_AXIS[mode].label,
                 }
               : undefined
           }

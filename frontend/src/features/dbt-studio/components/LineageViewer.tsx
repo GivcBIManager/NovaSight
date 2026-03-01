@@ -59,26 +59,27 @@ import type {
   ResourceType,
 } from '../types'
 import { useFullDag, useLineage, useModelSql } from '../hooks/useDbtStudio'
+import { NODE_TYPE_COLORS } from '@/lib/colors'
 
 // ============================================================================
 // Node Colors and Icons
 // ============================================================================
 
 const resourceConfig: Record<string, { color: string; icon: typeof Database; label: string }> = {
-  source: { color: '#6366f1', icon: Database, label: 'Source' },
-  model: { color: '#10b981', icon: Table2, label: 'Model' },
-  seed: { color: '#8b5cf6', icon: Table2, label: 'Seed' },
-  snapshot: { color: '#f59e0b', icon: Layers, label: 'Snapshot' },
-  metric: { color: '#ef4444', icon: BarChart2, label: 'Metric' },
-  test: { color: '#06b6d4', icon: TestTube, label: 'Test' },
+  source: { color: NODE_TYPE_COLORS.source, icon: Database, label: 'Source' },
+  model: { color: NODE_TYPE_COLORS.model, icon: Table2, label: 'Model' },
+  seed: { color: NODE_TYPE_COLORS.seed, icon: Table2, label: 'Seed' },
+  snapshot: { color: NODE_TYPE_COLORS.snapshot, icon: Layers, label: 'Snapshot' },
+  metric: { color: NODE_TYPE_COLORS.metric, icon: BarChart2, label: 'Metric' },
+  test: { color: NODE_TYPE_COLORS.test, icon: TestTube, label: 'Test' },
 }
 
 // Layer colors for models
 const layerColors: Record<string, string> = {
-  staging: '#10b981',
-  intermediate: '#f59e0b',
-  marts: '#ef4444',
-  raw: '#6366f1',
+  staging: NODE_TYPE_COLORS.staging,
+  intermediate: NODE_TYPE_COLORS.intermediate,
+  marts: NODE_TYPE_COLORS.marts,
+  raw: NODE_TYPE_COLORS.raw,
 }
 
 // ============================================================================
@@ -486,12 +487,12 @@ export function LineageViewer({
       type: 'smoothstep',
       animated: edge.source === selectedNodeId || edge.target === selectedNodeId,
       style: {
-        stroke: '#9ca3af',
+        stroke: NODE_TYPE_COLORS.edgeMuted,
         strokeWidth: 1.5,
       },
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: '#9ca3af',
+        color: NODE_TYPE_COLORS.edgeMuted,
         width: 15,
         height: 15,
       },
