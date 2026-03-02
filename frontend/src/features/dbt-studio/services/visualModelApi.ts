@@ -25,7 +25,7 @@ import type {
   DbtPackage,
 } from '../types/visualModel'
 
-const BASE = '/dbt'
+const BASE = '/api/v1/dbt'
 
 // ═══════════════════════════════════════════════════════════════
 // Visual Model CRUD

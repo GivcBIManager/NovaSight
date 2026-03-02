@@ -12,7 +12,7 @@
  * Drop-in replacement for DbtStudioPage.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -67,6 +67,7 @@ import {
   useCreateVisualModel,
 } from '../hooks/useVisualModels'
 import { useCodePreviewMutation } from '../hooks/useCodePreview'
+import { useWarehouseColumns } from '../hooks/useWarehouseSchema'
 import type {
   VisualModelCreatePayload,
   WarehouseColumn,
@@ -77,7 +78,9 @@ export function EnhancedDbtStudioPage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('models')
   const [logExecutionId, setLogExecutionId] = useState<string | undefined>()
-  const [availableColumns] = useState<WarehouseColumn[]>([])
+  const [availableColumns, setAvailableColumns] = useState<WarehouseColumn[]>([])
+  const [selectedSchema, setSelectedSchema] = useState<string>()
+  const [selectedTable, setSelectedTable] = useState<string>()
 
   // Existing API hooks
   const { data: modelsData, refetch: refetchModels } = useModels()
@@ -92,6 +95,16 @@ export function EnhancedDbtStudioPage() {
   const { data: visualModels } = useVisualModels()
   const createVisualModel = useCreateVisualModel()
   const codePreview = useCodePreviewMutation()
+
+  // Warehouse column introspection — enabled when a table is selected
+  const { data: fetchedColumns } = useWarehouseColumns(selectedSchema, selectedTable)
+
+  // Sync fetched columns into local state
+  useEffect(() => {
+    if (fetchedColumns && fetchedColumns.length > 0) {
+      setAvailableColumns(fetchedColumns)
+    }
+  }, [fetchedColumns])
 
   // Server control
   const handleStartServer = async () => {
@@ -170,8 +183,10 @@ export function EnhancedDbtStudioPage() {
     [codePreview, toast]
   )
 
-  const handleTableSelect = useCallback((_schema: string, _table: string) => {
-    toast({ title: `Selected ${_schema}.${_table}` })
+  const handleTableSelect = useCallback((schema: string, table: string) => {
+    setSelectedSchema(schema)
+    setSelectedTable(table)
+    toast({ title: `Selected ${schema}.${table}`, description: 'Loading columns…' })
   }, [toast])
 
   // Stats
@@ -379,6 +394,8 @@ export function EnhancedDbtStudioPage() {
                 availableModels={
                   (visualModels || []).map((m: any) => m.model_name)
                 }
+                selectedSourceSchema={selectedSchema}
+                selectedSourceTable={selectedTable}
                 onSave={handleVisualSave}
                 onPreview={handleVisualPreview}
                 isSaving={createVisualModel.isPending}

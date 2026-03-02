@@ -5,7 +5,7 @@
  * and emits a VisualModelCreatePayload on save.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
@@ -33,6 +33,10 @@ export interface VisualQueryBuilderProps {
   availableModels: string[]
   /** Initial values (for editing). */
   initialValues?: Partial<VisualModelCreatePayload>
+  /** Auto-fill source schema from Schema Explorer selection. */
+  selectedSourceSchema?: string
+  /** Auto-fill source table from Schema Explorer selection. */
+  selectedSourceTable?: string
   /** Called when user saves the model configuration. */
   onSave: (payload: VisualModelCreatePayload) => void
   /** Called when user requests code preview. */
@@ -45,6 +49,8 @@ export function VisualQueryBuilder({
   availableColumns,
   availableModels,
   initialValues,
+  selectedSourceSchema,
+  selectedSourceTable,
   onSave,
   onPreview,
   isSaving = false,
@@ -68,6 +74,14 @@ export function VisualQueryBuilder({
   const [whereClause, setWhereClause] = useState(initialValues?.where_clause || '')
   const [groupBy, setGroupBy] = useState<string[]>(initialValues?.group_by || [])
   const [tags, setTags] = useState(initialValues?.tags?.join(', ') || '')
+
+  // Auto-fill source from Schema Explorer selection
+  useEffect(() => {
+    if (selectedSourceSchema) setSourceName(selectedSourceSchema)
+  }, [selectedSourceSchema])
+  useEffect(() => {
+    if (selectedSourceTable) setSourceTable(selectedSourceTable)
+  }, [selectedSourceTable])
 
   const buildPayload = useCallback((): VisualModelCreatePayload => ({
     model_name: modelName,

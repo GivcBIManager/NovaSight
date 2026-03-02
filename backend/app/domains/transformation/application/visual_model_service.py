@@ -293,7 +293,7 @@ class VisualModelService:
         """Query ClickHouse for available databases/schemas."""
         client = self._get_clickhouse_client(tenant_id)
         result = client.execute("SHOW DATABASES")
-        return [{"name": row[0]} for row in result]
+        return [{"name": row[0]} for row in result.rows]
 
     def list_warehouse_tables(
         self, tenant_id: str, schema: str
@@ -304,7 +304,7 @@ class VisualModelService:
             "SELECT name, engine FROM system.tables WHERE database = %(db)s",
             {"db": schema},
         )
-        return [{"name": row[0], "engine": row[1]} for row in result]
+        return [{"name": row[0], "engine": row[1]} for row in result.rows]
 
     def list_warehouse_columns(
         self, tenant_id: str, schema: str, table: str
@@ -318,7 +318,7 @@ class VisualModelService:
         )
         return [
             {"name": row[0], "type": row[1], "comment": row[2]}
-            for row in result
+            for row in result.rows
         ]
 
     # ── Execution History ────────────────────────────────────

@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, ArrowUpDown, Plus, Trash2 } from 'lucide-react'
+import { Search, ArrowUpDown, Plus, Trash2, MousePointerClick } from 'lucide-react'
 import type { VisualColumnConfig, WarehouseColumn } from '../../types/visualModel'
 import { ExpressionBuilder } from './ExpressionBuilder'
 
@@ -104,11 +104,20 @@ export function SelectBuilder({
       {/* Available columns picker */}
       <div className="border rounded-md max-h-48 overflow-y-auto">
         {filtered.length === 0 ? (
-          <p className="text-center text-muted-foreground text-sm p-4">
-            {availableColumns.length === 0
-              ? 'Select a source table to see columns'
-              : 'No matching columns'}
-          </p>
+          <div className="text-center text-muted-foreground text-sm p-6 space-y-2">
+            {availableColumns.length === 0 ? (
+              <>
+                <MousePointerClick className="h-8 w-8 mx-auto opacity-40" />
+                <p className="font-medium">No source table selected</p>
+                <p className="text-xs">
+                  Click a table in the <strong>Schema Explorer</strong> panel on
+                  the right to load its columns here.
+                </p>
+              </>
+            ) : (
+              <p>No matching columns</p>
+            )}
+          </div>
         ) : (
           filtered.map((col) => (
             <label
