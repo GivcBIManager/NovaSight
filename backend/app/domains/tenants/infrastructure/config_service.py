@@ -785,6 +785,7 @@ class InfrastructureConfigService:
                 "min_executors": 1,
                 "max_executors": 10,
                 "spark_home": "/opt/spark",
+                "rest_url": "",
             }
         if service_type == InfrastructureType.DAGSTER.value:
             return {

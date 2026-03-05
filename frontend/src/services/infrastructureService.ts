@@ -217,6 +217,7 @@ export const infrastructureService = {
           min_executors: 1,
           max_executors: 10,
           spark_home: '/opt/spark',
+          rest_url: '',
           additional_configs: {},
         };
       case 'ollama':

@@ -96,6 +96,7 @@ class RemoteSparkResource(ConfigurableResource):
         """Fetch Spark configuration from database."""
         try:
             import sys
+            import os
             if '/app' not in sys.path:
                 sys.path.insert(0, '/app')
             
@@ -105,6 +106,17 @@ class RemoteSparkResource(ConfigurableResource):
             config = provider.get_spark_config()
             
             if config:
+                # REST URL resolution order:
+                #   1. DB setting  rest_url  (admin-configurable per cluster)
+                #   2. SPARK_REST_URL env var
+                #   3. Fallback: http://spark-master:6066  (Docker default)
+                rest_url_from_db = getattr(config, 'rest_url', '') or ""
+                spark_rest_url = (
+                    rest_url_from_db
+                    or os.environ.get("SPARK_REST_URL", "")
+                    or "http://spark-master:6066"
+                )
+                
                 return {
                     "spark_master": config.master_url,
                     "driver_memory": config.driver_memory,
@@ -115,6 +127,7 @@ class RemoteSparkResource(ConfigurableResource):
                     "ssh_user": getattr(config, 'ssh_user', self.ssh_user),
                     "ssh_key_path": getattr(config, 'ssh_key_path', self.ssh_key_path),
                     "deploy_mode": getattr(config, 'deploy_mode', self.deploy_mode),
+                    "spark_rest_url": spark_rest_url,
                 }
         except Exception as e:
             logger.warning(f"Failed to get dynamic Spark config: {e}")
@@ -651,48 +664,64 @@ class RemoteSparkResource(ConfigurableResource):
         execution_mode = dynamic_config.get("execution_mode", self.execution_mode)
         
         local_file = Path(local_path)
+        remote_jobs_dir = dynamic_config.get("remote_jobs_dir", self.remote_jobs_dir)
+        ssh_port = dynamic_config.get("ssh_port", self.ssh_port)
+        dest_remote_path = remote_path or f"{remote_jobs_dir}/{local_file.name}"
         
         if execution_mode in ("rest", "docker"):
-            # REST/docker mode: copy to shared volume accessible by Spark workers
-            jobs_dir = Path(dynamic_config.get("remote_jobs_dir", self.remote_jobs_dir))
-            jobs_dir.mkdir(parents=True, exist_ok=True)
-            dest_path = jobs_dir / local_file.name
-            
-            if str(local_file) != str(dest_path):
-                shutil.copy2(str(local_file), str(dest_path))
-                logger.info(f"Copied job to shared volume: {local_path} -> {dest_path}")
+            if ssh_host:
+                # Remote cluster: SCP the file to the Spark master, then
+                # the REST submission can reference it via file:// URI.
+                self._scp_file(local_path, dest_remote_path, ssh_host, ssh_user, ssh_key, ssh_port)
+                return dest_remote_path
             else:
-                logger.info(f"Job already on shared volume: {dest_path}")
-            
-            return str(dest_path)
+                # Local Docker cluster: copy to shared volume accessible by
+                # all containers (backend, spark-master, spark-workers).
+                jobs_dir = Path(remote_jobs_dir)
+                jobs_dir.mkdir(parents=True, exist_ok=True)
+                dest_path = jobs_dir / local_file.name
+                
+                if str(local_file) != str(dest_path):
+                    shutil.copy2(str(local_file), str(dest_path))
+                    logger.info(f"Copied job to shared volume: {local_path} -> {dest_path}")
+                else:
+                    logger.info(f"Job already on shared volume: {dest_path}")
+                
+                return str(dest_path)
         
         if not ssh_host:
             # Local mode - just return the local path
             return local_path
         
-        local_file = Path(local_path)
-        if remote_path is None:
-            remote_path = f"{self.remote_jobs_dir}/{local_file.name}"
-        
-        # Build SCP command
-        scp_cmd = ["scp"]
-        scp_cmd.extend(["-o", "StrictHostKeyChecking=no"])
+        # SSH mode: SCP to remote host
+        self._scp_file(local_path, dest_remote_path, ssh_host, ssh_user, ssh_key, ssh_port)
+        return dest_remote_path
+    
+    def _scp_file(
+        self,
+        local_path: str,
+        remote_path: str,
+        ssh_host: str,
+        ssh_user: str,
+        ssh_key: Optional[str],
+        ssh_port: int = 22,
+    ) -> None:
+        """SCP a file to a remote host."""
+        scp_cmd = ["scp", "-o", "StrictHostKeyChecking=no"]
         
         if ssh_key:
             scp_cmd.extend(["-i", ssh_key])
         
-        scp_cmd.extend(["-P", str(self.ssh_port)])
+        scp_cmd.extend(["-P", str(ssh_port)])
         scp_cmd.append(local_path)
         scp_cmd.append(f"{ssh_user}@{ssh_host}:{remote_path}")
         
-        logger.info(f"Copying job to remote: {local_path} -> {ssh_host}:{remote_path}")
+        logger.info(f"SCP job to remote: {local_path} -> {ssh_user}@{ssh_host}:{remote_path}")
         
         result = subprocess.run(scp_cmd, capture_output=True, text=True)
         
         if result.returncode != 0:
-            raise RuntimeError(f"Failed to copy file to remote: {result.stderr}")
-        
-        return remote_path
+            raise RuntimeError(f"Failed to SCP file to {ssh_host}: {result.stderr}")
     
     def submit_job(
         self,
@@ -947,9 +976,16 @@ class DynamicRemoteSparkResource(RemoteSparkResource):
                         )
                 
                 # Build comprehensive config from DB
-                # Derive REST URL from infra config host (port 6066)
-                infra_host = config.host or "spark-master"
-                spark_rest_url = f"http://{infra_host}:6066"
+                # REST URL resolution order:
+                #   1. DB setting  rest_url  (admin-configurable per cluster)
+                #   2. SPARK_REST_URL env var
+                #   3. Fallback: http://spark-master:6066  (Docker default)
+                rest_url_from_db = getattr(config, 'rest_url', '') or ""
+                spark_rest_url = (
+                    rest_url_from_db
+                    or os.environ.get("SPARK_REST_URL", "")
+                    or "http://spark-master:6066"
+                )
                 
                 return {
                     "spark_master": config.master_url,

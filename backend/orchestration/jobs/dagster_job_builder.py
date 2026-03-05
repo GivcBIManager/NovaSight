@@ -36,7 +36,7 @@ from dagster import (
     RunConfig,
     Config,
 )
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from pathlib import Path
 import logging
@@ -153,16 +153,20 @@ class DagsterJobBuilder:
                 context.log.info(f"Copied job to remote: {remote_path}")
                 return remote_path
             except Exception as e:
-                context.log.warning(f"Failed to copy to remote: {e}")
-                # Fallback: copy to the shared volume manually
+                context.log.warning(f"copy_job_to_remote failed: {e}")
+                # Fallback: try local shared volume (works for Docker clusters)
                 import shutil
                 dest = f"/opt/spark/jobs/{Path(local_path).name}"
                 try:
                     Path("/opt/spark/jobs").mkdir(parents=True, exist_ok=True)
                     shutil.copy2(local_path, dest)
-                    context.log.info(f"Fallback copy to shared volume: {dest}")
+                    context.log.info(f"Fallback: copied to local shared volume: {dest}")
                 except Exception as copy_err:
                     context.log.error(f"Fallback copy also failed: {copy_err}")
+                    raise RuntimeError(
+                        f"Cannot deliver job file to Spark cluster. "
+                        f"Primary: {e}. Fallback: {copy_err}"
+                    ) from e
                 return dest
 
         @op(
@@ -203,7 +207,7 @@ class DagsterJobBuilder:
                 with flask_app.app_context():
                     pyspark_app = PySparkApp.query.get(_app_id)
                     if pyspark_app:
-                        pyspark_app.last_run_at = datetime.utcnow()
+                        pyspark_app.last_run_at = datetime.now(timezone.utc)
                         pyspark_app.last_run_status = "success" if success else "failed"
                         pyspark_app.last_run_duration_ms = duration_ms
                         rows = _parse_rows_from_output(stdout)
@@ -385,10 +389,10 @@ class DagsterJobBuilder:
         )
         def _schedule(context):
             return RunRequest(
-                run_key=f"{schedule_name}_{datetime.utcnow().isoformat()}",
+                run_key=f"{schedule_name}_{datetime.now(timezone.utc).isoformat()}",
                 tags={
                     "scheduled": "true",
-                    "schedule_time": datetime.utcnow().isoformat(),
+                    "schedule_time": datetime.now(timezone.utc).isoformat(),
                 },
             )
         
@@ -563,7 +567,7 @@ def update_stats(
         with app.app_context():
             pyspark_app = PySparkApp.query.get(app_id)
             if pyspark_app:
-                pyspark_app.last_run_at = datetime.utcnow()
+                pyspark_app.last_run_at = datetime.now(timezone.utc)
                 pyspark_app.last_run_status = "success" if success else "failed"
                 pyspark_app.last_run_duration_ms = duration_ms
                 

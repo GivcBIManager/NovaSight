@@ -462,6 +462,7 @@ const ConfigDialog: React.FC<ConfigDialogProps> = ({
               <p className="text-[11px] text-muted-foreground">Auto-generated from Host and Port above</p>
             </div>
             {field('SSH Host', 'ssh_host', { placeholder: 'spark-server', hint: 'Hostname for SSH-based remote execution (optional)' })}
+            {field('REST API URL', 'rest_url', { placeholder: 'http://spark-master:6066', hint: 'Spark REST Submission API. Leave empty for Docker default (http://spark-master:6066)' })}
             <div className="grid grid-cols-2 gap-4">
               {field('SSH User', 'ssh_user', { placeholder: 'spark' })}
               {field('Web UI Port', 'webui_port', { type: 'number', min: 1, hint: 'Spark Master Web UI port for testing connectivity' })}

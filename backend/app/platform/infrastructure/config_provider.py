@@ -105,6 +105,8 @@ class SparkConfig:
         self.num_executors = settings.get("num_executors", 2)
         self.spark_home = settings.get("spark_home", "/opt/spark")
         self.additional_configs = settings.get("additional_configs", {})
+        # Spark REST Submission API URL (empty → fallback to http://spark-master:6066)
+        self.rest_url = settings.get("rest_url", "")
         # Remote Spark server configuration
         self.ssh_host = settings.get("ssh_host", "")
         self.ssh_user = settings.get("ssh_user", "spark")

@@ -175,6 +175,13 @@ class SparkSettingsSchema(Schema):
     )
     spark_home = fields.Str(load_default="/opt/spark")
     additional_configs = fields.Dict(load_default=dict)
+    # Spark REST Submission API URL (port 6066 on Standalone clusters)
+    # Leave empty to fall back to http://spark-master:6066 (Docker default)
+    rest_url = fields.Str(
+        load_default="",
+        validate=validate.Length(max=255),
+        metadata={"description": "Spark REST Submission API URL (e.g. http://spark-master:6066). Leave empty for Docker default."},
+    )
     # Remote Spark server configuration
     ssh_host = fields.Str(load_default="", validate=validate.Length(max=255))
     ssh_user = fields.Str(load_default="spark", validate=validate.Length(max=64))
