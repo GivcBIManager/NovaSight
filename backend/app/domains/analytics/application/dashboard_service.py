@@ -15,7 +15,7 @@ from sqlalchemy import and_, or_
 
 from app.extensions import db
 from app.domains.analytics.domain.models import Dashboard, Widget, WidgetType
-from app.services.semantic_service import SemanticService, QueryBuildError
+from app.domains.transformation.application.semantic_service import SemanticService, QueryBuildError
 
 logger = logging.getLogger(__name__)
 

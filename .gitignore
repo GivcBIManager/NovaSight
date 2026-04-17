@@ -57,11 +57,6 @@ Thumbs.db
 postgres_data/
 clickhouse_data/
 redis_data/
-airflow_data/
-
-# Airflow logs
-infrastructure/airflow/logs/
-
 # Test coverage
 .coverage
 htmlcov/

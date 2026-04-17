@@ -10,8 +10,16 @@ export function useDashboards() {
   return useQuery({
     queryKey: ['dashboards'],
     queryFn: async () => {
-      const response = await api.get<Dashboard[]>('/dashboards')
-      return response.data
+      const response = await api.get<Dashboard[] | { dashboards: Dashboard[] }>('/dashboards')
+      const data = response.data
+      // Handle both array and object response formats
+      if (Array.isArray(data)) {
+        return data
+      }
+      if (data && typeof data === 'object' && 'dashboards' in data && Array.isArray(data.dashboards)) {
+        return data.dashboards
+      }
+      return []
     },
   })
 }

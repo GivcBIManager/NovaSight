@@ -14,7 +14,7 @@ from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 import uuid
 
-from app.services.dashboard_service import (
+from app.domains.analytics.application.dashboard_service import (
     DashboardService,
     DashboardServiceError,
     DashboardNotFoundError,
@@ -22,7 +22,7 @@ from app.services.dashboard_service import (
     DashboardAccessDeniedError,
     DashboardValidationError,
 )
-from app.models.dashboard import Dashboard, Widget, WidgetType
+from app.domains.analytics.domain.models import Dashboard, Widget, WidgetType
 
 
 class TestDashboardCRUD:

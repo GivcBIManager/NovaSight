@@ -321,17 +321,6 @@ class InfrastructureConfigProvider:
             }
         return config_dict
     
-    def get_airflow_config(self) -> Dict[str, Any]:
-        """
-        Get Airflow configuration.
-        
-        .. deprecated:: Use get_dagster_config() instead.
-        """
-        config_dict = self._cache.get_config("airflow", tenant_id=None)
-        if config_dict is None:
-            raise ValueError("No Airflow configuration found")
-        return config_dict
-    
     def get_ollama_config(self) -> Dict[str, Any]:
         """Get Ollama configuration."""
         config_dict = self._cache.get_config("ollama", tenant_id=None)

@@ -16,14 +16,13 @@ for fine-grained access control.
 import logging
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError as MarshmallowValidationError
 
 from app.api.v1 import api_v1_bp
 from app.api.v1.admin import admin_bp
 from app.domains.tenants.application.tenant_service import TenantService
 from app.platform.auth.jwt_handler import get_jwt_identity_dict
-from app.platform.auth.decorators import require_roles
+from app.platform.auth.decorators import authenticated, require_roles
 from app.platform.errors.exceptions import ValidationError, NotFoundError
 
 logger = logging.getLogger(__name__)
@@ -35,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 @api_v1_bp.route("/tenants", methods=["GET"])
-@jwt_required()
+@authenticated
 @require_roles("super_admin")
 def list_tenants():
     """List all tenants (super_admin only)."""
@@ -49,7 +48,7 @@ def list_tenants():
 
 
 @api_v1_bp.route("/tenants", methods=["POST"])
-@jwt_required()
+@authenticated
 @require_roles("super_admin")
 def create_tenant():
     """Create a new tenant (super_admin only)."""
@@ -80,7 +79,7 @@ def create_tenant():
 
 
 @api_v1_bp.route("/tenants/<tenant_id>", methods=["GET"])
-@jwt_required()
+@authenticated
 @require_roles("super_admin", "tenant_admin")
 def get_tenant(tenant_id: str):
     """Get tenant details. Tenant admins may only view their own."""
@@ -100,7 +99,7 @@ def get_tenant(tenant_id: str):
 
 
 @api_v1_bp.route("/tenants/<tenant_id>", methods=["PATCH"])
-@jwt_required()
+@authenticated
 @require_roles("super_admin", "tenant_admin")
 def update_tenant(tenant_id: str):
     """Update tenant settings. Non-super_admins cannot change status."""
@@ -126,7 +125,7 @@ def update_tenant(tenant_id: str):
 
 
 @api_v1_bp.route("/tenants/current/database", methods=["GET"])
-@jwt_required()
+@authenticated
 def get_current_tenant_database():
     """
     Get the current tenant's database configuration.
@@ -166,13 +165,13 @@ def get_current_tenant_database():
 
 def _require_permission(perm: str):
     """Lazy-import permission decorator to avoid circular imports."""
-    from app.middleware.permissions import require_permission
+    from app.platform.auth.decorators import require_permission
 
     return require_permission(perm)
 
 
 @admin_bp.route("/tenants", methods=["GET"])
-@jwt_required()
+@authenticated
 @_require_permission("admin.tenants.view")
 def admin_list_tenants():
     """List all tenants with pagination and filtering (admin)."""
@@ -199,7 +198,7 @@ def admin_list_tenants():
 
 
 @admin_bp.route("/tenants", methods=["POST"])
-@jwt_required()
+@authenticated
 @_require_permission("admin.tenants.create")
 def admin_create_tenant():
     """Create a new tenant with full provisioning (admin)."""
@@ -235,7 +234,7 @@ def admin_create_tenant():
 
 
 @admin_bp.route("/tenants/<uuid:tenant_id>", methods=["GET"])
-@jwt_required()
+@authenticated
 @_require_permission("admin.tenants.view")
 def admin_get_tenant(tenant_id):
     """Get tenant details by ID (admin)."""
@@ -253,7 +252,7 @@ def admin_get_tenant(tenant_id):
 
 
 @admin_bp.route("/tenants/<uuid:tenant_id>", methods=["PUT"])
-@jwt_required()
+@authenticated
 @_require_permission("admin.tenants.edit")
 def admin_update_tenant(tenant_id):
     """Update tenant configuration (admin)."""
@@ -281,7 +280,7 @@ def admin_update_tenant(tenant_id):
 
 
 @admin_bp.route("/tenants/<uuid:tenant_id>", methods=["DELETE"])
-@jwt_required()
+@authenticated
 @_require_permission("admin.tenants.delete")
 def admin_deactivate_tenant(tenant_id):
     """
@@ -329,7 +328,7 @@ def admin_deactivate_tenant(tenant_id):
 
 
 @admin_bp.route("/tenants/<uuid:tenant_id>/usage", methods=["GET"])
-@jwt_required()
+@authenticated
 @_require_permission("admin.tenants.view")
 def admin_get_tenant_usage(tenant_id):
     """Get tenant usage statistics (admin)."""
@@ -349,7 +348,7 @@ def admin_get_tenant_usage(tenant_id):
 
 
 @admin_bp.route("/tenants/<uuid:tenant_id>/activate", methods=["POST"])
-@jwt_required()
+@authenticated
 @_require_permission("admin.tenants.edit")
 def admin_activate_tenant(tenant_id):
     """Activate a suspended/pending tenant (admin)."""
@@ -369,7 +368,7 @@ def admin_activate_tenant(tenant_id):
 
 
 @admin_bp.route("/tenants/<uuid:tenant_id>/database", methods=["GET"])
-@jwt_required()
+@authenticated
 @_require_permission("admin.tenants.view")
 def admin_get_tenant_database_info(tenant_id):
     """
@@ -409,7 +408,7 @@ def admin_get_tenant_database_info(tenant_id):
 
 
 @admin_bp.route("/tenants/<uuid:tenant_id>/suspend", methods=["POST"])
-@jwt_required()
+@authenticated
 @_require_permission("admin.tenants.edit")
 def admin_suspend_tenant(tenant_id):
     """Suspend a tenant temporarily (admin)."""

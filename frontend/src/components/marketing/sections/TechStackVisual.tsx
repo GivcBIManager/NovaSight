@@ -42,7 +42,7 @@ const layers = [
   },
   {
     name: 'ORCHESTRATION',
-    items: ['Apache Airflow'],
+    items: ['Dagster'],
     color: 'pink',
     description: 'Workflow automation and scheduling',
   },

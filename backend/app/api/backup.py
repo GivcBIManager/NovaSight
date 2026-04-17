@@ -7,14 +7,13 @@ REST API endpoints for backup management and recovery operations.
 
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt
 
 from app.services.backup_service import (
     BackupService,
     PointInTimeRecovery,
     TenantRecoveryService
 )
-from app.decorators import require_roles
+from app.platform.auth.decorators import authenticated, require_roles
 from app.extensions import limiter
 from app.utils.logger import get_logger
 
@@ -24,7 +23,7 @@ bp = Blueprint('backup', __name__, url_prefix='/backups')
 
 
 @bp.route('/', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_roles(['super_admin'])
 def list_backups():
     """List available backups.
@@ -77,7 +76,7 @@ def list_backups():
 
 
 @bp.route('/<path:key>', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_roles(['super_admin'])
 def get_backup_details(key: str):
     """Get detailed information about a specific backup.
@@ -100,7 +99,7 @@ def get_backup_details(key: str):
 
 
 @bp.route('/<path:key>/download', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_roles(['super_admin'])
 def get_backup_download_url(key: str):
     """Get a presigned URL for downloading a backup.
@@ -140,7 +139,7 @@ def get_backup_download_url(key: str):
 
 
 @bp.route('/<path:key>/verify', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_roles(['super_admin'])
 def verify_backup_integrity(key: str):
     """Verify backup integrity using checksum.
@@ -164,7 +163,7 @@ def verify_backup_integrity(key: str):
 
 
 @bp.route('/trigger', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_roles(['super_admin'])
 @limiter.limit("5 per hour")
 def trigger_backup():
@@ -203,7 +202,7 @@ def trigger_backup():
 
 
 @bp.route('/jobs/<job_name>', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_roles(['super_admin'])
 def get_backup_job_status(job_name: str):
     """Get the status of a backup job.
@@ -226,7 +225,7 @@ def get_backup_job_status(job_name: str):
 
 
 @bp.route('/stats', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_roles(['super_admin'])
 def get_backup_stats():
     """Get backup statistics.
@@ -251,7 +250,7 @@ def get_backup_stats():
 
 
 @bp.route('/<path:key>', methods=['DELETE'])
-@jwt_required()
+@authenticated
 @require_roles(['super_admin'])
 def delete_backup(key: str):
     """Delete a backup.
@@ -283,7 +282,7 @@ def delete_backup(key: str):
 # PITR Endpoints
 
 @bp.route('/pitr/recovery-points', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_roles(['super_admin'])
 def get_pitr_recovery_points():
     """Get available point-in-time recovery points.
@@ -326,7 +325,7 @@ def get_pitr_recovery_points():
 
 
 @bp.route('/pitr/recover', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_roles(['super_admin'])
 @limiter.limit("3 per hour")
 def initiate_pitr():
@@ -381,7 +380,7 @@ def initiate_pitr():
 # Tenant Recovery Endpoints
 
 @bp.route('/tenant/recover', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_roles(['super_admin'])
 @limiter.limit("10 per hour")
 def recover_tenant_data():

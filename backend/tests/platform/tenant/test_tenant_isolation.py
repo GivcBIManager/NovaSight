@@ -88,7 +88,7 @@ class TestCrossTenantDataAccess:
     def tenant_a_token(self, app, db_session):
         """JWT token for tenant A."""
         from flask_jwt_extended import create_access_token
-        from app.models.tenant import Tenant
+        from app.domains.tenants.domain.models import Tenant
 
         tenant = Tenant(
             name="Tenant A",
@@ -119,7 +119,7 @@ class TestCrossTenantDataAccess:
     def tenant_b_token(self, app, db_session):
         """JWT token for tenant B."""
         from flask_jwt_extended import create_access_token
-        from app.models.tenant import Tenant
+        from app.domains.tenants.domain.models import Tenant
 
         tenant = Tenant(
             name="Tenant B",

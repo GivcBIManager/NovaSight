@@ -14,9 +14,9 @@ from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
 import uuid
 
-from app.services.auth_service import AuthService
-from app.models.user import User, UserStatus
-from app.models.tenant import Tenant, TenantStatus
+from app.domains.identity.application.auth_service import AuthService
+from app.domains.identity.domain.models import User, UserStatus
+from app.domains.tenants.domain.models import Tenant, TenantStatus
 
 
 class TestUserRegistration:
@@ -155,7 +155,7 @@ class TestUserAuthentication:
     
     def test_authenticate_inactive_user(self, auth_service, db_session, sample_tenant):
         """Test authentication fails for inactive user."""
-        from app.services.password_service import password_service
+        from app.platform.security.passwords import password_service
         
         inactive_user = User(
             tenant_id=sample_tenant.id,

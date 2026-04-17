@@ -10,20 +10,19 @@ User CRUD operations within tenant scope.
 import logging
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required
 
 from app.api.v1 import api_v1_bp
 from app.domains.identity.application.user_service import UserService
 from app.platform.auth.jwt_handler import get_jwt_identity_dict
-from app.platform.auth.decorators import require_roles, tenant_required
+from app.platform.auth.decorators import authenticated, require_roles, tenant_required
 from app.platform.errors.exceptions import ValidationError, NotFoundError
-from app.services.audit_service import AuditService
+from app.platform.audit.service import AuditService
 
 logger = logging.getLogger(__name__)
 
 
 @api_v1_bp.route("/users", methods=["GET"])
-@jwt_required()
+@authenticated
 @tenant_required
 @require_roles("tenant_admin", "user_manager")
 def list_users():
@@ -50,7 +49,7 @@ def list_users():
 
 
 @api_v1_bp.route("/users", methods=["POST"])
-@jwt_required()
+@authenticated
 @tenant_required
 @require_roles("tenant_admin", "user_manager")
 def create_user():
@@ -94,7 +93,7 @@ def create_user():
 
 
 @api_v1_bp.route("/users/<user_id>", methods=["GET"])
-@jwt_required()
+@authenticated
 @tenant_required
 def get_user(user_id: str):
     """Get user details."""
@@ -118,7 +117,7 @@ def get_user(user_id: str):
 
 
 @api_v1_bp.route("/users/<user_id>", methods=["PATCH"])
-@jwt_required()
+@authenticated
 @tenant_required
 def update_user(user_id: str):
     """Update user details."""
@@ -165,7 +164,7 @@ def update_user(user_id: str):
 
 
 @api_v1_bp.route("/users/<user_id>", methods=["DELETE"])
-@jwt_required()
+@authenticated
 @tenant_required
 @require_roles("tenant_admin")
 def delete_user(user_id: str):
@@ -197,7 +196,7 @@ def delete_user(user_id: str):
 
 
 @api_v1_bp.route("/users/<user_id>/permissions", methods=["GET"])
-@jwt_required()
+@authenticated
 @tenant_required
 def get_user_permissions(user_id: str):
     """Get user's effective permissions from all assigned roles."""
@@ -222,7 +221,7 @@ def get_user_permissions(user_id: str):
 
 
 @api_v1_bp.route("/users/<user_id>/roles", methods=["PUT"])
-@jwt_required()
+@authenticated
 @tenant_required
 @require_roles("tenant_admin", "user_manager")
 def assign_user_roles(user_id: str):
@@ -261,7 +260,7 @@ def assign_user_roles(user_id: str):
 
 
 @api_v1_bp.route("/users/<user_id>/password", methods=["POST"])
-@jwt_required()
+@authenticated
 @tenant_required
 def change_user_password(user_id: str):
     """Change user password."""

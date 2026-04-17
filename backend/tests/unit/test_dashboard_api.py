@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch, PropertyMock
 from uuid import uuid4
 from datetime import datetime, timedelta
 
-from app.models.dashboard import Dashboard, Widget, WidgetType
-from app.schemas.dashboard_schemas import (
+from app.domains.analytics.domain.models import Dashboard, Widget, WidgetType
+from app.domains.analytics.schemas.dashboard_schemas import (
     DashboardCreateSchema,
     DashboardUpdateSchema,
     DashboardLayoutUpdateSchema,
@@ -369,7 +369,7 @@ class TestDashboardService:
     @pytest.fixture
     def mock_db_session(self):
         """Mock database session."""
-        with patch('app.services.dashboard_service.db.session') as mock:
+        with patch('app.domains.analytics.application.dashboard_service.db.session') as mock:
             yield mock
     
     @pytest.fixture
@@ -415,7 +415,7 @@ class TestDashboardService:
     
     def test_list_for_user_basic(self, mock_db_session):
         """Test listing dashboards for a user."""
-        from app.services.dashboard_service import DashboardService
+        from app.domains.analytics.application.dashboard_service import DashboardService
         
         tenant_id = str(uuid4())
         user_id = str(uuid4())
@@ -432,7 +432,7 @@ class TestDashboardService:
     
     def test_create_dashboard(self, mock_db_session):
         """Test dashboard creation."""
-        from app.services.dashboard_service import DashboardService
+        from app.domains.analytics.application.dashboard_service import DashboardService
         
         tenant_id = str(uuid4())
         user_id = str(uuid4())
@@ -452,7 +452,7 @@ class TestDashboardService:
     
     def test_get_dashboard_not_found(self, mock_db_session):
         """Test getting non-existent dashboard."""
-        from app.services.dashboard_service import (
+        from app.domains.analytics.application.dashboard_service import (
             DashboardService, DashboardNotFoundError
         )
         
@@ -467,7 +467,7 @@ class TestDashboardService:
     
     def test_get_dashboard_access_denied(self, mock_db_session, sample_dashboard):
         """Test access control for private dashboards."""
-        from app.services.dashboard_service import (
+        from app.domains.analytics.application.dashboard_service import (
             DashboardService, DashboardAccessDeniedError
         )
         
@@ -486,7 +486,7 @@ class TestDashboardService:
     
     def test_update_dashboard(self, mock_db_session, sample_dashboard):
         """Test dashboard update."""
-        from app.services.dashboard_service import DashboardService
+        from app.domains.analytics.application.dashboard_service import DashboardService
         
         owner_id = str(sample_dashboard.created_by)
         
@@ -507,7 +507,7 @@ class TestDashboardService:
     
     def test_delete_dashboard_soft(self, mock_db_session, sample_dashboard):
         """Test soft delete of dashboard."""
-        from app.services.dashboard_service import DashboardService
+        from app.domains.analytics.application.dashboard_service import DashboardService
         
         owner_id = str(sample_dashboard.created_by)
         
@@ -527,7 +527,7 @@ class TestDashboardService:
     
     def test_share_dashboard(self, mock_db_session, sample_dashboard):
         """Test sharing dashboard with users."""
-        from app.services.dashboard_service import DashboardService
+        from app.domains.analytics.application.dashboard_service import DashboardService
         
         owner_id = str(sample_dashboard.created_by)
         target_users = [str(uuid4()), str(uuid4())]
@@ -546,7 +546,7 @@ class TestDashboardService:
     
     def test_update_layout(self, mock_db_session, sample_dashboard, sample_widget):
         """Test updating dashboard layout."""
-        from app.services.dashboard_service import DashboardService
+        from app.domains.analytics.application.dashboard_service import DashboardService
         
         owner_id = str(sample_dashboard.created_by)
         
@@ -580,7 +580,7 @@ class TestWidgetDataExecution:
     @pytest.fixture
     def mock_semantic_service(self):
         """Mock semantic service."""
-        with patch('app.services.dashboard_service.SemanticService') as mock:
+        with patch('app.domains.analytics.application.dashboard_service.SemanticService') as mock:
             mock.execute_query.return_value = {
                 "columns": ["region", "total_sales"],
                 "rows": [["East", 10000], ["West", 15000]],
@@ -592,13 +592,13 @@ class TestWidgetDataExecution:
     @pytest.fixture
     def mock_current_app(self):
         """Mock Flask current_app."""
-        with patch('app.services.dashboard_service.current_app') as mock:
+        with patch('app.domains.analytics.application.dashboard_service.current_app') as mock:
             mock.config.get.return_value = 300  # Cache TTL
             yield mock
     
     def test_execute_widget_query_cached(self, mock_semantic_service):
         """Test that cached data is returned when valid."""
-        from app.services.dashboard_service import DashboardService
+        from app.domains.analytics.application.dashboard_service import DashboardService
         
         widget = Widget(
             id=uuid4(),
@@ -627,7 +627,7 @@ class TestWidgetDataExecution:
         self, mock_semantic_service, mock_current_app
     ):
         """Test fresh query execution."""
-        from app.services.dashboard_service import DashboardService
+        from app.domains.analytics.application.dashboard_service import DashboardService
         
         widget = Widget(
             id=uuid4(),
@@ -644,7 +644,7 @@ class TestWidgetDataExecution:
             local_filters={},
         )
         
-        with patch('app.services.dashboard_service.db.session'):
+        with patch('app.domains.analytics.application.dashboard_service.db.session'):
             result = DashboardService.execute_widget_query(
                 widget=widget,
                 tenant_id=str(widget.tenant_id),

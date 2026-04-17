@@ -15,9 +15,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from app.models.data_source import DataSourceTable, DataSourceColumn, DataSourceSchema
+from app.domains.datasources.domain.value_objects import DataSourceTable, DataSourceColumn, DataSourceSchema
 from app.services.template_engine import TemplateEngine, template_engine
-from app.utils.naming import to_snake_case
+from app.services.template_engine.filters import to_snake_case
 
 logger = logging.getLogger(__name__)
 
@@ -967,7 +967,7 @@ class DbtModelGenerator:
         Returns:
             Tuple of (success, message)
         """
-        from app.services.dbt_service import get_dbt_service
+        from app.domains.transformation.application.dbt_service import get_dbt_service
         
         try:
             dbt_service = get_dbt_service(str(self.dbt_path))

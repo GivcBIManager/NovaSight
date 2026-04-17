@@ -78,41 +78,6 @@ ingress:
         - staging.novasight.io
         - api.staging.novasight.io
 
-# Airflow - reduced for staging
-airflow:
-  enabled: true
-  executor: LocalExecutor  # Simpler executor for staging
-  
-  webserver:
-    replicas: 1
-    resources:
-      requests:
-        cpu: 250m
-        memory: 512Mi
-      limits:
-        cpu: 1000m
-        memory: 2Gi
-  
-  scheduler:
-    replicas: 1
-    resources:
-      requests:
-        cpu: 250m
-        memory: 512Mi
-      limits:
-        cpu: 1000m
-        memory: 2Gi
-  
-  workers:
-    replicas: 1
-    resources:
-      requests:
-        cpu: 500m
-        memory: 1Gi
-      limits:
-        cpu: 2000m
-        memory: 4Gi
-
 # Ollama - optional for staging
 ollama:
   enabled: true

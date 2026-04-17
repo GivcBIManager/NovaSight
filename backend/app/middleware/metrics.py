@@ -252,7 +252,7 @@ def track_template_generation(
     Track template generation metrics.
     
     Args:
-        template_type: Type of template (pyspark, dbt, airflow, sql)
+        template_type: Type of template (pyspark, dbt, dagster, sql)
         duration: Generation time in seconds
         success: Whether generation succeeded
         error_type: Error type if validation failed

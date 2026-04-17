@@ -67,7 +67,6 @@ jobs:
       
       - name: Type check Python with MyPy
         run: mypy backend/app --ignore-missing-imports --no-error-summary
-        continue-on-error: true  # Don't fail on type errors during initial setup
       
       - name: Lint TypeScript with ESLint
         run: npm run lint

@@ -77,7 +77,7 @@ class AccessChecker(IAccessChecker):
             user = getattr(g, "current_user", None)
             if user is None:
                 return False
-            from app.services.rbac_service import rbac_service
+            from app.domains.identity.application.rbac_service import rbac_service
             return rbac_service.check_permission(user, permission)
         except Exception:
             logger.debug("RBAC check failed, falling back to JWT claims", exc_info=True)

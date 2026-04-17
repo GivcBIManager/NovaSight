@@ -105,7 +105,7 @@ class DagService:
 
         Args:
             dag_id: DAG identifier (can be UUID primary key or string dag_id)
-            include_runs: Include recent run history from Airflow
+            include_runs: Include recent run history from Dagster
 
         Returns:
             DagConfig object or None
@@ -327,9 +327,9 @@ class DagService:
         Delete a DAG configuration.
 
         Performs full cleanup:
-        1. Pauses the DAG in Airflow
-        2. Deletes the DAG from Airflow API
-        3. Removes the generated DAG file
+        1. Pauses the job in Dagster
+        2. Deletes the job from Dagster
+        3. Removes the generated job file
         4. Archives (soft) or removes (hard) from the database
 
         Args:

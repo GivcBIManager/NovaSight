@@ -142,7 +142,7 @@ def register_jwt_handlers(jwt: JWTManager) -> None:
         identity = deserialize_identity(identity_raw)
         if not identity:
             return None
-        from app.services.auth_service import AuthService
+        from app.domains.identity.application.auth_service import AuthService
         return AuthService().validate_token_identity(identity)
 
     @jwt.additional_claims_loader

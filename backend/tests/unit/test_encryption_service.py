@@ -21,7 +21,7 @@ class TestEncryptionService:
     @pytest.fixture
     def encryption_service(self):
         """Create encryption service with test key."""
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         return EncryptionService(
             master_key='dGVzdC1rZXktZm9yLXVuaXQtdGVzdGluZy0zMmJ5dGVz'
         )
@@ -29,7 +29,7 @@ class TestEncryptionService:
     @pytest.fixture
     def tenant_encryption_service(self):
         """Create tenant-specific encryption service."""
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         return EncryptionService(
             master_key='dGVzdC1rZXktZm9yLXVuaXQtdGVzdGluZy0zMmJ5dGVz',
             tenant_id='test-tenant-123'
@@ -137,7 +137,7 @@ class TestEncryptionService:
         assert tenant_encryption_service.decrypt(encrypted2) == plaintext
         
         # Cross-decryption should fail
-        from app.services.encryption_service import DecryptionError
+        from app.platform.security.encryption import DecryptionError
         with pytest.raises(DecryptionError):
             encryption_service.decrypt(encrypted2)
     
@@ -152,7 +152,7 @@ class TestEncryptionService:
     
     def test_generate_key(self):
         """Test key generation."""
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         
         key1 = EncryptionService.generate_key()
         key2 = EncryptionService.generate_key()
@@ -162,7 +162,7 @@ class TestEncryptionService:
     
     def test_validate_key_strength(self):
         """Test key strength validation."""
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         
         # Valid key
         valid_key = EncryptionService.generate_key()
@@ -201,12 +201,12 @@ class TestKeyRotationService:
     @pytest.fixture
     def rotation_service(self, old_key, new_key):
         """Create key rotation service."""
-        from app.services.encryption_service import KeyRotationService
+        from app.platform.security.encryption import KeyRotationService
         return KeyRotationService(old_key, new_key)
     
     def test_rotate_value(self, rotation_service, old_key):
         """Test rotating a single encrypted value."""
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         
         # Encrypt with old key
         old_service = EncryptionService(master_key=old_key)
@@ -220,7 +220,7 @@ class TestKeyRotationService:
         assert encrypted_new != encrypted_old
         
         # Verify can decrypt with new key
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         new_service = rotation_service.new_service
         decrypted = new_service.decrypt(encrypted_new)
         assert decrypted == original
@@ -232,7 +232,7 @@ class TestKeyRotationService:
     
     def test_rotate_dict_fields(self, rotation_service, old_key):
         """Test rotating dictionary fields."""
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         
         old_service = EncryptionService(master_key=old_key)
         
@@ -265,7 +265,7 @@ class TestEncryptionServiceNoKey:
     
     def test_raises_error_without_key(self):
         """Test that missing key raises appropriate error in production."""
-        from app.services.encryption_service import EncryptionService, KeyNotConfiguredError
+        from app.platform.security.encryption import EncryptionService, KeyNotConfiguredError
         
         # Remove environment key
         original_key = os.environ.pop('ENCRYPTION_MASTER_KEY', None)
@@ -288,21 +288,21 @@ class TestDecryptionErrors:
     
     @pytest.fixture
     def encryption_service(self):
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         return EncryptionService(
             master_key='dGVzdC1rZXktZm9yLXVuaXQtdGVzdGluZy0zMmJ5dGVz'
         )
     
     def test_invalid_token_raises_error(self, encryption_service):
         """Test that invalid encrypted data raises DecryptionError."""
-        from app.services.encryption_service import DecryptionError
+        from app.platform.security.encryption import DecryptionError
         
         with pytest.raises(DecryptionError):
             encryption_service.decrypt("v1:invalid_encrypted_data")
     
     def test_wrong_key_raises_error(self, encryption_service):
         """Test that wrong key raises DecryptionError."""
-        from app.services.encryption_service import EncryptionService, DecryptionError
+        from app.platform.security.encryption import EncryptionService, DecryptionError
         
         # Encrypt with one key
         encrypted = encryption_service.encrypt("test")

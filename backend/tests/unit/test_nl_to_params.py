@@ -10,7 +10,7 @@ import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.ollama.nl_to_params import (
+from app.domains.ai.infrastructure.ollama.nl_to_params import (
     NLToParametersService,
     QueryIntent,
     FilterCondition,
@@ -18,7 +18,7 @@ from app.services.ollama.nl_to_params import (
     DataExplorationSuggestion,
     QueryExplanation,
 )
-from app.services.ollama.client import OllamaClient
+from app.domains.ai.infrastructure.ollama.client import OllamaClient
 
 
 class TestQueryIntent:

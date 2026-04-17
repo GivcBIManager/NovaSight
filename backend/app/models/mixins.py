@@ -17,7 +17,7 @@ from flask import g, has_request_context
 from app.extensions import db
 
 if TYPE_CHECKING:
-    from app.models.tenant import Tenant
+    from app.domains.tenants.domain.models import Tenant
 
 
 class TenantMixin:

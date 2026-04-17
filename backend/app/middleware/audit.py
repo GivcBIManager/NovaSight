@@ -10,7 +10,7 @@ from functools import wraps
 from typing import Optional, Callable, Any, Dict
 from flask import request, g
 
-from app.services.audit_service import AuditService
+from app.platform.audit.service import AuditService
 
 
 def audited(action: str, resource_type: str, resource_id_param: Optional[str] = None):

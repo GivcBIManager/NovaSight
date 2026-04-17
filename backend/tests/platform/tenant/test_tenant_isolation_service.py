@@ -433,7 +433,7 @@ class TestFilePaths:
             tenant_slug="acme_corp"
         )
         path = service.get_dag_file_path("my_dag")
-        assert path == "/opt/airflow/dags/tenant_acme_corp/my_dag.py"
+        assert path == "/opt/dagster/jobs/tenant_acme_corp/my_dag.py"
 
     def test_get_pyspark_job_path(self):
         """PySpark job path includes tenant folder."""
@@ -442,7 +442,7 @@ class TestFilePaths:
             tenant_slug="acme_corp"
         )
         path = service.get_pyspark_job_path("my_job")
-        assert path == "/opt/airflow/spark_apps/tenant_acme_corp/my_job.py"
+        assert path == "/opt/dagster/spark_apps/tenant_acme_corp/my_job.py"
 
     def test_get_dbt_model_path(self):
         """dbt model path includes tenant folder."""

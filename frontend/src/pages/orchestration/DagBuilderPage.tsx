@@ -352,8 +352,8 @@ export function DagBuilderPage() {
       'from datetime import datetime, timedelta',
       'import os',
       'import pendulum',
-      'from airflow.models.dag import DAG',
-      'from airflow.operators.empty import EmptyOperator',
+      'from dagster import job, op, schedule, ScheduleDefinition, In, Out, graph',
+      'from dagster import DagsterInstance',
     ])
 
     // Add task-specific imports
@@ -361,23 +361,23 @@ export function DagBuilderPage() {
     tasks.forEach(task => {
       switch (task.task_type) {
         case 'spark_submit':
-          imports.add('from airflow.operators.bash import BashOperator')
-          imports.add('from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator')
-          imports.add('from airflow.utils.trigger_rule import TriggerRule')
+          imports.add('from dagster_shell import create_shell_command_op')
+          imports.add('from dagster_spark import spark_resource, SparkSubmitOp')
+          imports.add('from dagster import RetryPolicy')
           hasSparkSubmit = true
           break
         case 'dbt_run':
         case 'dbt_test':
-          imports.add('from airflow.operators.bash import BashOperator')
+          imports.add('from dagster_shell import create_shell_command_op')
           break
         case 'email':
-          imports.add('from airflow.providers.smtp.operators.smtp import EmailOperator')
+          imports.add('from dagster import op')
           break
         case 'http_sensor':
-          imports.add('from airflow.providers.http.sensors.http import HttpSensor')
+          imports.add('from dagster import sensor, RunRequest')
           break
         case 'bash_operator':
-          imports.add('from airflow.operators.bash import BashOperator')
+          imports.add('from dagster_shell import create_shell_command_op')
           break
       }
     })
@@ -642,12 +642,12 @@ ${indent})`
       if (wasUpdated) {
         toast({
           title: 'DAG Updated & Deployed',
-          description: `Successfully updated and deployed ${dagName} to Airflow`,
+          description: `Successfully updated and deployed ${dagName} to Dagster`,
         })
       } else {
         toast({
           title: 'DAG Created & Deployed',
-          description: `Successfully created and deployed ${dagName} to Airflow`,
+          description: `Successfully created and deployed ${dagName} to Dagster`,
         })
       }
       
@@ -692,7 +692,7 @@ ${indent})`
       console.error('Trigger error:', error)
       toast({
         title: 'Trigger Failed',
-        description: 'Failed to trigger DAG run. Make sure it is deployed to Airflow.',
+        description: 'Failed to trigger job run. Make sure it is deployed to Dagster.',
         variant: 'destructive',
       })
     } finally {

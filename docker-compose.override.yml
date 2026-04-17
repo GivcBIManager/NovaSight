@@ -40,18 +40,6 @@ services:
     command: npm run dev -- --host 0.0.0.0
 
   # ============================================
-  # Airflow - Debug Mode
-  # ============================================
-  airflow-api-server:
-    environment:
-      AIRFLOW__WEBSERVER__RELOAD_ON_PLUGIN_CHANGE: "true"
-      AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
-
-  airflow-scheduler:
-    environment:
-      AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
-
-  # ============================================
   # Spark - Resources for Dev
   # ============================================
   spark-worker-1:

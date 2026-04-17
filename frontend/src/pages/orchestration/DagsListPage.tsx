@@ -291,7 +291,7 @@ export function DagsListPage() {
             <AlertDialogDescription>
               Are you sure you want to delete{' '}
               <span className="font-semibold">{deleteTarget?.dag_id}</span>?
-              This will remove the DAG from Airflow and archive it. This action
+              This will remove the pipeline from Dagster and archive it. This action
               cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

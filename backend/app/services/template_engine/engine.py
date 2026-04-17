@@ -105,7 +105,7 @@ class TemplateEngine:
         'dbt/model.sql.j2',
         'dbt/schema.yml.j2',
         'dbt/sources.yml.j2',
-        'airflow/dag.py.j2',
+        'dagster/job.py.j2',
         'clickhouse/create_table.sql.j2',
         'clickhouse/materialized_view.sql.j2',
         'pyspark/extract_job.py.j2',
@@ -404,7 +404,7 @@ class TemplateEngine:
         List available templates.
         
         Args:
-            category: Optional category filter (e.g., 'sql', 'dbt', 'airflow')
+            category: Optional category filter (e.g., 'sql', 'dbt', 'dagster')
             
         Returns:
             List of template names

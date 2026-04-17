@@ -16,7 +16,7 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
-from app.models.semantic import Dimension, Measure, SemanticModel
+from app.domains.transformation.domain.models import Dimension, Measure, SemanticModel
 from app.domains.ai.infrastructure.ollama.client import OllamaClient
 from app.domains.ai.infrastructure.ollama.query_classifier import (
     QueryClassifier,

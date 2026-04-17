@@ -30,7 +30,7 @@ class BaseInfrastructureConfigSchema(Schema):
     service_type = fields.Str(
         required=True,
         validate=validate.OneOf(
-            ["clickhouse", "spark", "dagster", "ollama", "airflow"]
+            ["clickhouse", "spark", "dagster", "ollama"]
         ),
         metadata={"description": "Infrastructure service type"},
     )
@@ -214,46 +214,6 @@ class SparkConfigCreateSchema(BaseInfrastructureConfigSchema):
 
 
 # =====================================================
-# Airflow
-# =====================================================
-
-
-class AirflowSettingsSchema(Schema):
-    """Airflow-specific settings."""
-
-    class Meta:
-        unknown = EXCLUDE
-
-    base_url = fields.Str(
-        required=True, validate=validate.URL(schemes=["http", "https"])
-    )
-    api_version = fields.Str(
-        load_default="v1", validate=validate.OneOf(["v1"])
-    )
-    username = fields.Str(
-        load_default="airflow", validate=validate.Length(max=100)
-    )
-    password = fields.Str(load_only=True, allow_none=True)
-    dag_folder = fields.Str(load_default="/opt/airflow/dags")
-    request_timeout = fields.Int(
-        load_default=30, validate=validate.Range(min=5, max=300)
-    )
-    verify_ssl = fields.Bool(load_default=True)
-
-
-class AirflowConfigCreateSchema(BaseInfrastructureConfigSchema):
-    """
-    .. deprecated:: Use DagsterConfigCreateSchema instead.
-    """
-    service_type = fields.Str(
-        dump_default="airflow",
-        load_default="airflow",
-        validate=validate.Equal("airflow"),
-    )
-    settings = fields.Nested(AirflowSettingsSchema, required=True)
-
-
-# =====================================================
 # Dagster (Primary Orchestrator)
 # =====================================================
 
@@ -393,7 +353,7 @@ class InfrastructureConfigTestSchema(Schema):
     config_id = fields.UUID(allow_none=True)
     service_type = fields.Str(
         validate=validate.OneOf(
-            ["clickhouse", "spark", "dagster", "ollama", "airflow"]
+            ["clickhouse", "spark", "dagster", "ollama"]
         )
     )
     host = fields.Str(validate=validate.Length(min=1, max=255))

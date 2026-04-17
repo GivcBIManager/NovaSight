@@ -1,4 +1,4 @@
-"""
+﻿"""
 Admin API Namespace
 ====================
 
@@ -7,9 +7,8 @@ Flask-RESTX namespace for administration endpoint documentation.
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required
-from app.middleware.jwt_handlers import get_jwt_identity_dict
-from app.decorators import require_tenant_context, require_roles
+from app.platform.auth.jwt_handler import get_jwt_identity_dict
+from app.platform.auth.decorators import authenticated, tenant_required, require_roles
 import logging
 
 logger = logging.getLogger(__name__)
@@ -145,7 +144,7 @@ class TenantList(Resource):
         
         **Permissions Required:** `super_admin` role
         """
-        from app.services.tenant_service import TenantService
+        from app.domains.tenants.application.tenant_service import TenantService
         
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
@@ -176,7 +175,7 @@ class TenantList(Resource):
         
         **Permissions Required:** `super_admin` role
         """
-        from app.services.tenant_service import TenantService
+        from app.domains.tenants.application.tenant_service import TenantService
         
         data = request.json
         
@@ -203,7 +202,7 @@ class TenantDetail(Resource):
         
         **Permissions Required:** `super_admin` role
         """
-        from app.services.tenant_service import TenantService
+        from app.domains.tenants.application.tenant_service import TenantService
         
         tenant = TenantService.get_tenant(str(tenant_id))
         if not tenant:
@@ -223,7 +222,7 @@ class TenantDetail(Resource):
         
         **Permissions Required:** `super_admin` role
         """
-        from app.services.tenant_service import TenantService
+        from app.domains.tenants.application.tenant_service import TenantService
         
         data = request.json
         
@@ -252,7 +251,7 @@ class TenantDetail(Resource):
         
         **Permissions Required:** `super_admin` role
         """
-        from app.services.tenant_service import TenantService
+        from app.domains.tenants.application.tenant_service import TenantService
         
         success = TenantService.delete_tenant(str(tenant_id))
         if not success:
@@ -276,7 +275,7 @@ class TenantQuota(Resource):
         
         **Permissions Required:** `super_admin` or `tenant_admin` role
         """
-        from app.services.tenant_service import TenantService
+        from app.domains.tenants.application.tenant_service import TenantService
         
         quota = TenantService.get_quota(str(tenant_id))
         if not quota:
@@ -299,7 +298,7 @@ class UserList(Resource):
     @ns.param('is_active', 'Filter by active status', type=bool)
     @ns.marshal_list_with(user_response)
     @ns.response(401, 'Unauthorized', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(['tenant_admin'])
     def get(self):
         """
@@ -309,7 +308,7 @@ class UserList(Resource):
         
         **Permissions Required:** `tenant_admin` role
         """
-        from app.services.user_service import UserService
+        from app.domains.identity.application.user_service import UserService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
@@ -338,7 +337,7 @@ class UserList(Resource):
     @ns.marshal_with(user_response, code=201)
     @ns.response(400, 'Validation Error', error_response)
     @ns.response(409, 'Email already exists', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(['tenant_admin'])
     def post(self):
         """
@@ -349,7 +348,7 @@ class UserList(Resource):
         
         **Permissions Required:** `tenant_admin` role
         """
-        from app.services.user_service import UserService
+        from app.domains.identity.application.user_service import UserService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
@@ -373,7 +372,7 @@ class UserDetail(Resource):
     @ns.doc('get_user', security='Bearer')
     @ns.marshal_with(user_response)
     @ns.response(404, 'User not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(['tenant_admin'])
     def get(self, user_id):
         """
@@ -381,7 +380,7 @@ class UserDetail(Resource):
         
         **Permissions Required:** `tenant_admin` role
         """
-        from app.services.user_service import UserService
+        from app.domains.identity.application.user_service import UserService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
@@ -397,7 +396,7 @@ class UserDetail(Resource):
     @ns.marshal_with(user_response)
     @ns.response(400, 'Validation Error', error_response)
     @ns.response(404, 'User not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(['tenant_admin'])
     def patch(self, user_id):
         """
@@ -408,7 +407,7 @@ class UserDetail(Resource):
         
         **Permissions Required:** `tenant_admin` role
         """
-        from app.services.user_service import UserService
+        from app.domains.identity.application.user_service import UserService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
@@ -424,7 +423,7 @@ class UserDetail(Resource):
     @ns.doc('delete_user', security='Bearer')
     @ns.response(204, 'User deleted')
     @ns.response(404, 'User not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(['tenant_admin'])
     def delete(self, user_id):
         """
@@ -435,7 +434,7 @@ class UserDetail(Resource):
         
         **Permissions Required:** `tenant_admin` role
         """
-        from app.services.user_service import UserService
+        from app.domains.identity.application.user_service import UserService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
@@ -455,7 +454,7 @@ class UserDetail(Resource):
 class RoleList(Resource):
     @ns.doc('list_roles', security='Bearer')
     @ns.marshal_list_with(role_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(['tenant_admin'])
     def get(self):
         """
@@ -472,7 +471,7 @@ class RoleList(Resource):
         
         **Permissions Required:** `tenant_admin` role
         """
-        from app.services.role_service import RoleService
+        from app.domains.identity.application.role_service import RoleService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
@@ -485,7 +484,7 @@ class RoleList(Resource):
     @ns.marshal_with(role_response, code=201)
     @ns.response(400, 'Validation Error', error_response)
     @ns.response(409, 'Role name already exists', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(['tenant_admin'])
     def post(self):
         """
@@ -502,7 +501,7 @@ class RoleList(Resource):
         
         **Permissions Required:** `tenant_admin` role
         """
-        from app.services.role_service import RoleService
+        from app.domains.identity.application.role_service import RoleService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
@@ -525,13 +524,13 @@ class RoleDetail(Resource):
     @ns.doc('get_role', security='Bearer')
     @ns.marshal_with(role_response)
     @ns.response(404, 'Role not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(['tenant_admin'])
     def get(self, role_id):
         """
         Get role details.
         """
-        from app.services.role_service import RoleService
+        from app.domains.identity.application.role_service import RoleService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
@@ -547,7 +546,7 @@ class RoleDetail(Resource):
     @ns.marshal_with(role_response)
     @ns.response(400, 'Cannot modify system role', error_response)
     @ns.response(404, 'Role not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(['tenant_admin'])
     def patch(self, role_id):
         """
@@ -555,7 +554,7 @@ class RoleDetail(Resource):
         
         **Note:** System-defined roles cannot be modified.
         """
-        from app.services.role_service import RoleService
+        from app.domains.identity.application.role_service import RoleService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
@@ -572,7 +571,7 @@ class RoleDetail(Resource):
     @ns.response(204, 'Role deleted')
     @ns.response(400, 'Cannot delete system role', error_response)
     @ns.response(404, 'Role not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(['tenant_admin'])
     def delete(self, role_id):
         """
@@ -582,7 +581,7 @@ class RoleDetail(Resource):
         
         **Note:** System-defined roles cannot be deleted.
         """
-        from app.services.role_service import RoleService
+        from app.domains.identity.application.role_service import RoleService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')
@@ -610,7 +609,7 @@ class AuditLogList(Resource):
     @ns.param('to_date', 'End date (ISO 8601)', type=str)
     @ns.marshal_with(audit_response)
     @ns.response(401, 'Unauthorized', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(['tenant_admin'])
     def get(self):
         """
@@ -633,7 +632,7 @@ class AuditLogList(Resource):
         
         **Permissions Required:** `tenant_admin` role
         """
-        from app.services.audit_service import AuditService
+        from app.platform.audit.service import AuditService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get('tenant_id')

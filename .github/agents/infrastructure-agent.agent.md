@@ -16,7 +16,7 @@ You are the **Infrastructure Agent** for NovaSight. You handle all DevOps, conta
 - Kubernetes (K8s) manifests
 - PostgreSQL administration
 - ClickHouse cluster setup
-- Apache Airflow deployment
+- Dagster deployment
 - Redis configuration
 - CI/CD pipelines (GitHub Actions)
 - Environment management
@@ -28,7 +28,7 @@ You are the **Infrastructure Agent** for NovaSight. You handle all DevOps, conta
 - Docker Compose development environment
 - PostgreSQL multi-tenant schema setup
 - ClickHouse configuration
-- Airflow deployment
+- Dagster deployment
 - Ollama LLM setup
 - Redis for caching/sessions
 - CI/CD pipeline
@@ -46,7 +46,7 @@ infrastructure/
 │   │   └── Dockerfile
 │   ├── frontend/
 │   │   └── Dockerfile
-│   ├── airflow/
+│   ├── dagster/
 │   │   └── Dockerfile
 │   └── ollama/
 │       └── Dockerfile
@@ -66,8 +66,8 @@ infrastructure/
     │   └── init.sql
     ├── clickhouse/
     │   └── config.xml
-    ├── airflow/
-    │   └── airflow.cfg
+    ├── dagster/
+    │   └── dagster.yaml
     └── nginx/
         └── nginx.conf
 ```
@@ -80,9 +80,8 @@ services:
   - postgres        # Metadata store (port 5432)
   - clickhouse      # Analytics warehouse (port 8123, 9000)
   - redis           # Cache & sessions (port 6379)
-  - airflow-webserver
-  - airflow-scheduler
-  - airflow-worker
+  - dagster-webserver
+  - dagster-daemon
   - ollama          # LLM service (port 11434)
   - backend         # Flask API (port 5000)
   - frontend        # React dev server (port 3000)
@@ -108,9 +107,10 @@ CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
 # Redis
 REDIS_URL=redis://redis:6379/0
 
-# Airflow
-AIRFLOW__CORE__EXECUTOR=CeleryExecutor
-AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://...
+# Dagster
+DAGSTER_HOME=/opt/dagster/dagster_home
+DAGSTER_POSTGRES_HOST=postgres
+DAGSTER_POSTGRES_DB=dagster
 
 # Ollama
 OLLAMA_HOST=ollama
@@ -186,23 +186,23 @@ Acceptance Criteria:
 - [ ] Logging configured
 ```
 
-### Task 1.4: Airflow Deployment
+### Task 1.4: Dagster Deployment
 ```yaml
 Priority: P0
 Effort: 2 days
 Dependencies: 1.1, 1.2
 
 Steps:
-1. Create Airflow Dockerfile with dependencies
-2. Configure CeleryExecutor with Redis
-3. Set up DAG folder structure per tenant
-4. Configure Airflow variables and connections
+1. Create Dagster Dockerfile with dependencies
+2. Configure Dagster daemon and webserver
+3. Set up code location per tenant
+4. Configure Dagster instance (dagster.yaml)
 5. Set up webserver authentication
 
 Acceptance Criteria:
-- [ ] Airflow UI accessible
-- [ ] DAGs load from tenant folders
-- [ ] Tasks execute successfully
+- [ ] Dagster UI accessible
+- [ ] Jobs load from tenant code locations
+- [ ] Runs execute successfully
 - [ ] Logs accessible
 ```
 
@@ -240,8 +240,8 @@ docker-compose exec clickhouse clickhouse-client --query "SELECT 1"
 # Test Redis connection
 docker-compose exec redis redis-cli ping
 
-# Test Airflow
-curl http://localhost:8080/health
+# Test Dagster
+curl http://localhost:3000/dagit_info
 
 # Test Ollama
 curl http://localhost:11434/api/generate -d '{"model":"codellama","prompt":"SELECT"}'
@@ -254,7 +254,7 @@ curl http://localhost:11434/api/generate -d '{"model":"codellama","prompt":"SELE
 | PostgreSQL | `pg_isready` | Ready |
 | ClickHouse | `http://localhost:8123/ping` | Ok |
 | Redis | `redis-cli ping` | PONG |
-| Airflow | `http://localhost:8080/health` | healthy |
+| Dagster | `http://localhost:3000/dagit_info` | 200 OK |
 | Ollama | `http://localhost:11434/api/tags` | 200 OK |
 | Backend | `http://localhost:5000/health` | 200 OK |
 | Frontend | `http://localhost:3000` | 200 OK |

@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 from datetime import datetime
 
-from app.models.semantic import (
+from app.domains.transformation.domain.models import (
     SemanticModel,
     Dimension,
     Measure,
@@ -22,7 +22,7 @@ from app.models.semantic import (
     RelationshipType,
     JoinType,
 )
-from app.schemas.semantic_schemas import (
+from app.domains.transformation.schemas.semantic_schemas import (
     SemanticModelCreateSchema,
     SemanticModelUpdateSchema,
     DimensionCreateSchema,
@@ -37,7 +37,7 @@ from app.schemas.semantic_schemas import (
     FilterOperatorEnum,
     SortOrderEnum,
 )
-from app.services.clickhouse_client import (
+from app.domains.analytics.infrastructure.clickhouse_client import (
     QueryResult,
     MockClickHouseClient,
 )

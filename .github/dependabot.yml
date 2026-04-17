@@ -150,18 +150,6 @@ updates:
     commit-message:
       prefix: "deps(docker)"
 
-  - package-ecosystem: "docker"
-    directory: "/docker/airflow"
-    schedule:
-      interval: "monthly"
-    open-pull-requests-limit: 2
-    labels:
-      - "dependencies"
-      - "docker"
-      - "airflow"
-    commit-message:
-      prefix: "deps(airflow)"
-
   # ============================================
   # GitHub Actions Dependencies
   # ============================================

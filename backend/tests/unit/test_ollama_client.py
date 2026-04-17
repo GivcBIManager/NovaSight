@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 
-from app.services.ollama.client import (
+from app.domains.ai.infrastructure.ollama.client import (
     OllamaClient,
     OllamaError,
     OllamaConnectionError,

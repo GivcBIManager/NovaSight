@@ -333,16 +333,24 @@ class DbtService:
         
         return result
     
-    def get_lineage(self, tenant_id: str, model_name: str) -> Dict[str, Any]:
+    def get_lineage(
+        self,
+        tenant_id: str,
+        model_name: str,
+        upstream_depth: int = 3,
+        downstream_depth: int = 3
+    ) -> Dict[str, Any]:
         """
-        Get lineage information for a model.
+        Get lineage information for a model with configurable depth.
         
         Args:
             tenant_id: Tenant identifier for context
             model_name: Name of the model
+            upstream_depth: How many levels of upstream dependencies to include
+            downstream_depth: How many levels of downstream dependencies to include
             
         Returns:
-            Dictionary with upstream and downstream dependencies
+            Dictionary with root node, upstream, downstream, and edges
         """
         # First parse to get manifest
         parse_result = self.parse(tenant_id)
@@ -355,6 +363,8 @@ class DbtService:
         
         manifest = parse_result.manifest
         nodes = manifest.get('nodes', {})
+        sources = manifest.get('sources', {})
+        all_nodes = {**nodes, **sources}
         
         # Find the model
         model_key = None
@@ -367,35 +377,101 @@ class DbtService:
             return {"error": f"Model '{model_name}' not found"}
         
         model_node = nodes[model_key]
-        
-        # Get upstream dependencies
-        upstream = []
-        for dep in model_node.get('depends_on', {}).get('nodes', []):
-            if dep in nodes:
-                upstream.append({
-                    "name": nodes[dep].get('name'),
-                    "resource_type": nodes[dep].get('resource_type'),
-                    "unique_id": dep
-                })
-        
-        # Get downstream dependents
-        downstream = []
         child_map = manifest.get('child_map', {})
-        for child_key in child_map.get(model_key, []):
-            if child_key in nodes:
-                downstream.append({
-                    "name": nodes[child_key].get('name'),
-                    "resource_type": nodes[child_key].get('resource_type'),
-                    "unique_id": child_key
-                })
+        
+        # Helper to extract node info
+        def node_info(key: str, node: Dict) -> Dict[str, Any]:
+            # Infer layer from path or fqn
+            layer = None
+            fqn = node.get('fqn', [])
+            if len(fqn) > 1:
+                layer_candidate = fqn[1] if len(fqn) > 1 else None
+                if layer_candidate in ('staging', 'intermediate', 'marts', 'source'):
+                    layer = layer_candidate
+            return {
+                "id": key,
+                "name": node.get('name'),
+                "resource_type": node.get('resource_type'),
+                "layer": layer,
+                "materialization": node.get('config', {}).get('materialized', 'view'),
+                "description": node.get('description'),
+                "tags": node.get('tags', []),
+            }
+        
+        # BFS to get upstream
+        upstream = []
+        upstream_visited = set()
+        upstream_queue = [(model_key, 0)]
+        edges = []
+        
+        while upstream_queue:
+            current_key, depth = upstream_queue.pop(0)
+            if depth >= upstream_depth:
+                continue
+            current_node = all_nodes.get(current_key, {})
+            for dep_key in current_node.get('depends_on', {}).get('nodes', []):
+                if dep_key not in upstream_visited and dep_key in all_nodes:
+                    upstream_visited.add(dep_key)
+                    dep_node = all_nodes[dep_key]
+                    upstream.append(node_info(dep_key, dep_node))
+                    edges.append({"source": dep_key, "target": current_key})
+                    upstream_queue.append((dep_key, depth + 1))
+        
+        # BFS to get downstream
+        downstream = []
+        downstream_visited = set()
+        downstream_queue = [(model_key, 0)]
+        
+        while downstream_queue:
+            current_key, depth = downstream_queue.pop(0)
+            if depth >= downstream_depth:
+                continue
+            for child_key in child_map.get(current_key, []):
+                if child_key not in downstream_visited and child_key in all_nodes:
+                    downstream_visited.add(child_key)
+                    child_node = all_nodes[child_key]
+                    downstream.append(node_info(child_key, child_node))
+                    edges.append({"source": current_key, "target": child_key})
+                    downstream_queue.append((child_key, depth + 1))
         
         return {
-            "model": model_name,
-            "unique_id": model_key,
+            "root": node_info(model_key, model_node),
             "upstream": upstream,
             "downstream": downstream,
-            "columns": model_node.get('columns', {}),
-            "description": model_node.get('description', ''),
+            "edges": edges,
+        }
+    
+    def get_impact_analysis(self, tenant_id: str, model_name: str) -> Dict[str, Any]:
+        """
+        Get impact analysis for a model - counts of downstream dependents.
+        
+        Args:
+            tenant_id: Tenant identifier
+            model_name: Name of the model
+            
+        Returns:
+            Dictionary with affected counts and model names
+        """
+        lineage = self.get_lineage(
+            tenant_id, model_name,
+            upstream_depth=0,
+            downstream_depth=10  # Deep traversal for impact
+        )
+        
+        if "error" in lineage:
+            return lineage
+        
+        downstream = lineage.get("downstream", [])
+        
+        models = [n for n in downstream if n.get("resource_type") == "model"]
+        tests = [n for n in downstream if n.get("resource_type") == "test"]
+        exposures = [n for n in downstream if n.get("resource_type") == "exposure"]
+        
+        return {
+            "affected_models": len(models),
+            "affected_tests": len(tests),
+            "affected_exposures": len(exposures),
+            "model_names": [m.get("name") for m in models[:10]],  # First 10 names
         }
     
     def _build_env(self, tenant_id: str, tenant_slug: Optional[str] = None) -> Dict[str, str]:

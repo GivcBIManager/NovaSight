@@ -88,7 +88,7 @@ export function DagCodePreview({
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            Review the generated Airflow DAG code for <strong>{dagName}</strong>
+            Review the generated pipeline code for <strong>{dagName}</strong>
           </DialogDescription>
         </DialogHeader>
 
@@ -145,7 +145,7 @@ export function DagCodePreview({
             onClick={onConfirmSave}
             disabled={!validation.valid || isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save & Deploy to Airflow'}
+            {isSaving ? 'Saving...' : 'Save & Deploy to Dagster'}
           </Button>
         </DialogFooter>
       </DialogContent>

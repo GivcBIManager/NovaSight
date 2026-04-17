@@ -1,6 +1,6 @@
 ---
 name: "Template Engine Agent"
-description: "Jinja2 templates for code generation (DAGs, PySpark, dbt)"
+description: "Jinja2 templates for code generation (jobs, PySpark, dbt)"
 tools: ['vscode/vscodeAPI', 'vscode/extensions', 'read', 'edit', 'search', 'web']
 ---
 
@@ -32,7 +32,7 @@ You are the **Template Engine Agent** for NovaSight. You handle the core templat
 - Jinja2 sandboxed environment
 - Input validation framework
 - PySpark template library
-- Airflow DAG template library
+- Dagster job template library
 - dbt model template library
 - Artifact generation service
 - Template versioning
@@ -57,15 +57,15 @@ backend/app/
 │   │   ├── full_load.py.j2
 │   │   └── transformations.py.j2
 │   │
-│   ├── airflow/                 # Airflow templates
-│   │   ├── dag_base.py.j2
-│   │   ├── task_spark_submit.py.j2
-│   │   ├── task_dbt_run.py.j2
-│   │   ├── task_dbt_test.py.j2
-│   │   ├── task_email.py.j2
-│   │   ├── task_http_sensor.py.j2
-│   │   ├── task_sql.py.j2
-│   │   └── task_python.py.j2
+    ├── dagster/                 # Dagster templates
+    │   ├── job_base.py.j2
+    │   ├── op_spark_submit.py.j2
+    │   ├── op_dbt_run.py.j2
+    │   ├── op_dbt_test.py.j2
+    │   ├── op_email.py.j2
+    │   ├── op_http_sensor.py.j2
+    │   ├── op_sql.py.j2
+    │   └── op_python.py.j2
 │   │
 │   └── dbt/                     # dbt templates
 │       ├── model_base.sql.j2
@@ -81,7 +81,7 @@ backend/app/
 │   ├── __init__.py
 │   ├── base.py
 │   ├── pyspark_schemas.py
-│   ├── airflow_schemas.py
+│   ├── dagster_schemas.py
 │   └── dbt_schemas.py
 │
 └── services/
@@ -102,7 +102,7 @@ from enum import Enum
 
 class TemplateType(Enum):
     PYSPARK = "pyspark"
-    AIRFLOW = "airflow"
+    DAGSTER = "dagster"
     DBT = "dbt"
 
 @dataclass
@@ -147,12 +147,12 @@ def _register_all_templates():
             description="Base PySpark ingestion job"
         ),
         TemplateInfo(
-            name="dag_base",
-            type=TemplateType.AIRFLOW,
+            name="job_base",
+            type=TemplateType.DAGSTER,
             version="1.0.0",
-            path=Path("airflow/dag_base.py.j2"),
-            schema="DagConfig",
-            description="Base Airflow DAG"
+            path=Path("dagster/job_base.py.j2"),
+            schema="JobConfig",
+            description="Base Dagster job"
         ),
         TemplateInfo(
             name="model_base",
@@ -442,9 +442,9 @@ class ArtifactService:
         tenant_id: str,
         user_id: int
     ) -> Path:
-        """Generate an Airflow DAG from configuration."""
+        """Generate a Dagster job from configuration."""
         
-        template_info = TemplateRegistry.get(TemplateType.AIRFLOW, "dag_base")
+        template_info = TemplateRegistry.get(TemplateType.DAGSTER, "job_base")
         
         content = self.engine.render(
             str(template_info.path),
@@ -710,7 +710,7 @@ Dependencies: 3.2, 3.3
 
 Steps:
 1. Create PySpark templates (5 days)
-2. Create Airflow templates (5 days)
+2. Create Dagster templates (5 days)
 3. Create dbt templates (5 days)
 4. Test each template thoroughly
 5. Document template usage

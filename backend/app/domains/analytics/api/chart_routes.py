@@ -1,4 +1,4 @@
-"""
+﻿"""
 NovaSight Chart API
 ====================
 
@@ -6,14 +6,12 @@ REST API endpoints for chart management.
 """
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required
 from app.platform.auth.identity import get_current_identity
 from pydantic import ValidationError
 import logging
 
 from app.api.v1 import api_v1_bp
-from app.decorators import require_tenant_context
-from app.middleware.permissions import require_permission
+from app.platform.auth.decorators import authenticated, tenant_required, require_permission
 from app.domains.analytics.schemas.chart_schemas import (
     ChartCreateSchema,
     ChartUpdateSchema,
@@ -56,8 +54,8 @@ def get_user_id():
 # =============================================================================
 
 @api_v1_bp.route('/charts', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.view')
 def list_charts():
     """
@@ -115,8 +113,8 @@ def list_charts():
 
 
 @api_v1_bp.route('/charts/all', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.view')
 def list_all_charts():
     """
@@ -161,8 +159,8 @@ def list_all_charts():
 
 
 @api_v1_bp.route('/charts', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.create')
 def create_chart():
     """
@@ -221,8 +219,8 @@ def create_chart():
 
 
 @api_v1_bp.route('/charts/<uuid:chart_id>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.view')
 def get_chart(chart_id):
     """
@@ -256,8 +254,8 @@ def get_chart(chart_id):
 
 
 @api_v1_bp.route('/charts/<uuid:chart_id>', methods=['PUT'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.edit')
 def update_chart(chart_id):
     """
@@ -312,8 +310,8 @@ def update_chart(chart_id):
 
 
 @api_v1_bp.route('/charts/<uuid:chart_id>', methods=['DELETE'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.delete')
 def delete_chart(chart_id):
     """
@@ -352,8 +350,8 @@ def delete_chart(chart_id):
 
 
 @api_v1_bp.route('/charts/<uuid:chart_id>/duplicate', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.create')
 def duplicate_chart(chart_id):
     """
@@ -396,8 +394,8 @@ def duplicate_chart(chart_id):
 # =============================================================================
 
 @api_v1_bp.route('/charts/<uuid:chart_id>/data', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.view')
 def get_chart_data(chart_id):
     """
@@ -438,8 +436,8 @@ def get_chart_data(chart_id):
 
 
 @api_v1_bp.route('/charts/<uuid:chart_id>/data', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.view')
 def get_chart_data_with_filters(chart_id):
     """
@@ -485,8 +483,8 @@ def get_chart_data_with_filters(chart_id):
 
 
 @api_v1_bp.route('/charts/preview', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.view')
 def preview_chart_data():
     """
@@ -537,8 +535,8 @@ def preview_chart_data():
 # =============================================================================
 
 @api_v1_bp.route('/chart-folders', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.view')
 def list_chart_folders():
     """
@@ -567,8 +565,8 @@ def list_chart_folders():
 
 
 @api_v1_bp.route('/chart-folders', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.create')
 def create_chart_folder():
     """
@@ -609,8 +607,8 @@ def create_chart_folder():
 
 
 @api_v1_bp.route('/chart-folders/<uuid:folder_id>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.view')
 def get_chart_folder(folder_id):
     """
@@ -640,8 +638,8 @@ def get_chart_folder(folder_id):
 
 
 @api_v1_bp.route('/chart-folders/<uuid:folder_id>', methods=['PUT'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.edit')
 def update_chart_folder(folder_id):
     """
@@ -686,8 +684,8 @@ def update_chart_folder(folder_id):
 
 
 @api_v1_bp.route('/chart-folders/<uuid:folder_id>', methods=['DELETE'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.delete')
 def delete_chart_folder(folder_id):
     """
@@ -730,8 +728,8 @@ def delete_chart_folder(folder_id):
 # =============================================================================
 
 @api_v1_bp.route('/sql-editor/save-as-chart', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('charts.create')
 def sql_editor_save_as_chart():
     """
@@ -797,8 +795,8 @@ def sql_editor_save_as_chart():
 # =============================================================================
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/charts', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.edit')
 def add_chart_to_dashboard(dashboard_id):
     """
@@ -857,8 +855,8 @@ def add_chart_to_dashboard(dashboard_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/charts/<uuid:chart_id>', methods=['DELETE'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.edit')
 def remove_chart_from_dashboard(dashboard_id, chart_id):
     """
@@ -893,8 +891,8 @@ def remove_chart_from_dashboard(dashboard_id, chart_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/charts', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.view')
 def get_dashboard_charts(dashboard_id):
     """

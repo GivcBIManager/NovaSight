@@ -20,7 +20,6 @@ from app.platform.errors.exceptions import (   # noqa: F401
     TenantNotFoundError,
     ConnectionTestError,
     TemplateRenderError,
-    AirflowAPIError,
     DagsterAPIError,
     register_error_handlers,
 )

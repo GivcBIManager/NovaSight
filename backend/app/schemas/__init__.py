@@ -5,14 +5,14 @@ NovaSight Pydantic Schemas
 Request/Response validation schemas.
 """
 
-from app.schemas.auth_schemas import LoginRequest, TokenResponse
-from app.schemas.dag_schemas import (
+from app.domains.identity.schemas.auth_schemas import LoginRequest, TokenResponse
+from app.domains.orchestration.schemas.dag_schemas import (
     DagConfigCreate,
     DagConfigUpdate,
     TaskConfigCreate,
     DagConfigResponse,
 )
-from app.schemas.connection_schemas import (
+from app.domains.datasources.schemas.connection_schemas import (
     ConnectionCreateSchema,
     ConnectionUpdateSchema,
     ConnectionTestSchema,
@@ -24,7 +24,7 @@ from app.schemas.connection_schemas import (
     TableSchema,
     ColumnSchema,
 )
-from app.schemas.pyspark_schemas import (
+from app.domains.compute.schemas.pyspark_schemas import (
     PySparkAppCreateSchema,
     PySparkAppUpdateSchema,
     PySparkAppResponseSchema,
@@ -42,7 +42,7 @@ from app.schemas.pyspark_schemas import (
     CDCTypeEnum,
     PySparkAppStatusEnum,
 )
-from app.schemas.dbt_schemas import (
+from app.domains.transformation.schemas.dbt_schemas import (
     DbtRunRequest,
     DbtTestRequest,
     DbtBuildRequest,
@@ -59,7 +59,7 @@ from app.schemas.dbt_schemas import (
     JoinType,
     TestType,
 )
-from app.schemas.semantic_schemas import (
+from app.domains.transformation.schemas.semantic_schemas import (
     SemanticModelCreateSchema,
     SemanticModelUpdateSchema,
     SemanticModelResponseSchema,

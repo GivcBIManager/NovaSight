@@ -223,14 +223,14 @@ def init_infrastructure_defaults():
     """
     Initialize default infrastructure configurations.
     
-    Creates default configurations for ClickHouse, Spark, and Airflow
+    Creates default configurations for ClickHouse and Spark
     if they don't already exist. These defaults are used for
     development and testing.
     
     Examples:
         flask infra init-defaults
     """
-    from app.services.infrastructure_config_service import InfrastructureConfigService
+    from app.domains.tenants.infrastructure.config_service import InfrastructureConfigService
     
     click.echo('Initializing infrastructure defaults...')
     
@@ -240,11 +240,10 @@ def init_infrastructure_defaults():
     click.echo(click.style('✓ Infrastructure defaults initialized', fg='green'))
     click.echo('  - ClickHouse (localhost:8123)')
     click.echo('  - Spark (localhost:7077)')
-    click.echo('  - Airflow (localhost:8080)')
 
 
 @infra_cli.command('test')
-@click.option('--service', '-s', type=click.Choice(['clickhouse', 'spark', 'airflow', 'all']),
+@click.option('--service', '-s', type=click.Choice(['clickhouse', 'spark', 'all']),
               default='all', help='Service to test')
 @with_appcontext
 def test_infrastructure_connections(service):
@@ -257,9 +256,9 @@ def test_infrastructure_connections(service):
         flask infra test
         flask infra test -s clickhouse
     """
-    from app.services.infrastructure_config_service import InfrastructureConfigService
+    from app.domains.tenants.infrastructure.config_service import InfrastructureConfigService
     
-    services = ['clickhouse', 'spark', 'airflow'] if service == 'all' else [service]
+    services = ['clickhouse', 'spark'] if service == 'all' else [service]
     
     infra_service = InfrastructureConfigService()
     
@@ -296,7 +295,7 @@ def list_infrastructure_configs():
     Examples:
         flask infra list
     """
-    from app.services.infrastructure_config_service import InfrastructureConfigService
+    from app.domains.tenants.infrastructure.config_service import InfrastructureConfigService
     
     service = InfrastructureConfigService()
     result = service.list_configs(page=1, per_page=100)

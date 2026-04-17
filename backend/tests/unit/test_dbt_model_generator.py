@@ -12,12 +12,12 @@ from pathlib import Path
 from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock
 
-from app.models.data_source import (
+from app.domains.datasources.domain.value_objects import (
     DataSourceColumn,
     DataSourceTable,
     DataSourceSchema,
 )
-from app.services.dbt_model_generator import (
+from app.domains.transformation.infrastructure.dbt_model_generator import (
     DbtModelGenerator,
     get_dbt_model_generator,
     ModelGenerationError,
@@ -470,15 +470,15 @@ class TestGetDbtModelGenerator:
     
     def test_get_generator_creates_instance(self):
         """Test that get_dbt_model_generator creates an instance."""
-        with patch('app.services.dbt_model_generator.template_engine'):
+        with patch('app.domains.transformation.infrastructure.dbt_model_generator.template_engine'):
             generator = get_dbt_model_generator(dbt_path="/tmp/test_dbt")
             assert isinstance(generator, DbtModelGenerator)
     
     def test_get_generator_returns_same_instance(self):
         """Test singleton behavior - returns same instance."""
-        with patch('app.services.dbt_model_generator.template_engine'):
+        with patch('app.domains.transformation.infrastructure.dbt_model_generator.template_engine'):
             # Reset singleton
-            import app.services.dbt_model_generator as dbt_gen_module
+            import app.domains.transformation.infrastructure.dbt_model_generator as dbt_gen_module
             dbt_gen_module._dbt_model_generator = None
             
             generator1 = get_dbt_model_generator()

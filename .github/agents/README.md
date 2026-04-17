@@ -24,7 +24,7 @@ Each agent file follows the `.agent.md` naming convention and includes the requi
 | [Backend](#backend) | Flask API development | REST APIs, services, models |
 | [Frontend](#frontend) | React UI development | Components, pages, state |
 | [Template Engine](#template-engine) | Code generation | PySpark, DAGs, dbt models |
-| [Orchestration](#orchestration) | Airflow DAGs | Pipeline scheduling, monitoring |
+| [Orchestration](#orchestration) | Dagster jobs | Pipeline scheduling, monitoring |
 | [AI](#ai) | LLM integration | NL to SQL, query assistance |
 | [Data Sources](#data-sources) | Database connections | Connection CRUD, introspection |
 | [dbt](#dbt) | Semantic layer | Model builder, lineage |
@@ -63,7 +63,7 @@ Handles all infrastructure and DevOps concerns.
 **Key Responsibilities:**
 - Docker Compose configuration
 - Database setup (PostgreSQL, ClickHouse)
-- Service configuration (Airflow, Redis, Ollama)
+- Service configuration (Dagster, Redis, Ollama)
 - Network and volume management
 
 **When to Use:**
@@ -119,14 +119,14 @@ Manages secure code generation from templates.
 **Key Responsibilities:**
 - Jinja2 template management
 - Pydantic validation schemas
-- Artifact generation (PySpark, DAGs, dbt)
+- Artifact generation (PySpark, jobs, dbt)
 - Security validation
 
-**⚠️ CRITICAL:** Enforces Template Engine Rule - no arbitrary code generation.
+⚠️ **CRITICAL:** Enforces Template Engine Rule - no arbitrary code generation.
 
 **When to Use:**
 - Generating PySpark jobs
-- Creating Airflow DAGs
+- Creating Dagster jobs
 - Building dbt models
 
 ---
@@ -134,16 +134,16 @@ Manages secure code generation from templates.
 ### Orchestration
 **File:** `orchestration-agent.agent.md`
 
-Handles Airflow DAG creation and management.
+Handles Dagster job creation and management.
 
 **Key Responsibilities:**
-- DAG configuration API
-- Airflow REST integration
-- Visual DAG builder (ReactFlow)
+- Job configuration API
+- Dagster GraphQL integration
+- Visual job builder (ReactFlow)
 - Pipeline monitoring
 
 **When to Use:**
-- Creating pipeline DAGs
+- Creating pipeline jobs
 - Scheduling jobs
 - Monitoring executions
 

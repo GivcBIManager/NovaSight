@@ -8,7 +8,7 @@ Common utility functions and helpers.
 from app.utils.encryption import encrypt_credential, decrypt_credential
 from app.utils.pagination import paginate, PaginationParams
 from app.utils.validators import validate_slug, validate_email
-from app.utils.tenant_utils import (
+from app.platform.tenant.schema import (
     get_tenant_schema_name,
     create_tenant_schema,
     drop_tenant_schema,

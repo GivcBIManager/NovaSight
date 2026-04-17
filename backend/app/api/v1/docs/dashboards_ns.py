@@ -1,4 +1,4 @@
-"""
+﻿"""
 Dashboards API Namespace
 =========================
 
@@ -7,10 +7,8 @@ Flask-RESTX namespace for dashboard and widget endpoint documentation.
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required
-from app.middleware.jwt_handlers import get_jwt_identity_dict
-from app.decorators import require_tenant_context
-from app.middleware.permissions import require_permission
+from app.platform.auth.jwt_handler import get_jwt_identity_dict
+from app.platform.auth.decorators import authenticated, tenant_required, require_permission
 import logging
 
 logger = logging.getLogger(__name__)
@@ -154,7 +152,7 @@ class DashboardList(Resource):
     @ns.param('offset', 'Pagination offset', type=int, default=0)
     @ns.marshal_list_with(dashboard_response)
     @ns.response(401, 'Unauthorized', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.view')
     def get(self):
         """
@@ -165,7 +163,7 @@ class DashboardList(Resource):
         
         **Permissions Required:** `dashboards.view`
         """
-        from app.services.dashboard_service import DashboardService
+        from app.domains.analytics.application.dashboard_service import DashboardService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -196,7 +194,7 @@ class DashboardList(Resource):
     @ns.marshal_with(dashboard_detail, code=201)
     @ns.response(400, 'Validation Error', error_response)
     @ns.response(401, 'Unauthorized', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.create')
     def post(self):
         """
@@ -207,8 +205,8 @@ class DashboardList(Resource):
         
         **Permissions Required:** `dashboards.create`
         """
-        from app.services.dashboard_service import DashboardService
-        from app.schemas.dashboard_schemas import DashboardCreateSchema
+        from app.domains.analytics.application.dashboard_service import DashboardService
+        from app.domains.analytics.schemas.dashboard_schemas import DashboardCreateSchema
         from pydantic import ValidationError
         
         identity = get_jwt_identity_dict()
@@ -245,7 +243,7 @@ class DashboardDetail(Resource):
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Dashboard not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.view')
     def get(self, dashboard_id):
         """
@@ -254,7 +252,7 @@ class DashboardDetail(Resource):
         Returns the complete dashboard configuration including
         all widget definitions and their positions.
         """
-        from app.services.dashboard_service import DashboardService, DashboardNotFoundError
+        from app.domains.analytics.application.dashboard_service import DashboardService, DashboardNotFoundError
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -277,7 +275,7 @@ class DashboardDetail(Resource):
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Dashboard not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.edit')
     def patch(self, dashboard_id):
         """
@@ -288,7 +286,7 @@ class DashboardDetail(Resource):
         
         **Permissions Required:** Dashboard owner or `dashboards.edit`
         """
-        from app.services.dashboard_service import DashboardService, DashboardNotFoundError
+        from app.domains.analytics.application.dashboard_service import DashboardService, DashboardNotFoundError
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -310,7 +308,7 @@ class DashboardDetail(Resource):
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Dashboard not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.delete')
     def delete(self, dashboard_id):
         """
@@ -321,7 +319,7 @@ class DashboardDetail(Resource):
         
         **Permissions Required:** Dashboard owner or `dashboards.delete`
         """
-        from app.services.dashboard_service import DashboardService, DashboardNotFoundError
+        from app.domains.analytics.application.dashboard_service import DashboardService, DashboardNotFoundError
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -348,7 +346,7 @@ class DashboardLayout(Resource):
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Dashboard not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.edit')
     def put(self, dashboard_id):
         """
@@ -362,8 +360,8 @@ class DashboardLayout(Resource):
         - `x`, `y`: Grid position (x: 0-11)
         - `w`, `h`: Size in grid units (w: 1-12)
         """
-        from app.services.dashboard_service import DashboardService
-        from app.schemas.dashboard_schemas import DashboardLayoutUpdateSchema
+        from app.domains.analytics.application.dashboard_service import DashboardService
+        from app.domains.analytics.schemas.dashboard_schemas import DashboardLayoutUpdateSchema
         from pydantic import ValidationError
         
         identity = get_jwt_identity_dict()
@@ -394,7 +392,7 @@ class DashboardSharing(Resource):
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Dashboard not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.share')
     def post(self, dashboard_id):
         """
@@ -405,8 +403,8 @@ class DashboardSharing(Resource):
         
         **Permissions Required:** Dashboard owner or `dashboards.share`
         """
-        from app.services.dashboard_service import DashboardService
-        from app.schemas.dashboard_schemas import DashboardShareSchema
+        from app.domains.analytics.application.dashboard_service import DashboardService
+        from app.domains.analytics.schemas.dashboard_schemas import DashboardShareSchema
         from pydantic import ValidationError
         
         identity = get_jwt_identity_dict()
@@ -435,13 +433,13 @@ class DashboardSharing(Resource):
 class WidgetList(Resource):
     @ns.doc('list_widgets', security='Bearer')
     @ns.marshal_list_with(widget_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.view')
     def get(self, dashboard_id):
         """
         List all widgets on a dashboard.
         """
-        from app.services.dashboard_service import DashboardService
+        from app.domains.analytics.application.dashboard_service import DashboardService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -461,7 +459,7 @@ class WidgetList(Resource):
     @ns.response(400, 'Validation Error', error_response)
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(403, 'Forbidden', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.edit')
     def post(self, dashboard_id):
         """
@@ -480,8 +478,8 @@ class WidgetList(Resource):
         - `scatter`: Scatter plot
         - `area`: Stacked area chart
         """
-        from app.services.dashboard_service import DashboardService
-        from app.schemas.dashboard_schemas import WidgetCreateSchema
+        from app.domains.analytics.application.dashboard_service import DashboardService
+        from app.domains.analytics.schemas.dashboard_schemas import WidgetCreateSchema
         from pydantic import ValidationError
         
         identity = get_jwt_identity_dict()
@@ -510,13 +508,13 @@ class WidgetDetail(Resource):
     @ns.doc('get_widget', security='Bearer')
     @ns.marshal_with(widget_response)
     @ns.response(404, 'Widget not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.view')
     def get(self, dashboard_id, widget_id):
         """
         Get widget details.
         """
-        from app.services.dashboard_service import DashboardService, WidgetNotFoundError
+        from app.domains.analytics.application.dashboard_service import DashboardService, WidgetNotFoundError
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -538,7 +536,7 @@ class WidgetDetail(Resource):
     @ns.marshal_with(widget_response)
     @ns.response(400, 'Validation Error', error_response)
     @ns.response(404, 'Widget not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.edit')
     def patch(self, dashboard_id, widget_id):
         """
@@ -546,7 +544,7 @@ class WidgetDetail(Resource):
         
         Partial updates supported. Only include fields you want to change.
         """
-        from app.services.dashboard_service import DashboardService, WidgetNotFoundError
+        from app.domains.analytics.application.dashboard_service import DashboardService, WidgetNotFoundError
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -567,13 +565,13 @@ class WidgetDetail(Resource):
     @ns.doc('delete_widget', security='Bearer')
     @ns.response(204, 'Widget deleted')
     @ns.response(404, 'Widget not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.edit')
     def delete(self, dashboard_id, widget_id):
         """
         Delete a widget from a dashboard.
         """
-        from app.services.dashboard_service import DashboardService, WidgetNotFoundError
+        from app.domains.analytics.application.dashboard_service import DashboardService, WidgetNotFoundError
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -598,7 +596,7 @@ class WidgetData(Resource):
     @ns.doc('get_widget_data', security='Bearer')
     @ns.response(200, 'Widget data')
     @ns.response(404, 'Widget not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('dashboards.view')
     def get(self, dashboard_id, widget_id):
         """
@@ -607,7 +605,7 @@ class WidgetData(Resource):
         Executes the widget's query and returns the data.
         Results may be cached based on dashboard settings.
         """
-        from app.services.dashboard_service import DashboardService, WidgetNotFoundError
+        from app.domains.analytics.application.dashboard_service import DashboardService, WidgetNotFoundError
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")

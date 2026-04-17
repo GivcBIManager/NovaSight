@@ -7,8 +7,8 @@ Allows portal admins to configure ClickHouse, Spark, and Ollama connections.
 """
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required
 from app.api.v1.admin import admin_bp
+from app.platform.auth.decorators import authenticated
 from app.platform.auth.jwt_handler import get_jwt_identity_dict
 
 
@@ -16,13 +16,13 @@ def _get_user_id() -> str:
     """Extract user_id from JWT identity."""
     identity = get_jwt_identity_dict()
     return identity.get("user_id", "")
-from app.services.infrastructure_config_service import (
+from app.domains.tenants.infrastructure.config_service import (
     InfrastructureConfigService,
     InfrastructureConfigError,
     InfrastructureConfigNotFoundError,
 )
-from app.middleware.permissions import require_permission
-from app.schemas.infrastructure_schemas import (
+from app.platform.auth.decorators import require_permission
+from app.domains.tenants.schemas.infrastructure_schemas import (
     InfrastructureConfigResponseSchema,
     InfrastructureConfigListSchema,
     InfrastructureConfigUpdateSchema,
@@ -47,7 +47,7 @@ CREATE_SCHEMAS = {
 
 
 @admin_bp.route('/infrastructure/configs', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.view')
 def list_infrastructure_configs():
     """
@@ -82,7 +82,7 @@ def list_infrastructure_configs():
 
 
 @admin_bp.route('/infrastructure/configs/<uuid:config_id>', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.view')
 def get_infrastructure_config(config_id):
     """
@@ -106,7 +106,7 @@ def get_infrastructure_config(config_id):
 
 
 @admin_bp.route('/infrastructure/configs/active/<service_type>', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.view')
 def get_active_infrastructure_config(service_type):
     """
@@ -151,7 +151,7 @@ def get_active_infrastructure_config(service_type):
 
 
 @admin_bp.route('/infrastructure/configs', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.create')
 def create_infrastructure_config():
     """
@@ -215,7 +215,7 @@ def create_infrastructure_config():
 
 
 @admin_bp.route('/infrastructure/configs/<uuid:config_id>', methods=['PUT'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.edit')
 def update_infrastructure_config(config_id):
     """
@@ -263,7 +263,7 @@ def update_infrastructure_config(config_id):
 
 
 @admin_bp.route('/infrastructure/configs/<uuid:config_id>', methods=['DELETE'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.delete')
 def delete_infrastructure_config(config_id):
     """
@@ -293,7 +293,7 @@ def delete_infrastructure_config(config_id):
 
 
 @admin_bp.route('/infrastructure/configs/test', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.test')
 def test_infrastructure_connection():
     """
@@ -343,7 +343,7 @@ def test_infrastructure_connection():
 
 
 @admin_bp.route('/infrastructure/configs/<uuid:config_id>/activate', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.edit')
 def activate_infrastructure_config(config_id):
     """
@@ -381,7 +381,7 @@ def activate_infrastructure_config(config_id):
 
 
 @admin_bp.route('/infrastructure/defaults', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.create')
 def initialize_infrastructure_defaults():
     """
@@ -408,7 +408,7 @@ def initialize_infrastructure_defaults():
 # ============================================================================
 
 @admin_bp.route('/tenants/<uuid:tenant_id>/clickhouse-config', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.view')
 def get_tenant_clickhouse_config(tenant_id):
     """
@@ -435,7 +435,7 @@ def get_tenant_clickhouse_config(tenant_id):
 
 
 @admin_bp.route('/tenants/<uuid:tenant_id>/clickhouse-config', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.create')
 def create_tenant_clickhouse_config(tenant_id):
     """
@@ -505,7 +505,7 @@ def create_tenant_clickhouse_config(tenant_id):
 
 
 @admin_bp.route('/tenants/<uuid:tenant_id>/clickhouse-config', methods=['PUT'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.edit')
 def update_tenant_clickhouse_config(tenant_id):
     """
@@ -556,7 +556,7 @@ def update_tenant_clickhouse_config(tenant_id):
 
 
 @admin_bp.route('/tenants/<uuid:tenant_id>/clickhouse-config', methods=['DELETE'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.delete')
 def delete_tenant_clickhouse_config(tenant_id):
     """
@@ -600,7 +600,7 @@ def delete_tenant_clickhouse_config(tenant_id):
 
 
 @admin_bp.route('/tenants/<uuid:tenant_id>/clickhouse-config/test', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.test')
 def test_tenant_clickhouse_connection(tenant_id):
     """
@@ -655,7 +655,7 @@ def test_tenant_clickhouse_connection(tenant_id):
 # ============================================================================
 
 @admin_bp.route('/settings/spark', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.view')
 def get_global_spark_config():
     """
@@ -691,7 +691,7 @@ def get_global_spark_config():
 
 
 @admin_bp.route('/settings/spark', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.create')
 def create_global_spark_config():
     """
@@ -750,7 +750,7 @@ def create_global_spark_config():
 
 
 @admin_bp.route('/settings/spark', methods=['PUT'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.edit')
 def update_global_spark_config():
     """
@@ -801,7 +801,7 @@ def update_global_spark_config():
 
 
 @admin_bp.route('/settings/spark/test', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_permission('admin.infrastructure.test')
 def test_global_spark_connection():
     """

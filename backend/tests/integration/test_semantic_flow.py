@@ -12,7 +12,7 @@ from typing import Dict, Any
 from unittest.mock import MagicMock
 
 from tests.integration.conftest import helper
-from app.services.clickhouse_client import QueryResult
+from app.domains.analytics.infrastructure.clickhouse_client import QueryResult
 
 
 class TestSemanticModelList:
@@ -532,9 +532,9 @@ class TestSemanticTenantIsolation:
         integration_app
     ):
         """Test that semantic models are isolated between tenants."""
-        from app.models.tenant import Tenant, TenantStatus, SubscriptionPlan
-        from app.models.user import User, UserStatus
-        from app.services.password_service import password_service
+        from app.domains.tenants.domain.models import Tenant, TenantStatus, SubscriptionPlan
+        from app.domains.identity.domain.models import User, UserStatus
+        from app.platform.security.passwords import password_service
         from app.extensions import db
         from flask_jwt_extended import create_access_token
         

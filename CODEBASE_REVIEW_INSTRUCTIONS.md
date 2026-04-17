@@ -84,7 +84,7 @@ NovaSight shows a solid target architecture (domain-modular backend + modern Typ
 #### M1. Unfinished backend workflows (TODOs in core operational paths)
 - **Evidence**:
   - Alerting integration TODO: `backend/app/services/audit_service.py:600`.
-  - Airflow trigger TODO: `backend/app/domains/datasources/application/connection_service.py:467`.
+  - Dagster trigger TODO: `backend/app/domains/datasources/application/connection_service.py:467`.
   - Placeholder SQL type inference: `backend/app/domains/analytics/application/chart_service.py:702`.
 - **Impact**: incomplete incident response, orchestration gaps, weaker analytics metadata quality.
 
@@ -128,7 +128,7 @@ NovaSight shows a solid target architecture (domain-modular backend + modern Typ
 3. Promote security-sensitive checks to blocking in CI for protected branches.
 
 ### Near Term (2-6 weeks)
-1. Complete TODO-critical flows (Airflow trigger, profile update, semantic model fetch, dashboard action).
+1. Complete TODO-critical flows (Dagster trigger, profile update, semantic model fetch, dashboard action).
 2. Replace silent exception fallbacks in chart execution with structured error handling.
 3. Consolidate duplicate auth/chart components into canonical modules.
 

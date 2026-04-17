@@ -31,9 +31,6 @@ data:
   OLLAMA_HOST: "ollama-service"
   OLLAMA_PORT: "11434"
   
-  AIRFLOW_HOST: "airflow-webserver"
-  AIRFLOW_PORT: "8080"
-  
   SPARK_MASTER_HOST: "spark-master"
   SPARK_MASTER_PORT: "7077"
   

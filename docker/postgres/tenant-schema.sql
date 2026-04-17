@@ -66,7 +66,7 @@ CREATE INDEX idx_{schema}_ingestion_status ON {schema}.ingestion_jobs(status);
 -- =========================================
 -- DAG CONFIGURATIONS
 -- =========================================
--- Stores Airflow DAG definitions
+-- Stores pipeline DAG definitions
 
 CREATE TABLE IF NOT EXISTS {schema}.dag_configs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

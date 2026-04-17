@@ -13,7 +13,7 @@ from datetime import timedelta
 def other_tenant(db_session):
     """Create a second tenant for isolation testing."""
     from app.models import Tenant
-    from app.models.tenant import TenantStatus
+    from app.domains.tenants.domain.models import TenantStatus
     
     tenant = Tenant(
         name="Other Tenant",
@@ -31,8 +31,8 @@ def other_tenant(db_session):
 def other_tenant_user(db_session, other_tenant):
     """Create a user in the other tenant for isolation testing."""
     from app.models import User
-    from app.models.user import UserStatus
-    from app.services.password_service import password_service
+    from app.domains.identity.domain.models import UserStatus
+    from app.platform.security.passwords import password_service
     
     user = User(
         tenant_id=other_tenant.id,

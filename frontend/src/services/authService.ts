@@ -26,7 +26,6 @@ export interface User {
 
 export interface LoginResponse {
   access_token: string
-  refresh_token: string
   token_type: string
   user: User
 }
@@ -43,13 +42,13 @@ export interface RegisterResponse {
 }
 
 const TOKEN_KEY = 'novasight_access_token'
-const REFRESH_TOKEN_KEY = 'novasight_refresh_token'
 
 class AuthService {
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     const response = await axios.post<LoginResponse>(
       `${API_BASE_URL}/api/v1/auth/login`,
-      credentials
+      credentials,
+      { withCredentials: true }
     )
     return response.data
   }
@@ -89,19 +88,11 @@ class AuthService {
   }
 
   async refreshAccessToken(): Promise<string> {
-    const refreshToken = this.getRefreshToken()
-    if (!refreshToken) {
-      throw new Error('No refresh token available')
-    }
-
+    // Refresh token is sent automatically via HTTP-only cookie
     const response = await axios.post<{ access_token: string }>(
       `${API_BASE_URL}/api/v1/auth/refresh`,
       {},
-      {
-        headers: {
-          Authorization: `Bearer ${refreshToken}`,
-        },
-      }
+      { withCredentials: true }
     )
 
     const newToken = response.data.access_token
@@ -118,6 +109,7 @@ class AuthService {
           headers: {
             Authorization: `Bearer ${this.getAccessToken()}`,
           },
+          withCredentials: true,
         }
       )
     } catch (error) {
@@ -127,22 +119,16 @@ class AuthService {
     }
   }
 
-  setTokens(accessToken: string, refreshToken: string): void {
+  setTokens(accessToken: string): void {
     localStorage.setItem(TOKEN_KEY, accessToken)
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
   }
 
   getAccessToken(): string | null {
     return localStorage.getItem(TOKEN_KEY)
   }
 
-  getRefreshToken(): string | null {
-    return localStorage.getItem(REFRESH_TOKEN_KEY)
-  }
-
   clearTokens(): void {
     localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(REFRESH_TOKEN_KEY)
   }
 }
 

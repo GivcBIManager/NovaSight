@@ -8,7 +8,7 @@ export { ChartRenderer } from './ChartRenderer';
 export { ChartContainer } from './ChartContainer';
 export { ChartLegend } from './ChartLegend';
 export { ChartTooltip } from './ChartTooltip';
-export { MetricCard } from './MetricCard';
+export { MetricCard } from '@/components/dashboard/MetricCard';
 export { DataTable } from './DataTable';
 export type {
   ChartData,

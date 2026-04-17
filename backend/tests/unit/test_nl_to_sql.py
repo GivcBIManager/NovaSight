@@ -10,20 +10,20 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from app.models.semantic import Dimension, Measure, AggregationType, DimensionType
-from app.services.ollama.query_classifier import (
+from app.domains.transformation.domain.models import Dimension, Measure, AggregationType, DimensionType
+from app.domains.ai.infrastructure.ollama.query_classifier import (
     QueryClassifier,
     QueryType,
     ClassifiedIntent,
     QueryEntities,
     TimeRange,
 )
-from app.services.query_builder import (
+from app.domains.analytics.infrastructure.query_builder import (
     QueryBuilder,
     InvalidInputError,
     TemplateRenderError,
 )
-from app.services.nl_to_sql import (
+from app.domains.ai.application.nl_to_sql import (
     NLToSQLService,
     NLToSQLResult,
     NLToSQLError,
@@ -475,7 +475,7 @@ class TestNLToSQLService:
             original_query="Show revenue by region"
         )
         
-        from app.services.ollama.nl_to_params import QueryIntent
+        from app.domains.ai.infrastructure.ollama.nl_to_params import QueryIntent
         params = QueryIntent(
             dimensions=['region'],
             measures=['total_revenue']

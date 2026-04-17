@@ -1,5 +1,5 @@
-"""
-NovaSight Data Sources Domain — Connection Routes
+﻿"""
+NovaSight Data Sources Domain â€” Connection Routes
 ===================================================
 
 Database connection management API endpoints.
@@ -12,23 +12,22 @@ Changes from legacy ``app.api.v1.connections``:
 """
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required
 
 from app.api.v1 import api_v1_bp
 from app.extensions import db
 from app.domains.datasources.application.connection_service import ConnectionService
 from app.platform.auth.identity import get_current_identity
-from app.decorators import require_roles, require_tenant_context
+from app.platform.auth.decorators import authenticated, require_roles, tenant_required
 from app.errors import ValidationError, NotFoundError
-from app.services.audit_service import AuditService
+from app.platform.audit.service import AuditService
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 @api_v1_bp.route("/connections", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def list_connections():
     """List all data connections for current tenant."""
     identity = get_current_identity()
@@ -48,8 +47,8 @@ def list_connections():
 
 
 @api_v1_bp.route("/connections", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def create_connection():
     """Create a new data source connection."""
@@ -113,8 +112,8 @@ def create_connection():
 
 
 @api_v1_bp.route("/connections/<connection_id>", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_connection(connection_id: str):
     """Get connection details."""
     identity = get_current_identity()
@@ -130,8 +129,8 @@ def get_connection(connection_id: str):
 
 
 @api_v1_bp.route("/connections/<connection_id>", methods=["PATCH"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def update_connection(connection_id: str):
     """Update connection details."""
@@ -164,8 +163,8 @@ def update_connection(connection_id: str):
 
 
 @api_v1_bp.route("/connections/<connection_id>", methods=["DELETE"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def delete_connection(connection_id: str):
     """Delete a data connection."""
@@ -192,8 +191,8 @@ def delete_connection(connection_id: str):
 
 
 @api_v1_bp.route("/connections/<connection_id>/test", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin", "viewer"])
 def test_connection(connection_id: str):
     """Test database connection."""
@@ -228,8 +227,8 @@ def test_connection(connection_id: str):
 
 
 @api_v1_bp.route("/connections/test", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def test_new_connection():
     """Test connection parameters without saving."""
@@ -277,8 +276,8 @@ def test_new_connection():
 
 
 @api_v1_bp.route("/connections/<connection_id>/schema", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_connection_schema(connection_id: str):
     """Get database schema information."""
     identity = get_current_identity()
@@ -303,8 +302,8 @@ def get_connection_schema(connection_id: str):
 
 
 @api_v1_bp.route("/connections/<connection_id>/sync", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def trigger_connection_sync(connection_id: str):
     """Trigger data sync for a connection."""
@@ -337,8 +336,8 @@ def trigger_connection_sync(connection_id: str):
 
 
 @api_v1_bp.route("/query/execute", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin", "analyst", "viewer"])
 def execute_query():
     """Execute a SQL query against a connection."""
@@ -372,12 +371,12 @@ def execute_query():
         raise ValidationError(str(e))
 
 
-# ─── Tenant ClickHouse Endpoints ──────────────────────────────────────
+# â”€â”€â”€ Tenant ClickHouse Endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @api_v1_bp.route("/clickhouse/info", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_tenant_clickhouse_info():
     """Get tenant's ClickHouse database information."""
     from app.platform.tenant.isolation import TenantIsolationService
@@ -396,8 +395,8 @@ def get_tenant_clickhouse_info():
 
 
 @api_v1_bp.route("/clickhouse/schema", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_tenant_clickhouse_schema():
     """Get tenant's ClickHouse database schema (tables and columns)."""
     from app.domains.analytics.infrastructure.clickhouse_client import get_clickhouse_client
@@ -496,8 +495,8 @@ def get_tenant_clickhouse_schema():
 
 
 @api_v1_bp.route("/clickhouse/query", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin", "analyst", "viewer"])
 def execute_clickhouse_query():
     """Execute a SQL query against tenant's ClickHouse database."""
@@ -557,12 +556,12 @@ def execute_clickhouse_query():
         raise ValidationError(f"Query execution failed: {str(e)}")
 
 
-# ─── Saved Queries Endpoints ──────────────────────────────────────
+# â”€â”€â”€ Saved Queries Endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 @api_v1_bp.route("/saved-queries", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def list_saved_queries():
     """List saved queries for the current tenant."""
     from app.domains.datasources.domain.models import SavedQuery
@@ -606,8 +605,8 @@ def list_saved_queries():
 
 
 @api_v1_bp.route("/saved-queries", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def create_saved_query():
     """Create a new saved query."""
     from app.domains.datasources.domain.models import SavedQuery, QueryType
@@ -662,8 +661,8 @@ def create_saved_query():
 
 
 @api_v1_bp.route("/saved-queries/<query_id>", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_saved_query(query_id: str):
     """Get a saved query by ID."""
     from app.domains.datasources.domain.models import SavedQuery
@@ -684,8 +683,8 @@ def get_saved_query(query_id: str):
 
 
 @api_v1_bp.route("/saved-queries/<query_id>", methods=["PATCH"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def update_saved_query(query_id: str):
     """Update a saved query."""
     from app.domains.datasources.domain.models import SavedQuery, QueryType
@@ -729,8 +728,8 @@ def update_saved_query(query_id: str):
 
 
 @api_v1_bp.route("/saved-queries/<query_id>", methods=["DELETE"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def delete_saved_query(query_id: str):
     """Delete a saved query."""
     from app.domains.datasources.domain.models import SavedQuery

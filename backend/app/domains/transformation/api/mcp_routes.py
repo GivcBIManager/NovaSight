@@ -1,4 +1,4 @@
-"""
+﻿"""
 dbt-MCP API endpoints.
 
 Provides REST API for dbt-MCP server interactions including:
@@ -13,11 +13,11 @@ import logging
 from functools import wraps
 from typing import Any, Dict
 
-from flask import g, jsonify, request
-from flask_jwt_extended import jwt_required
+from flask import jsonify, request
 
 from app.api.v1 import api_v1_bp
-from app.decorators import require_roles, require_tenant_context
+from app.platform.auth.decorators import authenticated, require_roles, tenant_required
+from app.platform.auth.identity import get_current_identity
 from app.errors import ValidationError, NovaSightException
 
 from app.domains.transformation.infrastructure.dbt_mcp_adapter import (
@@ -52,8 +52,9 @@ logger = logging.getLogger(__name__)
 
 def get_tenant_id() -> str:
     """Get current tenant ID from request context."""
-    if hasattr(g, 'tenant_id') and g.tenant_id:
-        return g.tenant_id
+    identity = get_current_identity()
+    if identity and identity.tenant_id:
+        return identity.tenant_id
     raise ValidationError("Tenant context required", details={"field": "tenant_id"})
 
 
@@ -86,8 +87,8 @@ def get_adapter() -> DbtMCPAdapter:
 # ============================================================================
 
 @api_v1_bp.route('/dbt/mcp/query', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 @async_route
 async def mcp_query():
@@ -194,8 +195,8 @@ async def mcp_query():
 
 
 @api_v1_bp.route('/dbt/mcp/compile', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 @async_route
 async def mcp_compile_query():
@@ -257,8 +258,8 @@ async def mcp_compile_query():
 # ============================================================================
 
 @api_v1_bp.route('/dbt/mcp/models', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 @async_route
 async def mcp_list_models():
@@ -331,8 +332,8 @@ async def mcp_list_models():
 
 
 @api_v1_bp.route('/dbt/mcp/models/<path:model_name>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 @async_route
 async def mcp_get_model(model_name: str):
@@ -389,8 +390,8 @@ async def mcp_get_model(model_name: str):
 
 
 @api_v1_bp.route('/dbt/mcp/models/<path:model_name>/sql', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 @async_route
 async def mcp_get_model_sql(model_name: str):
@@ -438,8 +439,8 @@ async def mcp_get_model_sql(model_name: str):
 # ============================================================================
 
 @api_v1_bp.route('/dbt/mcp/metrics', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 @async_route
 async def mcp_list_metrics():
@@ -490,8 +491,8 @@ async def mcp_list_metrics():
 
 
 @api_v1_bp.route('/dbt/mcp/dimensions', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 @async_route
 async def mcp_list_dimensions():
@@ -549,8 +550,8 @@ async def mcp_list_dimensions():
 # ============================================================================
 
 @api_v1_bp.route('/dbt/mcp/lineage/<path:model_name>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 @async_route
 async def mcp_get_lineage(model_name: str):
@@ -646,8 +647,8 @@ async def mcp_get_lineage(model_name: str):
 
 
 @api_v1_bp.route('/dbt/mcp/lineage', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 @async_route
 async def mcp_get_full_dag():
@@ -711,8 +712,8 @@ async def mcp_get_full_dag():
 # ============================================================================
 
 @api_v1_bp.route('/dbt/mcp/tests', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 @async_route
 async def mcp_list_tests():
@@ -755,8 +756,8 @@ async def mcp_list_tests():
 
 
 @api_v1_bp.route('/dbt/mcp/tests/results', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 @async_route
 async def mcp_get_test_results():
@@ -829,8 +830,8 @@ async def mcp_get_test_results():
 # ============================================================================
 
 @api_v1_bp.route('/dbt/mcp/visual-models', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def create_visual_model():
     """
@@ -1021,8 +1022,8 @@ def create_visual_model():
 # ============================================================================
 
 @api_v1_bp.route('/dbt/mcp/status', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def mcp_server_status():
     """
@@ -1048,8 +1049,8 @@ def mcp_server_status():
 
 
 @api_v1_bp.route('/dbt/mcp/start', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 @async_route
 async def mcp_start_server():
@@ -1081,8 +1082,8 @@ async def mcp_start_server():
 
 
 @api_v1_bp.route('/dbt/mcp/stop', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin'])
 @async_route
 async def mcp_stop_server():
@@ -1113,8 +1114,8 @@ async def mcp_stop_server():
 # ============================================================================
 
 @api_v1_bp.route('/dbt/project/structure', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['super_admin', 'tenant_admin', 'data_engineer'])
 def get_project_structure():
     """
@@ -1150,8 +1151,8 @@ def get_project_structure():
 
 
 @api_v1_bp.route('/dbt/project/file', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['super_admin', 'tenant_admin', 'data_engineer'])
 def get_project_file():
     """
@@ -1202,8 +1203,8 @@ def get_project_file():
 
 
 @api_v1_bp.route('/dbt/project/models', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['super_admin', 'tenant_admin', 'data_engineer'])
 def list_project_models():
     """
@@ -1239,8 +1240,8 @@ def list_project_models():
 
 
 @api_v1_bp.route('/dbt/project/semantic-models', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['super_admin', 'tenant_admin', 'data_engineer'])
 def list_project_semantic_models():
     """
@@ -1276,8 +1277,8 @@ def list_project_semantic_models():
 
 
 @api_v1_bp.route('/dbt/project/sources/discover', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def discover_sources():
     """
@@ -1322,8 +1323,8 @@ def discover_sources():
 
 
 @api_v1_bp.route('/dbt/project/init', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def init_tenant_project():
     """
@@ -1377,12 +1378,12 @@ def init_tenant_project():
 # ============================================================================
 
 @api_v1_bp.route('/dbt/dag/generate', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def generate_dbt_dag():
     """
-    Generate an Airflow DAG for running dbt.
+    Generate a pipeline DAG for running dbt.
     
     Creates a DAG file from template that can be used in the Task Scheduler.
     
@@ -1469,7 +1470,7 @@ def generate_dbt_dag():
         manager.ensure_project_exists()
         
         # Load template
-        template_dir = Path(__file__).parent.parent.parent.parent / 'templates' / 'airflow'
+        template_dir = Path(__file__).parent.parent.parent.parent / 'templates' / 'dagster'
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         template = env.get_template('dbt_run.py.j2')
         
@@ -1499,7 +1500,7 @@ def generate_dbt_dag():
         
         # Output path for DAG file
         dag_filename = f"dbt_{manager.tenant_slug}_{dag_id}.py"
-        dag_output_dir = Path('/opt/airflow/dags') / f"tenant_{manager.tenant_slug}"
+        dag_output_dir = Path('/opt/dagster/dags') / f"tenant_{manager.tenant_slug}"
         dag_output_dir.mkdir(parents=True, exist_ok=True)
         dag_output_path = dag_output_dir / dag_filename
         

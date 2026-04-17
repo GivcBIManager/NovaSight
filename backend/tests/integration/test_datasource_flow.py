@@ -437,9 +437,9 @@ class TestConnectionTenantIsolation:
         integration_app
     ):
         """Test that connections are isolated between tenants."""
-        from app.models.tenant import Tenant, TenantStatus, SubscriptionPlan
-        from app.models.user import User, UserStatus
-        from app.services.password_service import password_service
+        from app.domains.tenants.domain.models import Tenant, TenantStatus, SubscriptionPlan
+        from app.domains.identity.domain.models import User, UserStatus
+        from app.platform.security.passwords import password_service
         from app.extensions import db
         from flask_jwt_extended import create_access_token
         

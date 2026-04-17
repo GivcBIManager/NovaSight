@@ -10,14 +10,14 @@ import uuid
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
-from app.models.rbac import (
+from app.domains.identity.domain.models import (
     Permission,
     ResourcePermission,
     RoleHierarchy,
     role_permissions,
     get_all_permissions,
 )
-from app.services.rbac_service import RBACService, rbac_service
+from app.domains.identity.application.rbac_service import RBACService, rbac_service
 
 
 class TestRBACService:

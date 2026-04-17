@@ -1,4 +1,4 @@
-"""
+﻿"""
 NovaSight PySpark Apps API Endpoints
 ====================================
 
@@ -6,13 +6,12 @@ REST API for PySpark application configuration and code generation.
 """
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required
 from app.platform.auth.identity import get_current_identity
 from pydantic import ValidationError as PydanticValidationError
 
 from app.api.v1 import api_v1_bp
 from app.domains.compute.application.pyspark_app_service import PySparkAppService
-from app.decorators import require_roles, require_tenant_context
+from app.platform.auth.decorators import authenticated, require_roles, tenant_required
 from app.errors import ValidationError, NotFoundError
 from app.domains.compute.schemas.pyspark_schemas import (
     PySparkAppCreateSchema,
@@ -34,8 +33,8 @@ logger = logging.getLogger(__name__)
 
 
 @api_v1_bp.route("/pyspark-apps", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def list_pyspark_apps():
     """
     List all PySpark apps for current tenant.
@@ -72,8 +71,8 @@ def list_pyspark_apps():
 
 
 @api_v1_bp.route("/pyspark-apps", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def create_pyspark_app():
     """
@@ -140,8 +139,8 @@ def create_pyspark_app():
 
 
 @api_v1_bp.route("/pyspark-apps/<app_id>", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_pyspark_app(app_id: str):
     """
     Get PySpark app details.
@@ -169,8 +168,8 @@ def get_pyspark_app(app_id: str):
 
 
 @api_v1_bp.route("/pyspark-apps/<app_id>", methods=["PUT"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def update_pyspark_app(app_id: str):
     """
@@ -223,8 +222,8 @@ def update_pyspark_app(app_id: str):
 
 
 @api_v1_bp.route("/pyspark-apps/<app_id>", methods=["DELETE"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def delete_pyspark_app(app_id: str):
     """
@@ -246,8 +245,8 @@ def delete_pyspark_app(app_id: str):
 
 
 @api_v1_bp.route("/pyspark-apps/<app_id>/generate", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def generate_pyspark_code(app_id: str):
     """
@@ -280,8 +279,8 @@ def generate_pyspark_code(app_id: str):
 
 
 @api_v1_bp.route("/pyspark-apps/<app_id>/code", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_pyspark_code(app_id: str):
     """
     Get previously generated PySpark code.
@@ -313,8 +312,8 @@ def get_pyspark_code(app_id: str):
 
 
 @api_v1_bp.route("/pyspark-apps/preview", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def preview_pyspark_code():
     """
@@ -370,8 +369,8 @@ def preview_pyspark_code():
 
 
 @api_v1_bp.route("/pyspark-apps/validate-query", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def validate_pyspark_query():
     """
     Validate SQL query and get column metadata.
@@ -411,8 +410,8 @@ def validate_pyspark_query():
 
 
 @api_v1_bp.route("/pyspark-apps/<app_id>/activate", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def activate_pyspark_app(app_id: str):
     """
@@ -456,8 +455,8 @@ def activate_pyspark_app(app_id: str):
 
 
 @api_v1_bp.route("/pyspark-apps/<app_id>/deactivate", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def deactivate_pyspark_app(app_id: str):
     """
@@ -496,8 +495,8 @@ def deactivate_pyspark_app(app_id: str):
 
 
 @api_v1_bp.route("/pyspark-apps/<app_id>/run", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def run_pyspark_app(app_id: str):
     """

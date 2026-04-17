@@ -22,8 +22,8 @@ from app.domains.compute.domain.models import (
     SCDType,
     CDCType,
 )
-from app.models.connection import DataConnection
-from app.services.connection_service import ConnectionService
+from app.domains.datasources.domain.models import DataConnection
+from app.domains.datasources.application.connection_service import ConnectionService
 from app.services.template_engine import TemplateEngine
 from app.errors import ValidationError, NotFoundError
 from app.platform.security.encryption import EncryptionService
@@ -403,7 +403,7 @@ class PySparkAppService:
         db.session.commit()
         
         # Write PySpark job file to the shared Spark jobs directory
-        # This file will be accessible by both Airflow and Spark containers
+        # This file will be accessible by Dagster and Spark containers
         job_filename = self._get_job_filename(app)
         job_file_path = self.SPARK_JOBS_PATH / job_filename
         try:
@@ -568,7 +568,7 @@ class PySparkAppService:
         """
         # Decrypt password for runtime use
         # Note: This embeds the password in generated code for runtime use.
-        # Consider using secrets management (Vault, Airflow Connections) in production.
+        # Consider using secrets management (Vault, Dagster resource configs) in production.
         decrypted_password = ""
         try:
             if connection.password_encrypted:

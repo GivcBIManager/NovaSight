@@ -79,7 +79,7 @@ Updated `services/connection_service.py` with connector framework integration:
 
 ✅ **trigger_sync()** - Sync job triggering
 - Generates job UUID
-- TODO: Airflow integration
+- TODO: Dagster integration
 - Logs sync trigger
 - Returns job ID
 
@@ -167,7 +167,7 @@ From Prompt 014:
 - [x] ✅ Credentials never exposed in responses
 - [x] ✅ Tenant isolation enforced
 - [x] ✅ Permission checks work
-- [x] ⚠️ Sync triggers Airflow DAG (placeholder implemented, needs Airflow integration)
+- [x] ⚠️ Sync triggers Dagster job (placeholder implemented, needs Dagster integration)
 
 ## Key Features
 
@@ -247,16 +247,17 @@ connector = ConnectorRegistry.create_connector(db_type, config)
 - Uses existing `ConnectionStatus` enum
 - Uses existing `credential_service` for encryption
 
-### With Airflow (Planned)
+### With Dagster (Planned)
 
 ```python
 # TODO: Implement in trigger_sync()
-from app.services.airflow_client import AirflowClient
+from app.services.dagster_client import DagsterClient
 
-airflow = AirflowClient()
-dag_run = airflow.trigger_dag(
-    dag_id=f"ingest_{db_type}",
-    conf={"connection_id": connection_id, ...}
+dagster = DagsterClient()
+run = dagster.launch_run(
+    job_name=f"ingest_{db_type}",
+    repository_name=tenant_id,
+    run_config={"connection_id": connection_id, ...}
 )
 ```
 
@@ -345,7 +346,7 @@ pytest backend/tests/unit/test_connection_api.py --cov=app.api.v1.connections --
 ## Next Steps
 
 ### Immediate
-1. ✅ Complete Airflow integration in `trigger_sync()`
+1. ✅ Complete Dagster integration in `trigger_sync()`
 2. Add sync status tracking endpoint
 3. Add connection health monitoring
 4. Add connection usage statistics
@@ -361,7 +362,7 @@ pytest backend/tests/unit/test_connection_api.py --cov=app.api.v1.connections --
 
 ## Known Limitations
 
-1. **Airflow Integration** - Placeholder implemented, needs actual Airflow client
+1. **Dagster Integration** - Placeholder implemented, needs actual Dagster client
 2. **Sync Status** - No endpoint to check sync job status yet
 3. **Connection History** - No audit trail for connection changes yet
 4. **Query Execution** - No endpoint to execute arbitrary queries
@@ -405,5 +406,5 @@ pytest backend/tests/unit/test_connection_api.py --cov=app.api.v1.connections --
 
 **Implementation completed successfully! ✅**
 
-All acceptance criteria met except full Airflow integration (placeholder in place).
+All acceptance criteria met except full Dagster integration (placeholder in place).
 The API is production-ready and fully integrated with the connector framework.

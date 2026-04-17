@@ -11,7 +11,7 @@ from typing import Dict, Any, List, Tuple
 from unittest.mock import MagicMock
 
 from tests.integration.conftest import helper
-from app.services.clickhouse_client import QueryResult
+from app.domains.analytics.infrastructure.clickhouse_client import QueryResult
 
 
 def create_mock_query_result(
@@ -530,9 +530,9 @@ class TestQueryTenantIsolation:
         integration_app
     ):
         """Test that queries only access tenant's data."""
-        from app.models.tenant import Tenant, TenantStatus, SubscriptionPlan
-        from app.models.user import User, UserStatus
-        from app.services.password_service import password_service
+        from app.domains.tenants.domain.models import Tenant, TenantStatus, SubscriptionPlan
+        from app.domains.identity.domain.models import User, UserStatus
+        from app.platform.security.passwords import password_service
         from app.extensions import db
         from flask_jwt_extended import create_access_token
         

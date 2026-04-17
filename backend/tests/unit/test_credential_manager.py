@@ -20,7 +20,7 @@ class TestCredentialManager:
     @pytest.fixture
     def credential_manager(self):
         """Create credential manager with test tenant."""
-        from app.services.credential_manager import CredentialManager
+        from app.platform.security.credentials import CredentialManager
         return CredentialManager(tenant_id='test-tenant-123')
     
     def test_store_credentials_encrypts_password(self, credential_manager):
@@ -235,7 +235,7 @@ class TestCredentialManager:
     
     def test_rotate_credentials(self, credential_manager):
         """Test credential rotation with new encryption service."""
-        from app.services.encryption_service import EncryptionService
+        from app.platform.security.encryption import EncryptionService
         
         original = {
             "username": "admin",
@@ -269,7 +269,7 @@ class TestCredentialVault:
     @pytest.fixture
     def vault(self):
         """Create credential vault."""
-        from app.services.credential_manager import CredentialVault
+        from app.platform.security.credentials import CredentialVault
         return CredentialVault(tenant_id='test-tenant-123')
     
     def test_store_creates_metadata(self, vault):
@@ -353,7 +353,7 @@ class TestCredentialManagerTenantIsolation:
     
     def test_different_tenants_different_encryption(self):
         """Test that credentials from different tenants are encrypted differently."""
-        from app.services.credential_manager import CredentialManager
+        from app.platform.security.credentials import CredentialManager
         
         manager1 = CredentialManager(tenant_id='tenant-1')
         manager2 = CredentialManager(tenant_id='tenant-2')
@@ -368,7 +368,7 @@ class TestCredentialManagerTenantIsolation:
     
     def test_cross_tenant_decryption_fails(self):
         """Test that one tenant cannot decrypt another's credentials."""
-        from app.services.credential_manager import CredentialManager
+        from app.platform.security.credentials import CredentialManager
         
         manager1 = CredentialManager(tenant_id='tenant-1')
         manager2 = CredentialManager(tenant_id='tenant-2')
@@ -388,7 +388,7 @@ class TestGetCredentialManager:
     
     def test_creates_manager_with_tenant(self):
         """Test creating manager with explicit tenant."""
-        from app.services.credential_manager import get_credential_manager
+        from app.platform.security.credentials import get_credential_manager
         
         manager = get_credential_manager(tenant_id='test-tenant')
         
@@ -396,7 +396,7 @@ class TestGetCredentialManager:
     
     def test_creates_manager_without_context(self):
         """Test creating manager without Flask context."""
-        from app.services.credential_manager import get_credential_manager
+        from app.platform.security.credentials import get_credential_manager
         
         manager = get_credential_manager()
         

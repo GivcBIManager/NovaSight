@@ -38,8 +38,8 @@ class TestTemplateEngineSecurityRule:
             assert 'eval(' not in generated_code
             assert '__import__(' not in generated_code
     
-    def test_airflow_dag_uses_template(self, client, api_headers):
-        """Verify Airflow DAGs are generated from templates only."""
+    def test_pipeline_dag_uses_template(self, client, api_headers):
+        """Verify pipeline jobs are generated from templates only."""
         response = client.post('/api/v1/dags', json={
             'name': 'test_dag',
             'schedule': '@daily',

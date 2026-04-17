@@ -228,7 +228,7 @@ class TestTenantMixin:
     def test_for_tenant_with_context(self, app, db_session, sample_tenant, sample_user):
         """Test for_tenant() uses request context."""
         from app.models import DataConnection
-        from app.models.connection import DatabaseType
+        from app.domains.datasources.domain.models import DatabaseType
         
         with app.test_request_context():
             g.tenant = sample_tenant
@@ -269,7 +269,7 @@ class TestTenantUtils:
     
     def test_get_tenant_schema_name(self):
         """Test schema name generation."""
-        from app.utils.tenant_utils import get_tenant_schema_name
+        from app.platform.tenant.schema import get_tenant_schema_name
         
         assert get_tenant_schema_name("acme-corp") == "tenant_acme_corp"
         assert get_tenant_schema_name("test123") == "tenant_test123"
@@ -277,7 +277,7 @@ class TestTenantUtils:
     
     def test_validate_tenant_access_same_tenant(self, app, sample_tenant):
         """Test access validation for same tenant."""
-        from app.utils.tenant_utils import validate_tenant_access
+        from app.platform.tenant.schema import validate_tenant_access
         
         with app.test_request_context():
             g.tenant_id = str(sample_tenant.id)
@@ -287,7 +287,7 @@ class TestTenantUtils:
     
     def test_validate_tenant_access_different_tenant(self, app, sample_tenant):
         """Test access validation blocks different tenant."""
-        from app.utils.tenant_utils import validate_tenant_access
+        from app.platform.tenant.schema import validate_tenant_access
         import uuid
         
         with app.test_request_context():
@@ -299,7 +299,7 @@ class TestTenantUtils:
     
     def test_tenant_schema_context_manager(self, app, db_session, sample_tenant):
         """Test TenantSchemaContext context manager."""
-        from app.utils.tenant_utils import TenantSchemaContext
+        from app.platform.tenant.schema import TenantSchemaContext
         
         with app.app_context():
             with TenantSchemaContext(sample_tenant.slug) as ctx:
@@ -318,7 +318,7 @@ class TestCrossTenantAccess:
     def test_cannot_access_other_tenant_data(self, app, db_session, sample_user):
         """Test users cannot access data from other tenants."""
         from app.models import Tenant, DataConnection
-        from app.models.connection import DatabaseType
+        from app.domains.datasources.domain.models import DatabaseType
         import uuid
         
         # Create two tenants (use string values for SQLAlchemy compatibility)

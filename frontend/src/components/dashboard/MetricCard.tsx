@@ -13,15 +13,25 @@ import { GlassCard } from '@/components/ui/glass-card';
 
 interface MetricCardProps {
   /** Metric label/title */
-  label: string;
+  label?: string;
+  /** Alias for label (backward compat with charts/MetricCard) */
+  title?: string;
   /** Current value (number for animation, string for display) */
   value: number | string;
   /** Previous value for trend calculation */
   previousValue?: number;
   /** Format function for displaying the value */
   formatValue?: (value: number) => string;
+  /** Built-in format preset (used when formatValue is not provided) */
+  format?: 'currency' | 'percentage' | 'number' | 'compact';
   /** Optional unit (e.g., '%', 'ms', 'K') */
   unit?: string;
+  /** Prefix displayed before the value */
+  prefix?: string;
+  /** Suffix displayed after the value */
+  suffix?: string;
+  /** Subtitle text below the value */
+  subtitle?: string;
   /** Custom trend percentage (overrides calculated) */
   trendPercent?: number;
   /** Icon to display */
@@ -165,12 +175,42 @@ function TrendIndicator({ percent }: { percent: number }) {
   );
 }
 
+function formatMetricPreset(
+  value: number,
+  format: 'currency' | 'percentage' | 'number' | 'compact'
+): string {
+  switch (format) {
+    case 'currency':
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(value);
+    case 'percentage':
+      return `${(value * 100).toFixed(1)}%`;
+    case 'compact':
+      if (Math.abs(value) >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
+      if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+      if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+      return value.toFixed(0);
+    case 'number':
+    default:
+      return value.toLocaleString();
+  }
+}
+
 export function MetricCard({
   label,
+  title,
   value,
   previousValue,
-  formatValue = (v) => v.toLocaleString(),
+  formatValue,
+  format,
   unit,
+  prefix,
+  suffix,
+  subtitle,
   trendPercent,
   icon: Icon,
   iconColor = 'indigo',
@@ -179,6 +219,9 @@ export function MetricCard({
   animated = true,
   size = 'md',
 }: MetricCardProps) {
+  const displayLabel = title || label;
+  const resolvedFormatValue = formatValue
+    || (format ? (v: number) => formatMetricPreset(v, format) : (v: number) => v.toLocaleString());
   // Calculate trend if not provided
   const calculatedTrend = React.useMemo(() => {
     if (trendPercent !== undefined) return trendPercent;
@@ -208,9 +251,12 @@ export function MetricCard({
       <div className="flex items-start justify-between">
         {/* Left side - Label and Value */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-muted-foreground truncate">{label}</p>
+          {displayLabel && <p className="text-sm text-muted-foreground truncate">{displayLabel}</p>}
           
           <div className="mt-1 flex items-baseline gap-1">
+            {prefix && (
+              <span className="text-sm text-muted-foreground">{prefix}</span>
+            )}
             <span
               className={cn(
                 'font-bold tracking-tight text-gradient',
@@ -218,15 +264,15 @@ export function MetricCard({
               )}
             >
               {typeof value === 'number' && animated ? (
-                <AnimatedValue value={value} formatValue={formatValue} />
+                <AnimatedValue value={value} formatValue={resolvedFormatValue} />
               ) : typeof value === 'number' ? (
-                formatValue(value)
+                resolvedFormatValue(value)
               ) : (
                 value
               )}
             </span>
-            {unit && (
-              <span className="text-sm text-muted-foreground">{unit}</span>
+            {(suffix || unit) && (
+              <span className="text-sm text-muted-foreground">{suffix || unit}</span>
             )}
           </div>
 
@@ -235,6 +281,10 @@ export function MetricCard({
             <div className="mt-2">
               <TrendIndicator percent={calculatedTrend} />
             </div>
+          )}
+
+          {subtitle && (
+            <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
           )}
         </div>
 

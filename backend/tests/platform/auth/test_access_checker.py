@@ -116,7 +116,7 @@ class TestCheckPermission:
             mock_user = MagicMock()
             g.current_user = mock_user
 
-            with patch("app.services.rbac_service.rbac_service") as mock_rbac:
+            with patch("app.domains.identity.application.rbac_service.rbac_service") as mock_rbac:
                 mock_rbac.check_permission.return_value = True
                 assert checker.check_permission(identity, "dashboards.view") is True
                 mock_rbac.check_permission.assert_called_once()

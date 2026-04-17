@@ -15,7 +15,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Column, String, Text, Float, Integer, DateTime, Enum as SQLEnum
+from sqlalchemy import Column, String, Text, Float, Integer, DateTime, Boolean, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 
 from app.extensions import db
@@ -60,6 +60,13 @@ class VisualModel(TenantMixin, TimestampMixin, db.Model):
     tags = Column(ARRAY(String), default=list)
     description = Column(Text, default='')
 
+    # Optimistic locking
+    version = Column(Integer, nullable=False, default=1)
+
+    # Soft delete
+    is_deleted = Column(Boolean, default=False, index=True)
+    deleted_at = Column(DateTime, nullable=True)
+
     __table_args__ = (
         db.UniqueConstraint(
             'tenant_id', 'model_name',
@@ -80,8 +87,61 @@ class VisualModel(TenantMixin, TimestampMixin, db.Model):
             "materialization": self.materialization,
             "tags": self.tags or [],
             "description": self.description or "",
+            "version": self.version,
+            "is_deleted": self.is_deleted,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class VisualModelVersion(TenantMixin, TimestampMixin, db.Model):
+    """
+    Stores point-in-time snapshots of VisualModel for version history.
+    Each update to a VisualModel creates a new version row.
+    """
+    __tablename__ = 'visual_model_versions'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    model_id = Column(UUID(as_uuid=True), db.ForeignKey('visual_models.id'), nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+    model_name = Column(String(100), nullable=False)
+    model_path = Column(Text, nullable=False)
+    model_layer = Column(String(20), nullable=False)
+    visual_config = Column(JSONB, nullable=False)
+    generated_sql = Column(Text)
+    generated_yaml = Column(Text)
+    materialization = Column(String(50))
+    tags = Column(ARRAY(String), default=list)
+    description = Column(Text, default='')
+    change_type = Column(String(20), nullable=False, default='update')   # create | update | restore
+    change_summary = Column(Text, default='')
+    changed_by = Column(UUID(as_uuid=True), nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            'model_id', 'version',
+            name='uq_visual_model_version',
+        ),
+    )
+
+    def to_dict(self):
+        return {
+            "id": str(self.id),
+            "model_id": str(self.model_id),
+            "version": self.version,
+            "model_name": self.model_name,
+            "model_path": self.model_path,
+            "model_layer": self.model_layer,
+            "visual_config": self.visual_config,
+            "generated_sql": self.generated_sql,
+            "generated_yaml": self.generated_yaml,
+            "materialization": self.materialization,
+            "tags": self.tags or [],
+            "description": self.description or "",
+            "change_type": self.change_type,
+            "change_summary": self.change_summary,
+            "changed_by": str(self.changed_by) if self.changed_by else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
 

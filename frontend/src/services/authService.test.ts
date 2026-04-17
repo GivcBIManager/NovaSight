@@ -26,7 +26,6 @@ describe('AuthService', () => {
   describe('login', () => {
     const mockLoginResponse: LoginResponse = {
       access_token: 'mock-access-token',
-      refresh_token: 'mock-refresh-token',
       token_type: 'Bearer',
       expires_in: 3600,
       user: {
@@ -104,7 +103,6 @@ describe('AuthService', () => {
     it('should register new user successfully', async () => {
       const mockResponse = {
         access_token: 'new-access-token',
-        refresh_token: 'new-refresh-token',
         token_type: 'Bearer',
         expires_in: 3600,
         user: {
@@ -146,25 +144,24 @@ describe('AuthService', () => {
 
   describe('token management', () => {
     it('should store tokens in localStorage', () => {
-      authService.setTokens('access-token', 'refresh-token')
+      authService.setTokens('access-token')
 
       expect(authService.getAccessToken()).toBe('access-token')
     })
 
     it('should clear tokens on logout', () => {
-      authService.setTokens('access-token', 'refresh-token')
+      authService.setTokens('access-token')
       authService.clearTokens()
 
       expect(authService.getAccessToken()).toBeNull()
     })
 
     it('should refresh access token', async () => {
-      authService.setTokens('old-access', 'refresh-token')
+      authService.setTokens('old-access')
 
       mockedAxios.post.mockResolvedValueOnce({
         data: {
           access_token: 'new-access-token',
-          refresh_token: 'new-refresh-token',
         },
       })
 
@@ -174,7 +171,7 @@ describe('AuthService', () => {
     })
 
     it('should handle refresh token expiry', async () => {
-      authService.setTokens('old-access', 'expired-refresh')
+      authService.setTokens('old-access')
 
       mockedAxios.post.mockRejectedValueOnce({
         response: { status: 401, data: { message: 'Refresh token expired' } },
@@ -195,7 +192,7 @@ describe('AuthService', () => {
         roles: ['user'],
       }
 
-      authService.setTokens('valid-token', 'refresh')
+      authService.setTokens('valid-token')
       mockedAxios.get.mockResolvedValueOnce({ data: { user: mockUser } })
 
       const user = await authService.getCurrentUser()

@@ -66,6 +66,11 @@ import type {
   Materialization,
 } from '../types'
 import { NODE_TYPE_COLORS } from '@/lib/colors'
+import {
+  useWarehouseSchemas,
+  useWarehouseTables,
+  useWarehouseColumns,
+} from '../hooks/useWarehouseSchema'
 
 // ============================================================================
 // Node Type Definitions
@@ -80,7 +85,6 @@ const layerConfig: Record<ModelLayer, { color: string; icon: typeof Database; la
   source: { color: NODE_TYPE_COLORS.source, icon: Database, label: 'Source' },
   staging: { color: NODE_TYPE_COLORS.staging, icon: Table2, label: 'Staging' },
   intermediate: { color: NODE_TYPE_COLORS.intermediate, icon: Layers, label: 'Intermediate' },
-  mart: { color: NODE_TYPE_COLORS.mart, icon: BarChart2, label: 'Mart' },
   marts: { color: NODE_TYPE_COLORS.marts, icon: BarChart2, label: 'Marts' },
 }
 
@@ -181,7 +185,7 @@ function ModelPalette({ onDragStart }: ModelPaletteProps) {
     { layer: 'source', description: 'External data sources' },
     { layer: 'staging', description: 'Cleaned raw data' },
     { layer: 'intermediate', description: 'Business logic' },
-    { layer: 'mart', description: 'Analytics ready' },
+    { layer: 'marts', description: 'Analytics ready' },
   ]
 
   return (
@@ -241,6 +245,185 @@ interface ModelPropertiesPanelProps {
   onClose: () => void
 }
 
+// ----------------------------------------------------------------------------
+// Warehouse Binding Section
+// ----------------------------------------------------------------------------
+// Binds a source/staging model to a ClickHouse schema.table, then offers to
+// bulk-populate the column list from the live warehouse introspection
+// endpoint. This replaces free-text column typing with verified column names
+// and types — a major UX improvement for analysts.
+// ----------------------------------------------------------------------------
+
+interface WarehouseBindingSectionProps {
+  definition: VisualModelDefinition
+  onChange: (definition: VisualModelDefinition) => void
+}
+
+function WarehouseBindingSection({
+  definition,
+  onChange,
+}: WarehouseBindingSectionProps) {
+  const { toast } = useToast()
+  const firstSource = definition.sources?.[0]
+  const schema = firstSource?.schema_name
+  const table = firstSource?.table_name
+
+  const { data: schemasData, isLoading: schemasLoading } = useWarehouseSchemas()
+  const { data: tablesData, isLoading: tablesLoading } = useWarehouseTables(schema)
+  const { data: columnsData } = useWarehouseColumns(schema, table)
+
+  const schemas = (schemasData ?? []) as { name: string }[]
+  const tables = (tablesData ?? []) as { name: string; engine?: string }[]
+  const warehouseColumns = (columnsData ?? []) as {
+    name: string
+    type: string
+    comment?: string
+  }[]
+
+  const setSource = (next: { schema_name?: string; table_name?: string }) => {
+    const prev = definition.sources?.[0] ?? { schema_name: '', table_name: '' }
+    const merged = {
+      schema_name: next.schema_name ?? prev.schema_name ?? '',
+      table_name: next.table_name ?? prev.table_name ?? '',
+      alias: prev.alias,
+    }
+    const sources = [merged, ...(definition.sources?.slice(1) ?? [])]
+    onChange({ ...definition, sources })
+  }
+
+  const handleSchemaChange = (value: string) => {
+    setSource({ schema_name: value, table_name: '' })
+  }
+
+  const handleTableChange = (value: string) => {
+    setSource({ table_name: value })
+  }
+
+  const populateColumns = (mode: 'replace' | 'append') => {
+    if (warehouseColumns.length === 0) {
+      toast({ title: 'No columns available', description: 'Select a schema and table first.' })
+      return
+    }
+
+    const existing = definition.columns ?? []
+    const existingByName = new Map(existing.map((c) => [c.name, c]))
+
+    const incoming: VisualColumnDefinition[] = warehouseColumns.map((c) => ({
+      name: c.name,
+      source_column: c.name,
+      data_type: c.type,
+      expression: c.name,
+      description: c.comment || undefined,
+    }))
+
+    let next: VisualColumnDefinition[]
+    if (mode === 'replace') {
+      next = incoming
+    } else {
+      const additions = incoming.filter((c) => !existingByName.has(c.name))
+      next = [...existing, ...additions]
+    }
+
+    onChange({ ...definition, columns: next })
+    toast({
+      title: mode === 'replace' ? 'Columns replaced' : 'Columns appended',
+      description: `${mode === 'replace' ? next.length : next.length - existing.length} column(s) from ${schema}.${table}`,
+    })
+  }
+
+  return (
+    <div className="space-y-3 rounded-md border bg-muted/30 p-3">
+      <div className="flex items-center justify-between">
+        <h4 className="font-medium text-sm flex items-center gap-2">
+          <Database className="h-4 w-4" />
+          Warehouse Source Binding
+        </h4>
+        {schema && table && (
+          <span className="text-[11px] font-mono text-muted-foreground">
+            {schema}.{table}
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Bind this model to a ClickHouse table. Columns and data types can then
+        be populated automatically from the live warehouse schema.
+      </p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Schema</Label>
+          <Select
+            value={schema ?? ''}
+            onValueChange={handleSchemaChange}
+            disabled={schemasLoading}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder={schemasLoading ? 'Loading…' : 'Select schema'} />
+            </SelectTrigger>
+            <SelectContent>
+              {schemas.map((s) => (
+                <SelectItem key={s.name} value={s.name} className="text-xs font-mono">
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Table</Label>
+          <Select
+            value={table ?? ''}
+            onValueChange={handleTableChange}
+            disabled={!schema || tablesLoading}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue
+                placeholder={
+                  !schema
+                    ? 'Select schema first'
+                    : tablesLoading
+                      ? 'Loading…'
+                      : 'Select table'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {tables.map((t) => (
+                <SelectItem key={t.name} value={t.name} className="text-xs font-mono">
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs"
+          disabled={!schema || !table || warehouseColumns.length === 0}
+          onClick={() => populateColumns('append')}
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          Append Columns ({warehouseColumns.length})
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs"
+          disabled={!schema || !table || warehouseColumns.length === 0}
+          onClick={() => populateColumns('replace')}
+        >
+          Replace All
+        </Button>
+      </div>
+    </div>
+  )
+}
 function ModelPropertiesPanel({
   node,
   definition,
@@ -349,7 +532,7 @@ function ModelPropertiesPanel({
                     <SelectItem value="source">Source</SelectItem>
                     <SelectItem value="staging">Staging</SelectItem>
                     <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="mart">Mart</SelectItem>
+                    <SelectItem value="marts">Marts</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -375,6 +558,14 @@ function ModelPropertiesPanel({
               </div>
             </div>
           </div>
+
+          {/* Warehouse binding (source / staging only) */}
+          {(definition.layer === 'source' || definition.layer === 'staging') && (
+            <WarehouseBindingSection
+              definition={definition}
+              onChange={onUpdate}
+            />
+          )}
 
           {/* Columns */}
           <div className="space-y-4">
@@ -625,7 +816,7 @@ export function ModelCanvas({
       const newDefinition: VisualModelDefinition = {
         name: defaultName,
         layer,
-        materialization: layer === 'source' ? 'view' : layer === 'mart' ? 'table' : 'view',
+        materialization: layer === 'source' ? 'view' : layer === 'marts' ? 'table' : 'view',
         columns: [],
         tests: [],
         dependencies: [],

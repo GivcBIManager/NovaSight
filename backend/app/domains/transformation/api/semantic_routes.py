@@ -1,4 +1,4 @@
-"""
+﻿"""
 NovaSight Semantic Layer API
 ==============================
 
@@ -7,14 +7,12 @@ semantic models, dimensions, measures, relationships, and query execution.
 """
 
 from flask import request, g, jsonify
-from flask_jwt_extended import jwt_required
 from app.platform.auth.identity import get_current_identity
 from pydantic import ValidationError
 import logging
 
 from app.api.v1 import api_v1_bp
-from app.decorators import require_tenant_context
-from app.middleware.permissions import require_permission
+from app.platform.auth.decorators import authenticated, tenant_required, require_permission
 from app.domains.transformation.schemas.semantic_schemas import (
     SemanticModelCreateSchema,
     SemanticModelUpdateSchema,
@@ -53,8 +51,8 @@ def get_tenant_id():
 # =============================================================================
 
 @api_v1_bp.route('/semantic/models', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.view')
 def list_semantic_models():
     """
@@ -91,8 +89,8 @@ def list_semantic_models():
 
 
 @api_v1_bp.route('/semantic/models', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.create')
 def create_semantic_model():
     """
@@ -131,8 +129,8 @@ def create_semantic_model():
 
 
 @api_v1_bp.route('/semantic/models/<uuid:model_id>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.view')
 def get_semantic_model(model_id):
     """
@@ -158,8 +156,8 @@ def get_semantic_model(model_id):
 
 
 @api_v1_bp.route('/semantic/models/<uuid:model_id>', methods=['PUT'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.update')
 def update_semantic_model(model_id):
     """
@@ -194,8 +192,8 @@ def update_semantic_model(model_id):
 
 
 @api_v1_bp.route('/semantic/models/<uuid:model_id>', methods=['DELETE'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.delete')
 def delete_semantic_model(model_id):
     """
@@ -220,8 +218,8 @@ def delete_semantic_model(model_id):
 # =============================================================================
 
 @api_v1_bp.route('/semantic/models/<uuid:model_id>/dimensions', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.view')
 def list_dimensions(model_id):
     """
@@ -249,8 +247,8 @@ def list_dimensions(model_id):
 
 
 @api_v1_bp.route('/semantic/models/<uuid:model_id>/dimensions', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.create')
 def add_dimension(model_id):
     """
@@ -293,8 +291,8 @@ def add_dimension(model_id):
 
 
 @api_v1_bp.route('/semantic/dimensions/<uuid:dimension_id>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.view')
 def get_dimension(dimension_id):
     """Get a dimension by ID."""
@@ -308,8 +306,8 @@ def get_dimension(dimension_id):
 
 
 @api_v1_bp.route('/semantic/dimensions/<uuid:dimension_id>', methods=['PUT'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.update')
 def update_dimension(dimension_id):
     """Update a dimension."""
@@ -335,8 +333,8 @@ def update_dimension(dimension_id):
 
 
 @api_v1_bp.route('/semantic/dimensions/<uuid:dimension_id>', methods=['DELETE'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.delete')
 def delete_dimension(dimension_id):
     """Delete a dimension."""
@@ -356,8 +354,8 @@ def delete_dimension(dimension_id):
 # =============================================================================
 
 @api_v1_bp.route('/semantic/models/<uuid:model_id>/measures', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.view')
 def list_measures(model_id):
     """
@@ -385,8 +383,8 @@ def list_measures(model_id):
 
 
 @api_v1_bp.route('/semantic/models/<uuid:model_id>/measures', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.create')
 def add_measure(model_id):
     """
@@ -430,8 +428,8 @@ def add_measure(model_id):
 
 
 @api_v1_bp.route('/semantic/measures/<uuid:measure_id>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.view')
 def get_measure(measure_id):
     """Get a measure by ID."""
@@ -445,8 +443,8 @@ def get_measure(measure_id):
 
 
 @api_v1_bp.route('/semantic/measures/<uuid:measure_id>', methods=['PUT'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.update')
 def update_measure(measure_id):
     """Update a measure."""
@@ -472,8 +470,8 @@ def update_measure(measure_id):
 
 
 @api_v1_bp.route('/semantic/measures/<uuid:measure_id>', methods=['DELETE'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.delete')
 def delete_measure(measure_id):
     """Delete a measure."""
@@ -493,8 +491,8 @@ def delete_measure(measure_id):
 # =============================================================================
 
 @api_v1_bp.route('/semantic/relationships', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.view')
 def list_relationships():
     """List all relationships for the current tenant."""
@@ -508,8 +506,8 @@ def list_relationships():
 
 
 @api_v1_bp.route('/semantic/relationships', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.create')
 def create_relationship():
     """
@@ -545,8 +543,8 @@ def create_relationship():
 
 
 @api_v1_bp.route('/semantic/relationships/<uuid:relationship_id>', methods=['DELETE'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.delete')
 def delete_relationship(relationship_id):
     """Delete a relationship."""
@@ -564,8 +562,8 @@ def delete_relationship(relationship_id):
 # =============================================================================
 
 @api_v1_bp.route('/semantic/query', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.query')
 def execute_semantic_query():
     """
@@ -623,8 +621,8 @@ def execute_semantic_query():
 # =============================================================================
 
 @api_v1_bp.route('/semantic/explore', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.view')
 def explore_semantic_layer():
     """
@@ -652,8 +650,8 @@ def explore_semantic_layer():
 
 
 @api_v1_bp.route('/semantic/dimensions', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.view')
 def list_all_dimensions():
     """List all dimensions across all models for the tenant."""
@@ -667,8 +665,8 @@ def list_all_dimensions():
 
 
 @api_v1_bp.route('/semantic/measures', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.view')
 def list_all_measures():
     """List all measures across all models for the tenant."""
@@ -686,8 +684,8 @@ def list_all_measures():
 # =============================================================================
 
 @api_v1_bp.route('/semantic/cache/clear', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('semantic.manage')
 def clear_semantic_cache():
     """

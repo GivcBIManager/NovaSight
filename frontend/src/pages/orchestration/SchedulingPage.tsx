@@ -75,10 +75,13 @@ import {
   ExternalLink,
   XCircle,
   Briefcase,
+  FlaskConical,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from '@/components/ui/use-toast'
 import { getStatusClasses } from '@/lib/colors'
+import { DbtExecutionsList } from '@/features/dbt-studio/components/shared'
+import { useDbtExecutions } from '@/features/dbt-studio/hooks/useDbtExecutions'
 
 export function SchedulingPage() {
   const queryClient = useQueryClient()
@@ -100,7 +103,7 @@ export function SchedulingPage() {
     queryFn: () =>
       jobService.list({
         status: statusFilter !== 'all' ? statusFilter : undefined,
-        type: typeFilter !== 'all' ? (typeFilter as 'spark' | 'pipeline') : undefined,
+        type: typeFilter !== 'all' ? (typeFilter as 'spark' | 'pipeline' | 'dbt') : undefined,
         per_page: 50,
       }),
     refetchInterval: 30000,
@@ -130,6 +133,12 @@ export function SchedulingPage() {
     queryFn: () => dagsterService.getAssets(),
     refetchInterval: 30000,
   })
+
+  // dbt executions (unified scheduling view — dbt Studio runs surface here)
+  const { data: dbtExecutions } = useDbtExecutions({ limit: 25 })
+  const activeDbtExecutions =
+    dbtExecutions?.filter((e) => e.status === 'running' || e.status === 'pending')
+      .length || 0
 
   // Calculate stats
   const runningCount = runs?.filter((r) => r.status === 'running').length || 0
@@ -381,6 +390,15 @@ export function SchedulingPage() {
             <Activity className="h-4 w-4" />
             Runs
           </TabsTrigger>
+          <TabsTrigger value="dbt" className="flex items-center gap-2">
+            <FlaskConical className="h-4 w-4" />
+            dbt Runs
+            {activeDbtExecutions > 0 && (
+              <Badge variant="default" className="ml-1 h-4 px-1.5 text-[10px]">
+                {activeDbtExecutions}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="assets" className="flex items-center gap-2">
             <GitBranch className="h-4 w-4" />
             Assets
@@ -427,6 +445,7 @@ export function SchedulingPage() {
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="spark">Spark Jobs</SelectItem>
                 <SelectItem value="pipeline">Pipelines</SelectItem>
+                <SelectItem value="dbt">dbt Jobs</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="ghost" size="icon" onClick={() => refetchJobs()}>
@@ -594,6 +613,11 @@ export function SchedulingPage() {
             limit={50}
             onRunSelect={setSelectedRunId}
           />
+        </TabsContent>
+
+        {/* dbt Runs Tab — unified view of dbt invocations from dbt Studio */}
+        <TabsContent value="dbt">
+          <DbtExecutionsList limit={50} />
         </TabsContent>
 
         {/* Assets Tab */}

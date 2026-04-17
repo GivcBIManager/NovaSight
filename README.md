@@ -38,7 +38,7 @@ NovaSight is a multi-tenant SaaS platform that enables users to ingest, transfor
 
 ### Orchestration
 - Visual DAG builder with drag-and-drop
-- Apache Airflow integration
+- Dagster integration
 - Real-time monitoring and logs
 - Alerting and notifications
 
@@ -62,7 +62,7 @@ NovaSight is a multi-tenant SaaS platform that enables users to ingest, transfor
 ├─────────────────────────────────────────────────────────────┤
 │                     Flask REST API                           │
 ├──────────────┬──────────────┬──────────────┬────────────────┤
-│  PostgreSQL  │  ClickHouse  │   Airflow    │    Ollama      │
+│  PostgreSQL  │  ClickHouse  │   Dagster    │    Ollama      │
 │  (Metadata)  │ (Warehouse)  │(Orchestrator)│    (LLM)       │
 └──────────────┴──────────────┴──────────────┴────────────────┘
 ```
@@ -74,7 +74,7 @@ NovaSight is a multi-tenant SaaS platform that enables users to ingest, transfor
 | Frontend | React, TypeScript, Vite, TanStack Query, Shadcn/UI |
 | Backend | Flask, SQLAlchemy, Pydantic, JWT |
 | Compute | PySpark, dbt |
-| Orchestration | Apache Airflow |
+| Orchestration | Dagster |
 | Data Warehouse | ClickHouse |
 | AI/LLM | Ollama (Local) |
 | Metadata | PostgreSQL |
@@ -98,7 +98,7 @@ NovaSight is a multi-tenant SaaS platform that enables users to ingest, transfor
 
 2. **Start infrastructure services**
    ```bash
-   docker-compose up -d postgres redis clickhouse airflow-webserver airflow-scheduler
+   docker-compose up -d postgres redis clickhouse dagster
    ```
 
 3. **Set up the backend**
@@ -122,14 +122,13 @@ NovaSight is a multi-tenant SaaS platform that enables users to ingest, transfor
 5. **Access the application**
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:5000
-   - Airflow: http://localhost:8080 (airflow/airflow)
+   - Dagster: http://localhost:3070
 
 ### Default Credentials
 
 | Service | Username | Password |
 |---------|----------|----------|
 | NovaSight | admin@novasight.dev | Admin123! |
-| Airflow | airflow | airflow |
 
 ## 📖 Documentation
 

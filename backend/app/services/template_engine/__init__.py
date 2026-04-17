@@ -21,7 +21,7 @@ from app.services.template_engine.validator import (
     ColumnDefinition,
     TableDefinition,
     DbtModelDefinition,
-    AirflowDagDefinition,
+    PipelineJobDefinition,
     TemplateParameterValidator,
 )
 from app.services.template_engine.filters import (
@@ -42,7 +42,7 @@ __all__ = [
     "ColumnDefinition",
     "TableDefinition",
     "DbtModelDefinition",
-    "AirflowDagDefinition",
+    "PipelineJobDefinition",
     "TemplateParameterValidator",
     # Filters
     "to_snake_case",

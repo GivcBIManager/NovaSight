@@ -99,10 +99,10 @@ agents:
   # Orchestration Agent
   orchestration:
     model: sonnet 4.5
-    description: "Airflow DAGs, scheduling, workflow management"
+    description: "Dagster pipelines, scheduling, workflow management"
     file: ".github/agents/orchestration-agent.agent.md"
     capabilities:
-      - airflow_dags
+      - dagster_pipelines
       - dag_builder
       - scheduling
       - task_operators
@@ -238,7 +238,7 @@ handoff_rules:
       - "008-template-engine-core.md"
       - "009-sql-templates.md"
       - "010-dbt-templates.md"
-      - "011-airflow-templates.md"
+      - "011-dagster-templates.md"
       - "012-clickhouse-templates.md"
     require_review: true
 
@@ -269,13 +269,13 @@ handoff_rules:
 
   # Orchestration tasks
   - patterns:
-      - "airflow|dag|workflow"
+      - "dagster|dag|workflow"
       - "scheduling|cron|pipeline"
       - "task operator|sensor"
       - "dag builder|dag monitor"
     target: orchestration
     prompts:
-      - "011-airflow-templates.md"
+      - "011-dagster-templates.md"
       - "016-ingestion-dag-generator.md"
       - "021-transformation-dag-generator.md"
 
@@ -394,7 +394,7 @@ phases:
       - "008-template-engine-core.md"
       - "009-sql-templates.md"
       - "010-dbt-templates.md"
-      - "011-airflow-templates.md"
+      - "011-dagster-templates.md"
       - "012-clickhouse-templates.md"
 
   phase_3:

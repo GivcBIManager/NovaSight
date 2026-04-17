@@ -59,8 +59,10 @@
     "react-router-dom": "^6.21.2",
     "reactflow": "^11.10.2",
     "recharts": "^2.10.3",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^2.2.0",
     "tailwindcss-animate": "^1.0.7",
+    "three": "^0.184.0",
     "zod": "^3.22.4",
     "zustand": "^4.4.7"
   },

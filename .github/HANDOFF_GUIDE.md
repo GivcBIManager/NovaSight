@@ -29,7 +29,7 @@ The handoff configuration is defined in `.github/handoff.yml` and includes:
 - **template-engine** - Jinja2 templates, code generation (security-critical)
 - **data-sources** - Database connections, schema introspection
 - **dbt** - dbt models, semantic layer, transformations
-- **orchestration** - Airflow DAGs, scheduling
+- **orchestration** - Dagster pipelines, scheduling
 - **dashboard** - Analytics, charts, visualizations
 - **ai** - Ollama integration, NL2SQL
 - **admin** - Tenant management, RBAC

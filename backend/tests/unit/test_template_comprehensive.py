@@ -3,7 +3,7 @@ Template Engine Comprehensive Tests
 ====================================
 
 Extended tests for the Template Engine covering:
-- All template types (PySpark, Airflow DAGs, dbt, SQL)
+- All template types (PySpark, Dagster jobs, dbt, SQL)
 - Validation rules
 - Security enforcement
 - Parameter handling
@@ -157,93 +157,73 @@ if __name__ == "__main__":
         assert "F.count" in result
 
 
-class TestAirflowDAGTemplates:
-    """Tests for Airflow DAG templates."""
+class TestDagsterJobTemplates:
+    """Tests for Dagster job templates."""
     
     @pytest.fixture
-    def dag_params(self):
-        """Sample DAG parameters."""
+    def job_params(self):
+        """Sample Dagster job parameters."""
         return {
-            "dag_id": "daily_sales_pipeline",
+            "job_name": "daily_sales_pipeline",
             "schedule": "0 2 * * *",
-            "start_date": "2024-01-01",
-            "catchup": False,
             "tags": ["sales", "daily"],
-            "tasks": [
+            "ops": [
                 {
-                    "task_id": "extract_orders",
-                    "operator": "PythonOperator",
-                    "python_callable": "extract_orders",
+                    "op_name": "extract_orders",
                     "dependencies": []
                 },
                 {
-                    "task_id": "transform_orders",
-                    "operator": "PythonOperator",
-                    "python_callable": "transform_orders",
+                    "op_name": "transform_orders",
                     "dependencies": ["extract_orders"]
                 },
                 {
-                    "task_id": "load_to_warehouse",
-                    "operator": "PythonOperator",
-                    "python_callable": "load_warehouse",
+                    "op_name": "load_to_warehouse",
                     "dependencies": ["transform_orders"]
                 }
             ]
         }
     
-    def test_render_dag(self, temp_template_dir, dag_params):
-        """Test rendering Airflow DAG."""
-        airflow_dir = temp_template_dir / "airflow"
-        airflow_dir.mkdir(exist_ok=True)
+    def test_render_job(self, temp_template_dir, job_params):
+        """Test rendering Dagster job definition."""
+        dagster_dir = temp_template_dir / "dagster"
+        dagster_dir.mkdir(exist_ok=True)
         
         template_content = '''
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from datetime import datetime
+from dagster import job, op, In, Nothing
 
-with DAG(
-    dag_id="{{ dag_id }}",
-    schedule_interval="{{ schedule }}",
-    start_date=datetime.fromisoformat("{{ start_date }}"),
-    catchup={{ catchup | lower }},
-    tags={{ tags | tojson }},
-) as dag:
-{% for task in tasks %}
-    {{ task.task_id }} = {{ task.operator }}(
-        task_id="{{ task.task_id }}",
-        python_callable={{ task.python_callable }},
-    )
+{% for op_def in ops %}
+@op{% if op_def.dependencies %}(ins={{% for dep in op_def.dependencies %}"{{ dep }}": In(Nothing){% if not loop.last %}, {% endif %}{% endfor %}}){% endif %}
+def {{ op_def.op_name }}():
+    pass
 {% endfor %}
 
-{% for task in tasks %}
-{% if task.dependencies %}
-    [{% for dep in task.dependencies %}{{ dep }}{% if not loop.last %}, {% endif %}{% endfor %}] >> {{ task.task_id }}
-{% endif %}
+@job(name="{{ job_name }}", tags={{ tags | tojson }})
+def {{ job_name }}():
+{% for op_def in ops %}
+    {{ op_def.op_name }}()
 {% endfor %}
 '''
-        (airflow_dir / "dag.py.j2").write_text(template_content)
+        (dagster_dir / "job.py.j2").write_text(template_content)
         
         engine = TemplateEngine(template_dir=temp_template_dir)
         result = engine.render(
-            "airflow/dag.py.j2",
-            dag_params,
+            "dagster/job.py.j2",
+            job_params,
             validate=False
         )
         
-        assert 'dag_id="daily_sales_pipeline"' in result
-        assert 'schedule_interval="0 2 * * *"' in result
+        assert 'name="daily_sales_pipeline"' in result
         assert "extract_orders" in result
-        assert ">> transform_orders" in result
+        assert "transform_orders" in result
     
-    def test_dag_schedule_validation(self, temp_template_dir):
+    def test_job_schedule_validation(self, temp_template_dir):
         """Test that invalid cron expressions are rejected."""
         engine = TemplateEngine(template_dir=temp_template_dir)
         
         invalid_params = {
-            "dag_id": "test_dag",
+            "job_name": "test_job",
             "schedule": "invalid cron expression",
-            "start_date": "2024-01-01",
-            "tasks": []
+            "ops": []
         }
         
         # Should validate schedule format

@@ -253,7 +253,7 @@ export function DashboardPage() {
                   {[
                     { name: 'API Server', status: 'healthy', latency: '24ms' },
                     { name: 'Database', status: 'healthy', latency: '12ms' },
-                    { name: 'Airflow', status: 'healthy', latency: '45ms' },
+                    { name: 'Dagster', status: 'healthy', latency: '45ms' },
                     { name: 'Spark Cluster', status: 'warning', latency: '120ms' },
                   ].map((service) => (
                     <div key={service.name} className="flex items-center justify-between">

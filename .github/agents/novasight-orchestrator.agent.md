@@ -25,7 +25,7 @@ NovaSight is a multi-tenant SaaS BI platform with:
 - **Frontend**: React (TypeScript)
 - **Backend**: Flask (Python)
 - **Compute**: PySpark
-- **Orchestration**: Apache Airflow
+- **Orchestration**: Dagster
 - **Storage**: ClickHouse
 - **Transformation**: dbt
 - **AI**: Ollama (local LLMs)
@@ -42,18 +42,18 @@ The orchestrator can invoke specialized agents based on task requirements.
 
 | Agent ID | Model | Responsibility | Invoke With |
 |----------|-------|---------------|-------------|
-| `infrastructure-agent` | sonnet 4.5 | DevOps, Docker, CI/CD | `@infrastructure` |
-| `backend-agent` | opus 4.5 | Flask API, SQLAlchemy, Auth | `@backend` |
-| `frontend-agent` | sonnet 4.5 | React, TypeScript, UI | `@frontend` |
-| `template-engine-agent` | opus 4.5 | Jinja2 templates, validation | `@template-engine` |
-| `data-sources-agent` | sonnet 4.5 | Database connections | `@data-sources` |
-| `dbt-agent` | sonnet 4.5 | dbt models, semantic layer | `@dbt` |
-| `orchestration-agent` | sonnet 4.5 | Airflow DAGs, scheduling | `@orchestration` |
-| `dashboard-agent` | sonnet 4.5 | Analytics, charts, dashboards | `@dashboard` |
-| `ai-agent` | opus 4.5 | Ollama integration, NL2SQL | `@ai` |
+| `infrastructure-agent` | sonnet 4.6| DevOps, Docker, CI/CD | `@infrastructure` |
+| `backend-agent` | opus 4.6 | Flask API, SQLAlchemy, Auth | `@backend` |
+| `frontend-agent` | sonnet 4.6 | React, TypeScript, UI | `@frontend` |
+| `template-engine-agent` | opus 4.6 | Jinja2 templates, validation | `@template-engine` |
+| `data-sources-agent` | sonnet 4.6 | Database connections | `@data-sources` |
+| `dbt-agent` | sonnet 4.6 | dbt models, semantic layer | `@dbt` |
+| `orchestration-agent` | sonnet 4.6 | Dagster jobs, scheduling | `@orchestration` |
+| `dashboard-agent` | sonnet 4.6 | Analytics, charts, dashboards | `@dashboard` |
+| `ai-agent` | opus 4.6 | Ollama integration, NL2SQL | `@ai` |
 | `admin-agent` | haiku 4.5 | Admin portal, governance | `@admin` |
-| `testing-agent` | sonnet 4.5 | Unit tests, integration tests | `@testing` |
-| `security-agent` | opus 4.5 | Security review, hardening | `@security` |
+| `testing-agent` | sonnet 4.6 | Unit tests, integration tests | `@testing` |
+| `security-agent` | opus 4.6 | Security review, hardening | `@security` |
 
 ### Delegation Protocol
 
@@ -88,7 +88,7 @@ delegation_rules:
     delegate_to: "@template-engine"
     model: "opus 4.5"
     
-  - pattern: "Airflow|pipeline scheduling|DAG"
+  - pattern: "Dagster|pipeline scheduling|job orchestration"
     delegate_to: "@orchestration"
     model: "sonnet 4.5"
     
@@ -169,7 +169,7 @@ novasight/
 │
 ├── templates/                  # Code generation templates
 │   ├── pyspark/
-│   ├── airflow/
+│   ├── dagster/
 │   └── dbt/
 │
 └── docs/

@@ -147,7 +147,7 @@ def require_permission(permission: str):
                 abort(401, description="Authentication required")
 
             # Use RBAC service for comprehensive check
-            from app.services.rbac_service import rbac_service
+            from app.domains.identity.application.rbac_service import rbac_service
             if not rbac_service.check_permission(user, normalized_perm):
                 logger.warning(
                     f"Permission denied: {normalized_perm} for user {user.id}"
@@ -178,7 +178,7 @@ def require_any_permission(*permissions: str):
             if not user:
                 abort(401, description="Authentication required")
 
-            from app.services.rbac_service import rbac_service
+            from app.domains.identity.application.rbac_service import rbac_service
             normalized = [normalize_permission(p) for p in permissions]
 
             if not any(rbac_service.check_permission(user, p) for p in normalized):
@@ -211,7 +211,7 @@ def require_all_permissions(*permissions: str):
             if not user:
                 abort(401, description="Authentication required")
 
-            from app.services.rbac_service import rbac_service
+            from app.domains.identity.application.rbac_service import rbac_service
             normalized = [normalize_permission(p) for p in permissions]
             missing = [p for p in normalized if not rbac_service.check_permission(user, p)]
 

@@ -19,7 +19,7 @@ from app.extensions import db
 from app.domains.analytics.domain.chart_models import (
     Chart, ChartFolder, ChartType, ChartSourceType, DashboardChart
 )
-from app.services.semantic_service import SemanticService, QueryBuildError
+from app.domains.transformation.application.semantic_service import SemanticService, QueryBuildError
 from app.domains.analytics.infrastructure.clickhouse_client import (
     get_clickhouse_client,
     ClickHouseError,

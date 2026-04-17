@@ -80,7 +80,7 @@ class DagConfig(TenantMixin, TimestampMixin, db.Model):
     """
     DAG configuration model.
 
-    Stores the configuration for an Airflow DAG.
+    Stores the configuration for a pipeline DAG.
     Each configuration can have multiple versions.
 
     ``TenantMixin`` provides: ``tenant_id``, ``tenant`` relationship,
@@ -207,7 +207,7 @@ class DagConfig(TenantMixin, TimestampMixin, db.Model):
 
     @property
     def full_dag_id(self) -> str:
-        """Get tenant-prefixed DAG ID for Airflow."""
+        """Get tenant-prefixed pipeline ID."""
         return f"{self.tenant.slug}_{self.dag_id}"
 
 

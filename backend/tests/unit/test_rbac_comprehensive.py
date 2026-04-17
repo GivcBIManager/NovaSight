@@ -10,9 +10,9 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from uuid import uuid4
 
-from app.services.rbac_service import RBACService
+from app.domains.identity.application.rbac_service import RBACService
 from app.models import Role, User, Permission
-from app.models.rbac import Permission as RBACPermission
+from app.domains.identity.domain.models import Permission as RBACPermission
 
 # Exception classes not yet implemented in rbac_service
 class RBACError(Exception):
@@ -360,7 +360,7 @@ class TestAuditLogging:
     
     def test_role_change_logged(self, tenant_id):
         """Test that role changes are logged."""
-        with patch('app.services.rbac_service.AuditLog') as mock_audit:
+        with patch('app.domains.identity.application.rbac_service.AuditLog') as mock_audit:
             with patch.object(Role, 'query'):
                 with patch.object(User, 'query'):
                     service = RBACService(tenant_id)
@@ -374,7 +374,7 @@ class TestAuditLogging:
         user.id = str(uuid4())
         user.roles = []
         
-        with patch('app.services.rbac_service.logger') as mock_logger:
+        with patch('app.domains.identity.application.rbac_service.logger') as mock_logger:
             service = RBACService(tenant_id)
             result = service.has_permission(user, "admin:all")
             

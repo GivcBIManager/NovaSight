@@ -9,7 +9,7 @@ Implements ADR-002: All SQL is generated from templates, never from LLM output.
 import logging
 from typing import Any, Dict, List, Optional, Union
 
-from app.models.semantic import Dimension, Measure, AggregationType
+from app.domains.transformation.domain.models import Dimension, Measure, AggregationType
 from app.services.template_engine import TemplateEngine, template_engine
 
 logger = logging.getLogger(__name__)

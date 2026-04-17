@@ -1,5 +1,5 @@
-"""
-NovaSight Orchestration Domain — DAG Routes
+﻿"""
+NovaSight Orchestration Domain â€” DAG Routes
 =============================================
 
 Dagster pipeline configuration and monitoring API endpoints.
@@ -10,15 +10,13 @@ Canonical location: ``app.domains.orchestration.api.dag_routes``
 """
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required
 
 from app.api.v1 import api_v1_bp
 from app.platform.auth.identity import get_current_identity
 from app.domains.orchestration.application.dag_service import DagService
-from app.domains.orchestration.infrastructure.dag_generator import PySparkDAGGenerator
-from app.decorators import require_roles, require_tenant_context
+from app.platform.auth.decorators import authenticated, require_roles, tenant_required
 from app.errors import ValidationError, NotFoundError, DagsterAPIError
-from app.services.audit_service import AuditService
+from app.platform.audit.service import AuditService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -30,8 +28,8 @@ logger = logging.getLogger(__name__)
 
 
 @api_v1_bp.route("/dags", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def list_dags():
     """
     List all DAG configurations for current tenant.
@@ -68,8 +66,8 @@ def list_dags():
 
 
 @api_v1_bp.route("/dags", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def create_dag():
     """
@@ -147,8 +145,8 @@ def create_dag():
 
 
 @api_v1_bp.route("/dags/<dag_id>", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_dag(dag_id: str):
     """Get DAG configuration details."""
     identity = get_current_identity()
@@ -166,8 +164,8 @@ def get_dag(dag_id: str):
 
 
 @api_v1_bp.route("/dags/<dag_id>", methods=["PUT"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def update_dag(dag_id: str):
     """Update DAG configuration (creates new version)."""
@@ -204,15 +202,15 @@ def update_dag(dag_id: str):
 
 
 @api_v1_bp.route("/dags/<dag_id>", methods=["DELETE"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def delete_dag(dag_id: str):
     """
     Delete DAG configuration.
 
-    Performs full cleanup: pauses in Airflow, deletes from Airflow API,
-    removes the generated DAG file, and archives or hard-deletes from DB.
+    Performs full cleanup: pauses in Dagster, removes the generated job
+    definition, and archives or hard-deletes from DB.
 
     Query Parameters:
         - hard: If "true", permanently removes the DAG from the database.
@@ -245,8 +243,8 @@ def delete_dag(dag_id: str):
 
 
 @api_v1_bp.route("/dags/<dag_id>/validate", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def validate_dag(dag_id: str):
     """Validate DAG configuration."""
@@ -263,11 +261,11 @@ def validate_dag(dag_id: str):
 
 
 @api_v1_bp.route("/dags/<dag_id>/deploy", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def deploy_dag(dag_id: str):
-    """Deploy DAG to Airflow."""
+    """Deploy DAG to Dagster."""
     identity = get_current_identity()
     tenant_id = identity.tenant_id
     user_id = identity.user_id
@@ -283,9 +281,9 @@ def deploy_dag(dag_id: str):
         raise NotFoundError("DAG not found")
 
     if not result.get("success"):
-        raise AirflowAPIError(result.get("error", "Deployment failed"))
+        raise DagsterAPIError(result.get("error", "Deployment failed"))
 
-    logger.info(f"DAG '{dag_id}' deployed to Airflow by user {user_id}")
+    logger.info(f"DAG '{dag_id}' deployed to Dagster by user {user_id}")
     
     # Audit log: DAG deployed
     AuditService.log(
@@ -299,8 +297,8 @@ def deploy_dag(dag_id: str):
 
 
 @api_v1_bp.route("/dags/<dag_id>/trigger", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def trigger_dag(dag_id: str):
     """Trigger immediate DAG run."""
@@ -315,7 +313,7 @@ def trigger_dag(dag_id: str):
         raise NotFoundError("DAG not found")
 
     if not result.get("success"):
-        raise AirflowAPIError(result.get("error", "Failed to trigger DAG"))
+        raise DagsterAPIError(result.get("error", "Failed to trigger job"))
 
     logger.info(f"DAG '{dag_id}' triggered in tenant {tenant_id}")
     
@@ -332,11 +330,11 @@ def trigger_dag(dag_id: str):
 
 
 @api_v1_bp.route("/dags/<dag_id>/pause", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def pause_dag(dag_id: str):
-    """Pause DAG scheduling in Airflow."""
+    """Pause DAG scheduling in Dagster."""
     identity = get_current_identity()
     tenant_id = identity.tenant_id
 
@@ -347,7 +345,7 @@ def pause_dag(dag_id: str):
         raise NotFoundError("DAG not found")
 
     if not result.get("success"):
-        raise AirflowAPIError(result.get("error", "Failed to pause DAG in Airflow"))
+        raise DagsterAPIError(result.get("error", "Failed to pause DAG in Dagster"))
 
     logger.info(f"DAG '{dag_id}' paused in tenant {tenant_id}")
     
@@ -363,11 +361,11 @@ def pause_dag(dag_id: str):
 
 
 @api_v1_bp.route("/dags/<dag_id>/unpause", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def unpause_dag(dag_id: str):
-    """Resume DAG scheduling in Airflow."""
+    """Resume DAG scheduling in Dagster."""
     identity = get_current_identity()
     tenant_id = identity.tenant_id
 
@@ -378,7 +376,7 @@ def unpause_dag(dag_id: str):
         raise NotFoundError("DAG not found")
 
     if not result.get("success"):
-        raise AirflowAPIError(result.get("error", "Failed to unpause DAG in Airflow"))
+        raise DagsterAPIError(result.get("error", "Failed to resume DAG in Dagster"))
 
     logger.info(f"DAG '{dag_id}' unpaused in tenant {tenant_id}")
     
@@ -394,8 +392,8 @@ def unpause_dag(dag_id: str):
 
 
 @api_v1_bp.route("/dags/<dag_id>/runs", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def list_dag_runs(dag_id: str):
     """List DAG run history."""
     identity = get_current_identity()
@@ -415,8 +413,8 @@ def list_dag_runs(dag_id: str):
 
 
 @api_v1_bp.route("/dags/<dag_id>/runs/<run_id>", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_dag_run(dag_id: str, run_id: str):
     """Get DAG run details with task instances."""
     identity = get_current_identity()
@@ -432,8 +430,8 @@ def get_dag_run(dag_id: str, run_id: str):
 
 
 @api_v1_bp.route("/dags/<dag_id>/runs/<run_id>/tasks/<task_id>/logs", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_task_logs(dag_id: str, run_id: str, task_id: str):
     """Get task execution logs."""
     identity = get_current_identity()
@@ -461,8 +459,8 @@ def _get_pyspark_dag_generator(tenant_id: str) -> PySparkDAGGenerator:
 
 
 @api_v1_bp.route("/dags/pyspark/generate", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def generate_pyspark_dag():
     """
@@ -511,8 +509,8 @@ def generate_pyspark_dag():
 
 
 @api_v1_bp.route("/dags/pyspark/generate-pipeline", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def generate_pyspark_pipeline_dag():
     """
@@ -573,8 +571,8 @@ def generate_pyspark_pipeline_dag():
 
 
 @api_v1_bp.route("/dags/pyspark", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def list_pyspark_dags():
     """List all PySpark DAGs for the current tenant."""
     identity = get_current_identity()
@@ -587,8 +585,8 @@ def list_pyspark_dags():
 
 
 @api_v1_bp.route("/dags/pyspark/<dag_id>", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_pyspark_dag(dag_id: str):
     """Get detailed information about a PySpark DAG."""
     identity = get_current_identity()
@@ -604,8 +602,8 @@ def get_pyspark_dag(dag_id: str):
 
 
 @api_v1_bp.route("/dags/pyspark/<dag_id>", methods=["DELETE"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def delete_pyspark_dag(dag_id: str):
     """Delete a PySpark DAG and its associated job files."""
@@ -620,8 +618,8 @@ def delete_pyspark_dag(dag_id: str):
 
 
 @api_v1_bp.route("/dags/pyspark/<dag_id>/schedule", methods=["PATCH"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def update_pyspark_dag_schedule(dag_id: str):
     """Update the schedule of a PySpark DAG."""

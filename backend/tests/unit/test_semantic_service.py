@@ -14,7 +14,7 @@ from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 import uuid
 
-from app.services.semantic_service import (
+from app.domains.transformation.application.semantic_service import (
     SemanticService,
     SemanticServiceError,
     ModelNotFoundError,
@@ -22,7 +22,7 @@ from app.services.semantic_service import (
     MeasureNotFoundError,
     QueryBuildError,
 )
-from app.models.semantic import (
+from app.domains.transformation.domain.models import (
     SemanticModel,
     Dimension,
     Measure,

@@ -15,6 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { FlaskConical, Save, Lightbulb } from 'lucide-react'
 import type { SingularTestCreatePayload } from '../../types/visualModel'
+import { SavedQueryPicker } from '../shared/SavedQueryPicker'
+import { SaveAsQueryButton } from '../shared/SaveAsQueryButton'
+import type { SavedQuery } from '../../hooks/useDbtSavedQueries'
 
 export interface TestConfigFormProps {
   modelName: string
@@ -89,6 +92,17 @@ export function TestConfigForm({
     }
   }
 
+  const applySavedQuery = (q: SavedQuery) => {
+    setSql(q.sql)
+    if (!testName) {
+      const safe = q.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+      setTestName(`assert_${modelName}_${safe}`)
+    }
+    if (!description && q.description) {
+      setDescription(q.description)
+    }
+  }
+
   const handleSave = () => {
     onSave({
       test_name: testName,
@@ -147,9 +161,16 @@ export function TestConfigForm({
 
         {/* Quick templates */}
         <div className="space-y-1">
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Lightbulb className="h-3 w-3" />
-            Templates
+          <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Lightbulb className="h-3 w-3" />
+              Templates
+            </span>
+            <SavedQueryPicker
+              onSelect={applySavedQuery}
+              label="Load Saved Query"
+              size="xs"
+            />
           </div>
           <div className="flex flex-wrap gap-1">
             {SQL_TEMPLATES.map((t) => (
@@ -206,6 +227,20 @@ export function TestConfigForm({
           <Save className="h-4 w-4 mr-2" />
           {isSaving ? 'Creating...' : 'Create Singular Test'}
         </Button>
+
+        {/* Save as Query — persists the test SQL into the tenant library. */}
+        <div className="flex justify-end">
+          <SaveAsQueryButton
+            sql={sql}
+            defaultName={testName || `test_${modelName}`}
+            defaultDescription={`Singular dbt test for ${modelName}`}
+            defaultTags={['dbt', 'test']}
+            queryType="dbt"
+            size="xs"
+            disabled={!sql}
+            label="Save as Query"
+          />
+        </div>
       </CardContent>
     </Card>
   )

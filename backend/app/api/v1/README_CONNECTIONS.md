@@ -14,7 +14,7 @@ The Data Source API provides secure CRUD operations for database connections, co
 ✅ **Secure Credentials** - Passwords encrypted at rest  
 ✅ **Tenant Isolation** - Multi-tenant data separation  
 ✅ **Permission Control** - Role-based access control  
-✅ **Sync Triggering** - Trigger Airflow DAG runs  
+✅ **Sync Triggering** - Trigger Dagster job runs  
 
 ## API Endpoints
 
@@ -423,18 +423,19 @@ with connector:
         process(batch)
 ```
 
-### Triggering Airflow DAGs
+### Triggering Dagster Jobs
 
-Sync endpoint triggers Airflow DAGs:
+Sync endpoint triggers Dagster jobs:
 
 ```python
 # TODO: Full implementation
-from app.services.airflow_client import AirflowClient
+from app.services.dagster_client import DagsterClient
 
-airflow = AirflowClient()
-dag_run = airflow.trigger_dag(
-    dag_id=f"ingest_{db_type}",
-    conf={"connection_id": connection_id}
+dagster = DagsterClient()
+run = dagster.launch_run(
+    job_name=f"ingest_{db_type}",
+    repository_name=tenant_id,
+    run_config={"connection_id": connection_id}
 )
 ```
 

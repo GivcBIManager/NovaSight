@@ -16,13 +16,13 @@ class TestUserService:
     @pytest.fixture
     def mock_db(self):
         """Mock database session."""
-        with patch('app.services.user_service.db') as mock:
+        with patch('app.domains.identity.application.user_service.db') as mock:
             yield mock
     
     @pytest.fixture
     def mock_password_service(self):
         """Mock password service."""
-        with patch('app.services.user_service.PasswordService') as mock:
+        with patch('app.domains.identity.application.user_service.PasswordService') as mock:
             instance = mock.return_value
             instance.validate_strength.return_value = (True, None)
             instance.hash.return_value = 'hashed_password'
@@ -31,12 +31,12 @@ class TestUserService:
     @pytest.fixture
     def user_service(self, mock_password_service):
         """Create UserService instance."""
-        from app.services.user_service import UserService
+        from app.domains.identity.application.user_service import UserService
         return UserService(tenant_id=str(uuid4()))
     
     def test_list_for_tenant_basic(self, mock_db):
         """Test listing users for tenant."""
-        from app.services.user_service import UserService
+        from app.domains.identity.application.user_service import UserService
         
         tenant_id = str(uuid4())
         
@@ -48,7 +48,7 @@ class TestUserService:
         mock_pagination.has_next = False
         mock_pagination.has_prev = False
         
-        with patch('app.services.user_service.User') as MockUser:
+        with patch('app.domains.identity.application.user_service.User') as MockUser:
             MockUser.query.filter_by.return_value.order_by.return_value.paginate.return_value = mock_pagination
             
             result = UserService.list_for_tenant(tenant_id=tenant_id)
@@ -60,7 +60,7 @@ class TestUserService:
     
     def test_list_for_tenant_with_search(self, mock_db):
         """Test listing users with search filter."""
-        from app.services.user_service import UserService
+        from app.domains.identity.application.user_service import UserService
         
         tenant_id = str(uuid4())
         
@@ -71,7 +71,7 @@ class TestUserService:
         mock_pagination.has_next = False
         mock_pagination.has_prev = False
         
-        with patch('app.services.user_service.User') as MockUser:
+        with patch('app.domains.identity.application.user_service.User') as MockUser:
             query_mock = MagicMock()
             query_mock.filter.return_value = query_mock
             query_mock.order_by.return_value.paginate.return_value = mock_pagination
@@ -99,7 +99,7 @@ class TestUserService:
     
     def test_create_user_checks_email_uniqueness(self, user_service, mock_password_service, mock_db):
         """Test that user creation checks for duplicate email."""
-        with patch('app.services.user_service.User') as MockUser:
+        with patch('app.domains.identity.application.user_service.User') as MockUser:
             # Simulate existing user
             MockUser.query.filter.return_value.first.return_value = Mock()
             
@@ -139,7 +139,7 @@ class TestUserService:
         mock_role = Mock()
         
         with patch.object(user_service, 'get_user', return_value=mock_user):
-            with patch('app.services.user_service.Role') as MockRole:
+            with patch('app.domains.identity.application.user_service.Role') as MockRole:
                 MockRole.query.filter.return_value.all.return_value = [mock_role]
                 
                 result = user_service.assign_roles(str(uuid4()), ["viewer"])
@@ -205,7 +205,7 @@ class TestUserAPI:
                     "roles": ["viewer"]
                 }
                 
-                with patch('app.services.user_service.UserService') as MockService:
+                with patch('app.domains.identity.application.user_service.UserService') as MockService:
                     MockService.return_value.get_permissions.return_value = ["dashboards.view"]
                     
                     response = client.get(
@@ -247,7 +247,7 @@ class TestUserSchemas:
     
     def test_user_create_schema_validates_email(self):
         """Test that UserCreateSchema validates email format."""
-        from app.schemas.user_schemas import UserCreateSchema
+        from app.domains.identity.schemas.user_schemas import UserCreateSchema
         
         schema = UserCreateSchema()
         
@@ -261,7 +261,7 @@ class TestUserSchemas:
     
     def test_user_create_schema_validates_password_length(self):
         """Test that UserCreateSchema validates password length."""
-        from app.schemas.user_schemas import UserCreateSchema
+        from app.domains.identity.schemas.user_schemas import UserCreateSchema
         
         schema = UserCreateSchema()
         
@@ -275,7 +275,7 @@ class TestUserSchemas:
     
     def test_user_create_schema_normalizes_email(self):
         """Test that UserCreateSchema normalizes email to lowercase."""
-        from app.schemas.user_schemas import UserCreateSchema
+        from app.domains.identity.schemas.user_schemas import UserCreateSchema
         
         schema = UserCreateSchema()
         
@@ -289,7 +289,7 @@ class TestUserSchemas:
     
     def test_user_update_schema_optional_fields(self):
         """Test that UserUpdateSchema allows partial updates."""
-        from app.schemas.user_schemas import UserUpdateSchema
+        from app.domains.identity.schemas.user_schemas import UserUpdateSchema
         
         schema = UserUpdateSchema()
         
@@ -305,7 +305,7 @@ class TestRoleSchemas:
     
     def test_role_create_schema_validates_name_format(self):
         """Test that RoleCreateSchema validates role name format."""
-        from app.schemas.role_schemas import RoleCreateSchema
+        from app.domains.identity.schemas.role_schemas import RoleCreateSchema
         
         schema = RoleCreateSchema()
         
@@ -318,7 +318,7 @@ class TestRoleSchemas:
     
     def test_role_create_schema_validates_permissions(self):
         """Test that RoleCreateSchema validates permission names."""
-        from app.schemas.role_schemas import RoleCreateSchema
+        from app.domains.identity.schemas.role_schemas import RoleCreateSchema
         
         schema = RoleCreateSchema()
         
@@ -332,7 +332,7 @@ class TestRoleSchemas:
     
     def test_role_create_schema_valid_permissions(self):
         """Test that RoleCreateSchema accepts valid permissions."""
-        from app.schemas.role_schemas import RoleCreateSchema
+        from app.domains.identity.schemas.role_schemas import RoleCreateSchema
         
         schema = RoleCreateSchema()
         

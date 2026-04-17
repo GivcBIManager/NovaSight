@@ -108,7 +108,7 @@ class ClickHouseClient:
         # Try to get config from infrastructure config service first
         if use_infrastructure_config and not all([host, port, user]):
             try:
-                from app.services.infrastructure_config_service import InfrastructureConfigService
+                from app.domains.tenants.infrastructure.config_service import InfrastructureConfigService
                 config_service = InfrastructureConfigService()
                 settings = config_service.get_effective_settings('clickhouse', tenant_id)
                 

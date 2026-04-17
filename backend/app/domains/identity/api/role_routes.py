@@ -10,12 +10,11 @@ Role and permission CRUD operations within tenant scope.
 import logging
 
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required
 
 from app.api.v1 import api_v1_bp
 from app.domains.identity.application.role_service import RoleService
 from app.platform.auth.jwt_handler import get_jwt_identity_dict
-from app.platform.auth.decorators import require_roles, tenant_required
+from app.platform.auth.decorators import authenticated, require_roles, tenant_required
 from app.platform.errors.exceptions import ValidationError, NotFoundError
 from app.domains.identity.schemas.role_schemas import (
     RoleSchema,
@@ -29,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @api_v1_bp.route("/roles", methods=["GET"])
-@jwt_required()
+@authenticated
 @tenant_required
 def list_roles():
     """List all roles available in current tenant."""
@@ -46,7 +45,7 @@ def list_roles():
 
 
 @api_v1_bp.route("/roles/<role_id>", methods=["GET"])
-@jwt_required()
+@authenticated
 @tenant_required
 def get_role(role_id: str):
     """Get role details by ID."""
@@ -64,7 +63,7 @@ def get_role(role_id: str):
 
 
 @api_v1_bp.route("/roles", methods=["POST"])
-@jwt_required()
+@authenticated
 @tenant_required
 @require_roles("tenant_admin")
 def create_role():
@@ -92,7 +91,7 @@ def create_role():
 
 
 @api_v1_bp.route("/roles/<role_id>", methods=["PUT", "PATCH"])
-@jwt_required()
+@authenticated
 @tenant_required
 @require_roles("tenant_admin")
 def update_role(role_id: str):
@@ -122,7 +121,7 @@ def update_role(role_id: str):
 
 
 @api_v1_bp.route("/roles/<role_id>", methods=["DELETE"])
-@jwt_required()
+@authenticated
 @tenant_required
 @require_roles("tenant_admin")
 def delete_role(role_id: str):
@@ -145,7 +144,7 @@ def delete_role(role_id: str):
 
 
 @api_v1_bp.route("/roles/permissions", methods=["GET"])
-@jwt_required()
+@authenticated
 @tenant_required
 def list_permissions():
     """List all available permissions grouped by category."""
@@ -167,7 +166,7 @@ def list_permissions():
 
 
 @api_v1_bp.route("/roles/templates", methods=["GET"])
-@jwt_required()
+@authenticated
 @tenant_required
 def list_role_templates():
     """List available role templates for creating custom roles."""
@@ -185,7 +184,7 @@ def list_role_templates():
 
 
 @api_v1_bp.route("/roles/initialize", methods=["POST"])
-@jwt_required()
+@authenticated
 @tenant_required
 @require_roles("tenant_admin", "super_admin")
 def initialize_default_roles():

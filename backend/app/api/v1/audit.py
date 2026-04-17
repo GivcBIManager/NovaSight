@@ -1,4 +1,4 @@
-"""
+﻿"""
 NovaSight Audit API
 ===================
 
@@ -6,20 +6,21 @@ REST API endpoints for audit log querying and integrity verification.
 """
 
 from datetime import datetime
-from flask import jsonify, request, g
-from flask_jwt_extended import jwt_required
+from flask import jsonify, request
+from app.platform.auth.decorators import authenticated
+from app.platform.auth.identity import get_current_identity
 
 from app.api.v1 import api_v1_bp
-from app.services.audit_service import AuditService
-from app.middleware.permissions import require_permission, require_any_role
-from app.middleware.tenant_context import require_tenant
+from app.platform.audit.service import AuditService
+from app.platform.auth.decorators import require_permission, require_roles
+from app.platform.tenant.context import require_tenant
 from app.errors import ValidationError, AuthorizationError
 
 
 @api_v1_bp.route('/audit/logs', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_tenant
-@require_any_role('tenant_admin', 'super_admin', 'auditor')
+@require_roles('tenant_admin', 'super_admin', 'auditor')
 def list_audit_logs():
     """
     List audit logs with filtering and pagination.
@@ -39,7 +40,7 @@ def list_audit_logs():
     Returns:
         JSON with paginated audit log entries
     """
-    tenant_id = str(g.tenant_id)
+    tenant_id = str(get_current_identity().tenant_id)
     
     # Parse query parameters
     user_id = request.args.get('user_id')
@@ -93,9 +94,9 @@ def list_audit_logs():
 
 
 @api_v1_bp.route('/audit/logs/<log_id>', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_tenant
-@require_any_role('tenant_admin', 'super_admin', 'auditor')
+@require_roles('tenant_admin', 'super_admin', 'auditor')
 def get_audit_log(log_id: str):
     """
     Get a specific audit log entry.
@@ -109,7 +110,7 @@ def get_audit_log(log_id: str):
     from app.models.audit import AuditLog
     import uuid
     
-    tenant_id = str(g.tenant_id)
+    tenant_id = str(get_current_identity().tenant_id)
     
     try:
         log_uuid = uuid.UUID(log_id)
@@ -134,9 +135,9 @@ def get_audit_log(log_id: str):
 
 
 @api_v1_bp.route('/audit/user/<user_id>/activity', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_tenant
-@require_any_role('tenant_admin', 'super_admin', 'auditor')
+@require_roles('tenant_admin', 'super_admin', 'auditor')
 def get_user_activity(user_id: str):
     """
     Get recent activity for a specific user.
@@ -150,7 +151,7 @@ def get_user_activity(user_id: str):
     Returns:
         JSON with user's recent activity
     """
-    tenant_id = str(g.tenant_id)
+    tenant_id = str(get_current_identity().tenant_id)
     limit = request.args.get('limit', 50, type=int)
     limit = min(limit, 200)  # Cap at 200
     
@@ -171,9 +172,9 @@ def get_user_activity(user_id: str):
 
 
 @api_v1_bp.route('/audit/resource/<resource_type>/<resource_id>/history', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_tenant
-@require_any_role('tenant_admin', 'super_admin', 'auditor', 'analyst')
+@require_roles('tenant_admin', 'super_admin', 'auditor', 'analyst')
 def get_resource_history(resource_type: str, resource_id: str):
     """
     Get complete audit history for a specific resource.
@@ -185,7 +186,7 @@ def get_resource_history(resource_type: str, resource_id: str):
     Returns:
         JSON with resource's complete audit history
     """
-    tenant_id = str(g.tenant_id)
+    tenant_id = str(get_current_identity().tenant_id)
     
     history = AuditService.get_resource_history(
         tenant_id=tenant_id,
@@ -205,9 +206,9 @@ def get_resource_history(resource_type: str, resource_id: str):
 
 
 @api_v1_bp.route('/audit/integrity/verify', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_tenant
-@require_any_role('tenant_admin', 'super_admin')
+@require_roles('tenant_admin', 'super_admin')
 def verify_audit_integrity():
     """
     Verify audit log chain integrity.
@@ -218,7 +219,7 @@ def verify_audit_integrity():
     Returns:
         JSON with verification results including any integrity issues
     """
-    tenant_id = str(g.tenant_id)
+    tenant_id = str(get_current_identity().tenant_id)
     
     result = AuditService.verify_integrity(tenant_id=tenant_id)
     
@@ -229,9 +230,9 @@ def verify_audit_integrity():
 
 
 @api_v1_bp.route('/audit/security/events', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_tenant
-@require_any_role('tenant_admin', 'super_admin', 'security')
+@require_roles('tenant_admin', 'super_admin', 'security')
 def get_security_events():
     """
     Get security-relevant events from the last N hours.
@@ -242,7 +243,7 @@ def get_security_events():
     Returns:
         JSON with security events summary and details
     """
-    tenant_id = str(g.tenant_id)
+    tenant_id = str(get_current_identity().tenant_id)
     hours = request.args.get('hours', 24, type=int)
     hours = min(hours, 168)  # Cap at 1 week
     
@@ -258,9 +259,9 @@ def get_security_events():
 
 
 @api_v1_bp.route('/audit/export', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_tenant
-@require_any_role('tenant_admin', 'super_admin', 'auditor')
+@require_roles('tenant_admin', 'super_admin', 'auditor')
 def export_audit_logs():
     """
     Export audit logs for a date range.
@@ -272,7 +273,7 @@ def export_audit_logs():
     Returns:
         JSON with exportable audit log entries including hash chain
     """
-    tenant_id = str(g.tenant_id)
+    tenant_id = str(get_current_identity().tenant_id)
     data = request.get_json() or {}
     
     if not data.get('start_date') or not data.get('end_date'):
@@ -325,9 +326,9 @@ def export_audit_logs():
 
 
 @api_v1_bp.route('/audit/actions', methods=['GET'])
-@jwt_required()
+@authenticated
 @require_tenant
-@require_any_role('tenant_admin', 'super_admin', 'auditor')
+@require_roles('tenant_admin', 'super_admin', 'auditor')
 def list_audited_actions():
     """
     List all audited action types with their severity levels.

@@ -117,7 +117,7 @@ class JobService {
     page?: number
     per_page?: number
     status?: string
-    type?: 'spark' | 'pipeline'
+    type?: 'spark' | 'pipeline' | 'dbt'
   }): Promise<PaginatedResponse<Job>> {
     const response = await apiClient.get<{
       jobs: Job[]

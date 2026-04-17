@@ -464,7 +464,7 @@ class ConnectionService(IConnectionProvider, ISchemaProvider):
             return None
 
         try:
-            # TODO: Integrate with Airflow to trigger DAG
+            # TODO: Integrate with Dagster to trigger pipeline
             job_id = str(uuid.uuid4())
             logger.info(
                 f"Triggered sync for connection {connection.name}: job_id={job_id}"

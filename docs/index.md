@@ -86,7 +86,7 @@ Multi-tenant architecture with role-based access control, audit logging, and enc
 
 ### 🚀 Scalable Architecture
 
-Built on modern technologies (PySpark, ClickHouse, Airflow) to handle data at any scale.
+Built on modern technologies (PySpark, ClickHouse, Dagster) to handle data at any scale.
 
 ## Architecture Overview
 
@@ -110,7 +110,7 @@ Built on modern technologies (PySpark, ClickHouse, Airflow) to handle data at an
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │                 Processing Layer                           │  │
 │  │  ┌──────────┐  ┌─────────────┐  ┌─────────────────────┐   │  │
-│  │  │ Airflow  │  │   PySpark   │  │        dbt          │   │  │
+│  │  │ Dagster  │  │   PySpark   │  │        dbt          │   │  │
 │  │  │(Orchestr)│  │  (Compute)  │  │  (Transformation)   │   │  │
 │  │  └──────────┘  └─────────────┘  └─────────────────────┘   │  │
 │  └───────────────────────────────────────────────────────────┘  │

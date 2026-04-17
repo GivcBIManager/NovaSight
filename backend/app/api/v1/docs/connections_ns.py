@@ -1,4 +1,4 @@
-"""
+﻿"""
 Connections API Namespace
 ==========================
 
@@ -7,10 +7,9 @@ Flask-RESTX namespace for data connection endpoint documentation.
 
 from flask import request, jsonify
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required
-from app.middleware.jwt_handlers import get_jwt_identity_dict
-from app.services.connection_service import ConnectionService
-from app.decorators import require_roles, require_tenant_context
+from app.platform.auth.jwt_handler import get_jwt_identity_dict
+from app.domains.datasources.application.connection_service import ConnectionService
+from app.platform.auth.decorators import authenticated, require_roles, tenant_required
 from app.errors import ValidationError, NotFoundError, ConnectionTestError
 import logging
 
@@ -120,7 +119,7 @@ class ConnectionList(Resource):
     @ns.param('status', 'Filter by status', type=str)
     @ns.marshal_with(connection_list_response)
     @ns.response(401, 'Unauthorized', error_response)
-    @require_tenant_context
+    @tenant_required
     def get(self):
         """
         List all data connections for current tenant.
@@ -152,7 +151,7 @@ class ConnectionList(Resource):
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(409, 'Connection name already exists', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(["data_engineer", "tenant_admin"])
     def post(self):
         """
@@ -210,7 +209,7 @@ class ConnectionDetail(Resource):
     @ns.marshal_with(connection_response)
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(404, 'Connection not found', error_response)
-    @require_tenant_context
+    @tenant_required
     def get(self, connection_id):
         """
         Get connection details by ID.
@@ -236,7 +235,7 @@ class ConnectionDetail(Resource):
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Connection not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(["data_engineer", "tenant_admin"])
     def patch(self, connection_id):
         """
@@ -266,7 +265,7 @@ class ConnectionDetail(Resource):
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(403, 'Forbidden', error_response)
     @ns.response(404, 'Connection not found', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_roles(["data_engineer", "tenant_admin"])
     def delete(self, connection_id):
         """
@@ -302,7 +301,7 @@ class ConnectionTest(Resource):
     @ns.marshal_with(test_result)
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(404, 'Connection not found', error_response)
-    @require_tenant_context
+    @tenant_required
     def post(self, connection_id):
         """
         Test a data source connection.
@@ -333,7 +332,7 @@ class ConnectionSchema(Resource):
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(404, 'Connection not found', error_response)
     @ns.response(503, 'Unable to connect to database', error_response)
-    @require_tenant_context
+    @tenant_required
     def get(self, connection_id):
         """
         Get the database schema for a connection.

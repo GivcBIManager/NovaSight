@@ -60,6 +60,7 @@ import type {
   FilterOperator,
 } from '../types'
 import { useMetrics, useDimensions, useSemanticQuery, useCompileQuery } from '../hooks/useDbtStudio'
+import { SaveAsQueryButton } from './shared/SaveAsQueryButton'
 
 // ============================================================================
 // Filter Builder Component
@@ -499,10 +500,20 @@ function ResultsTable({ result, isLoading }: ResultsTableProps) {
             View Compiled SQL
             <ChevronDown className="h-4 w-4" />
           </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2">
+          <CollapsibleContent className="mt-2 space-y-2">
             <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded-lg overflow-x-auto">
               {result.compiled_sql}
             </pre>
+            <div className="flex justify-end">
+              <SaveAsQueryButton
+                sql={result.compiled_sql}
+                defaultName="mcp_query"
+                defaultDescription="Compiled from dbt Semantic Layer"
+                defaultTags={['dbt', 'semantic-layer', 'mcp']}
+                queryType="dbt"
+                size="xs"
+              />
+            </div>
           </CollapsibleContent>
         </Collapsible>
       )}

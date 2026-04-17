@@ -94,16 +94,17 @@ def _init_extensions(app: Flask) -> None:
     limiter.init_app(app)
     
     # Register JWT handlers (callbacks for token blacklist, etc.)
-    from app.middleware.jwt_handlers import register_jwt_handlers
+    from app.platform.auth.jwt_handler import register_jwt_handlers
     register_jwt_handlers(jwt)
 
 
 def _register_blueprints(app: Flask) -> None:
     """Register API blueprints."""
     from app.api.v1 import api_v1_bp
-    from app.api.health import health_bp
+    from app.api.health import health_bp, health_api_bp
     
     app.register_blueprint(health_bp)
+    app.register_blueprint(health_api_bp, url_prefix="/api/v1")
     app.register_blueprint(api_v1_bp, url_prefix="/api/v1")
     
     # Register Flask-RESTX API documentation (Swagger UI at /api/v1/docs)

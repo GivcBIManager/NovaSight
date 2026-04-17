@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import yaml
 
-from flask import g
+from app.platform.auth.identity import get_current_identity
 
 logger = logging.getLogger(__name__)
 
@@ -106,13 +106,14 @@ class TenantDbtProjectManager:
         Raises:
             TenantDbtProjectError: If no tenant context
         """
-        if not hasattr(g, 'tenant_id') or not g.tenant_id:
+        identity = get_current_identity()
+        if not identity or not identity.tenant_id:
             raise TenantDbtProjectError("No tenant context available")
         
         from app.domains.tenants.domain.models import Tenant
-        tenant = Tenant.query.get(g.tenant_id)
+        tenant = Tenant.query.get(identity.tenant_id)
         if not tenant:
-            raise TenantDbtProjectError(f"Tenant not found: {g.tenant_id}")
+            raise TenantDbtProjectError(f"Tenant not found: {identity.tenant_id}")
         
         # Get ClickHouse config from environment
         return cls(

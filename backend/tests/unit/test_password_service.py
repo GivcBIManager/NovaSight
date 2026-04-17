@@ -10,7 +10,7 @@ Comprehensive tests for the PasswordService including:
 """
 
 import pytest
-from app.services.password_service import PasswordService, password_service
+from app.platform.security.passwords import PasswordService, password_service
 
 
 class TestPasswordHashing:

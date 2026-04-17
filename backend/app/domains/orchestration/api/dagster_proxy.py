@@ -7,7 +7,7 @@ This handles CORS and maintains authentication context.
 
 import requests
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import jwt_required
+from app.platform.auth.decorators import authenticated
 
 dagster_proxy_bp = Blueprint('dagster_proxy', __name__, url_prefix='/dagster')
 
@@ -23,7 +23,7 @@ def get_dagster_timeout() -> int:
 
 
 @dagster_proxy_bp.route('/graphql', methods=['POST'])
-@jwt_required()
+@authenticated
 def graphql_proxy():
     """
     Proxy GraphQL requests to Dagster.
@@ -168,7 +168,7 @@ def dagster_health():
 
 
 @dagster_proxy_bp.route('/runs', methods=['GET'])
-@jwt_required()
+@authenticated
 def list_runs():
     """
     List recent runs from Dagster.
@@ -255,7 +255,7 @@ def list_runs():
 
 
 @dagster_proxy_bp.route('/runs/<run_id>', methods=['DELETE'])
-@jwt_required()
+@authenticated
 def terminate_run(run_id: str):
     """
     Terminate a running Dagster run.
@@ -326,7 +326,7 @@ def terminate_run(run_id: str):
 
 
 @dagster_proxy_bp.route('/assets', methods=['GET'])
-@jwt_required()
+@authenticated
 def list_assets():
     """
     List assets from Dagster.
@@ -406,7 +406,7 @@ def list_assets():
 
 
 @dagster_proxy_bp.route('/schedules', methods=['GET'])
-@jwt_required()
+@authenticated
 def list_schedules():
     """
     List schedules from Dagster.
@@ -488,7 +488,7 @@ def list_schedules():
 
 
 @dagster_proxy_bp.route('/sensors', methods=['GET'])
-@jwt_required()
+@authenticated
 def list_sensors():
     """
     List sensors from Dagster.

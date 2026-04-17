@@ -19,7 +19,7 @@ from app.utils.pagination import (   # noqa: F401
     paginate,
 )
 
-from app.utils.naming import (   # noqa: F401
+from app.services.template_engine.filters import (   # noqa: F401
     to_snake_case,
     to_camel_case,
     to_pascal_case,

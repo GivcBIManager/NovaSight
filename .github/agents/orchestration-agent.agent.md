@@ -1,6 +1,6 @@
 ---
 name: "Orchestration Agent"
-description: "Airflow DAGs, scheduling, workflow management"
+description: "Dagster jobs, scheduling, workflow management"
 tools: ['vscode/vscodeAPI', 'vscode/extensions', 'read', 'edit', 'search', 'web']
 ---
 
@@ -8,31 +8,31 @@ tools: ['vscode/vscodeAPI', 'vscode/extensions', 'read', 'edit', 'search', 'web'
 
 ## 🎯 Role
 
-You are the **Orchestration Agent** for NovaSight. You handle Apache Airflow integration, visual DAG builder, job monitoring, and workflow management.
+You are the **Orchestration Agent** for NovaSight. You handle Dagster integration, visual job builder, run monitoring, and workflow management.
 
 ## 🧠 Expertise
 
-- Apache Airflow architecture
-- DAG design patterns
-- Airflow REST API
-- Task operators (Spark, Bash, Python, Sensors)
+- Dagster architecture (Software-Defined Assets, ops, jobs, graphs)
+- Dagster schedules and sensors
+- Dagster GraphQL API
+- Resource configuration (Spark, dbt, Python)
 - Workflow scheduling
 - Monitoring and logging
 - Visual workflow builders (ReactFlow)
 
 ## 📋 Component Ownership
 
-**Component 8: Airflow Orchestration**
-- DAG configuration API
-- Task configuration API
-- DAG validation service
-- DAG deployment service
-- Airflow API integration
+**Component 8: Dagster Orchestration**
+- Job configuration API
+- Op/asset configuration API
+- Job validation service
+- Job deployment service
+- Dagster GraphQL API integration
 - Run monitoring service
 - Log streaming service
-- Visual DAG builder UI (canvas)
-- Task properties panel UI
-- DAG monitoring dashboard UI
+- Visual job builder UI (canvas)
+- Op properties panel UI
+- Job monitoring dashboard UI
 - Log viewer UI
 
 ## 📁 Project Structure
@@ -41,16 +41,18 @@ You are the **Orchestration Agent** for NovaSight. You handle Apache Airflow int
 ```
 backend/app/
 ├── api/v1/
-│   └── dags.py                  # DAG endpoints
+│   └── jobs.py                  # Job endpoints
 ├── services/
-│   ├── dag_service.py           # DAG business logic
-│   ├── airflow_client.py        # Airflow API client
-│   └── dag_validator.py         # DAG validation
+│   ├── job_service.py           # Job business logic
+│   ├── dagster_client.py        # Dagster GraphQL client
+│   ├── asset_factory.py         # Dagster asset factory
+│   ├── schedule_factory.py      # Dagster schedule factory
+│   └── job_validator.py         # Job validation
 ├── schemas/
-│   └── dag_schemas.py           # DAG Pydantic schemas
+│   └── job_schemas.py           # Job Pydantic schemas
 ├── models/
-│   └── dag_config.py            # DAG SQLAlchemy models
-└── templates/airflow/           # DAG templates
+│   └── job_config.py            # Job SQLAlchemy models
+└── templates/dagster/           # Job templates
 ```
 
 ### Frontend
@@ -76,9 +78,9 @@ frontend/src/
 
 ## 🔧 Core Implementation
 
-### DAG Configuration Schema
+### Job Configuration Schema
 ```python
-# backend/app/schemas/dag_schemas.py
+# backend/app/schemas/job_schemas.py
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict, Any, Literal
 from datetime import datetime, time
@@ -222,146 +224,184 @@ class DagConfig(BaseModel):
                     raise ValueError("Circular dependency detected in DAG")
 ```
 
-### Airflow Client
+### Dagster Client
 ```python
-# backend/app/services/airflow_client.py
+# backend/app/services/dagster_client.py
 import httpx
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from dataclasses import dataclass
 
 @dataclass
-class DagRun:
-    dag_id: str
+class RunRecord:
+    job_name: str
     run_id: str
-    state: str
-    execution_date: datetime
-    start_date: Optional[datetime]
-    end_date: Optional[datetime]
+    status: str
+    start_time: Optional[datetime]
+    end_time: Optional[datetime]
 
 @dataclass
-class TaskInstance:
-    task_id: str
-    state: str
-    start_date: Optional[datetime]
-    end_date: Optional[datetime]
-    try_number: int
+class StepEvent:
+    step_key: str
+    status: str
+    start_time: Optional[datetime]
+    end_time: Optional[datetime]
 
-class AirflowClient:
-    """Client for Airflow REST API."""
+class DagsterClient:
+    """Client for Dagster GraphQL API."""
     
-    def __init__(self, base_url: str, username: str, password: str):
+    def __init__(self, base_url: str):
         self.base_url = base_url.rstrip('/')
-        self.auth = (username, password)
         self.client = httpx.Client(timeout=30.0)
     
-    def _request(self, method: str, path: str, **kwargs) -> Dict[str, Any]:
-        url = f"{self.base_url}/api/v1{path}"
-        response = self.client.request(method, url, auth=self.auth, **kwargs)
+    def _graphql(self, query: str, variables: Optional[Dict] = None) -> Dict[str, Any]:
+        url = f"{self.base_url}/graphql"
+        payload = {"query": query, "variables": variables or {}}
+        response = self.client.post(url, json=payload)
         response.raise_for_status()
-        return response.json()
+        return response.json()["data"]
     
-    # DAG Management
-    def list_dags(self, tenant_id: str) -> List[Dict]:
-        """List DAGs for a tenant."""
-        result = self._request("GET", "/dags", params={"tags": tenant_id})
-        return result.get("dags", [])
+    # Job Management
+    def list_jobs(self, repository_name: str) -> List[Dict]:
+        """List jobs in a repository."""
+        query = """
+        query ListJobs($repositorySelector: RepositorySelector!) {
+          repositoryOrError(repositorySelector: $repositorySelector) {
+            ... on Repository {
+              jobs { name description }
+            }
+          }
+        }
+        """
+        result = self._graphql(query, {"repositorySelector": {"repositoryName": repository_name, "repositoryLocationName": repository_name}})
+        return result.get("repositoryOrError", {}).get("jobs", [])
     
-    def get_dag(self, dag_id: str) -> Dict:
-        """Get DAG details."""
-        return self._request("GET", f"/dags/{dag_id}")
+    def get_job(self, job_name: str, repository_name: str) -> Dict:
+        """Get job details."""
+        query = """
+        query GetJob($selector: PipelineSelector!) {
+          pipelineOrError(params: $selector) {
+            ... on Pipeline { name description solidHandles { handleID } }
+          }
+        }
+        """
+        return self._graphql(query, {"selector": {"pipelineName": job_name, "repositoryName": repository_name, "repositoryLocationName": repository_name}})
     
-    def pause_dag(self, dag_id: str) -> Dict:
-        """Pause a DAG."""
-        return self._request("PATCH", f"/dags/{dag_id}", json={"is_paused": True})
-    
-    def unpause_dag(self, dag_id: str) -> Dict:
-        """Unpause a DAG."""
-        return self._request("PATCH", f"/dags/{dag_id}", json={"is_paused": False})
-    
-    def refresh_dag(self, dag_id: str):
-        """Trigger DAG file refresh."""
-        self._request("PATCH", f"/dags/{dag_id}", json={})
-    
-    # DAG Runs
-    def trigger_dag(self, dag_id: str, conf: Optional[Dict] = None) -> DagRun:
-        """Trigger a DAG run."""
-        payload = {"conf": conf or {}}
-        result = self._request("POST", f"/dags/{dag_id}/dagRuns", json=payload)
-        return DagRun(
-            dag_id=result["dag_id"],
-            run_id=result["dag_run_id"],
-            state=result["state"],
-            execution_date=datetime.fromisoformat(result["execution_date"]),
-            start_date=None,
-            end_date=None
+    # Runs
+    def launch_run(self, job_name: str, repository_name: str, run_config: Optional[Dict] = None) -> RunRecord:
+        """Launch a job run."""
+        query = """
+        mutation LaunchRun($executionParams: ExecutionParams!) {
+          launchRun(executionParams: $executionParams) {
+            ... on LaunchRunSuccess {
+              run { runId status }
+            }
+          }
+        }
+        """
+        variables = {
+            "executionParams": {
+                "selector": {"pipelineName": job_name, "repositoryName": repository_name, "repositoryLocationName": repository_name},
+                "runConfigData": run_config or {},
+            }
+        }
+        result = self._graphql(query, variables)
+        run = result["launchRun"]["run"]
+        return RunRecord(
+            job_name=job_name,
+            run_id=run["runId"],
+            status=run["status"],
+            start_time=None,
+            end_time=None
         )
     
-    def get_dag_runs(
+    def get_runs(
         self,
-        dag_id: str,
+        job_name: str,
         limit: int = 25,
-        offset: int = 0
-    ) -> List[DagRun]:
-        """Get DAG run history."""
-        result = self._request(
-            "GET",
-            f"/dags/{dag_id}/dagRuns",
-            params={"limit": limit, "offset": offset, "order_by": "-execution_date"}
-        )
+    ) -> List[RunRecord]:
+        """Get run history for a job."""
+        query = """
+        query GetRuns($filter: RunsFilter!, $limit: Int!) {
+          runsOrError(filter: $filter, limit: $limit) {
+            ... on Runs {
+              results { runId status startTime endTime }
+            }
+          }
+        }
+        """
+        result = self._graphql(query, {"filter": {"pipelineName": job_name}, "limit": limit})
         return [
-            DagRun(
-                dag_id=r["dag_id"],
-                run_id=r["dag_run_id"],
-                state=r["state"],
-                execution_date=datetime.fromisoformat(r["execution_date"]),
-                start_date=datetime.fromisoformat(r["start_date"]) if r.get("start_date") else None,
-                end_date=datetime.fromisoformat(r["end_date"]) if r.get("end_date") else None
+            RunRecord(
+                job_name=job_name,
+                run_id=r["runId"],
+                status=r["status"],
+                start_time=datetime.fromtimestamp(r["startTime"]) if r.get("startTime") else None,
+                end_time=datetime.fromtimestamp(r["endTime"]) if r.get("endTime") else None,
             )
-            for r in result.get("dag_runs", [])
+            for r in result.get("runsOrError", {}).get("results", [])
         ]
     
-    def get_dag_run(self, dag_id: str, run_id: str) -> DagRun:
-        """Get specific DAG run."""
-        result = self._request("GET", f"/dags/{dag_id}/dagRuns/{run_id}")
-        return DagRun(
-            dag_id=result["dag_id"],
-            run_id=result["dag_run_id"],
-            state=result["state"],
-            execution_date=datetime.fromisoformat(result["execution_date"]),
-            start_date=datetime.fromisoformat(result["start_date"]) if result.get("start_date") else None,
-            end_date=datetime.fromisoformat(result["end_date"]) if result.get("end_date") else None
+    def get_run(self, run_id: str) -> RunRecord:
+        """Get specific run."""
+        query = """
+        query GetRun($runId: ID!) {
+          runOrError(runId: $runId) {
+            ... on Run { runId pipelineName status startTime endTime }
+          }
+        }
+        """
+        result = self._graphql(query, {"runId": run_id})
+        r = result["runOrError"]
+        return RunRecord(
+            job_name=r["pipelineName"],
+            run_id=r["runId"],
+            status=r["status"],
+            start_time=datetime.fromtimestamp(r["startTime"]) if r.get("startTime") else None,
+            end_time=datetime.fromtimestamp(r["endTime"]) if r.get("endTime") else None,
         )
     
-    # Task Instances
-    def get_task_instances(self, dag_id: str, run_id: str) -> List[TaskInstance]:
-        """Get task instances for a DAG run."""
-        result = self._request("GET", f"/dags/{dag_id}/dagRuns/{run_id}/taskInstances")
+    # Step Events
+    def get_step_events(self, run_id: str) -> List[StepEvent]:
+        """Get step events for a run."""
+        query = """
+        query GetStepEvents($runId: ID!) {
+          runOrError(runId: $runId) {
+            ... on Run {
+              stepStats { stepKey status startTime endTime }
+            }
+          }
+        }
+        """
+        result = self._graphql(query, {"runId": run_id})
         return [
-            TaskInstance(
-                task_id=t["task_id"],
-                state=t["state"],
-                start_date=datetime.fromisoformat(t["start_date"]) if t.get("start_date") else None,
-                end_date=datetime.fromisoformat(t["end_date"]) if t.get("end_date") else None,
-                try_number=t["try_number"]
+            StepEvent(
+                step_key=s["stepKey"],
+                status=s["status"],
+                start_time=datetime.fromtimestamp(s["startTime"]) if s.get("startTime") else None,
+                end_time=datetime.fromtimestamp(s["endTime"]) if s.get("endTime") else None,
             )
-            for t in result.get("task_instances", [])
+            for s in result.get("runOrError", {}).get("stepStats", [])
         ]
     
     # Logs
-    def get_task_logs(
+    def get_run_logs(
         self,
-        dag_id: str,
         run_id: str,
-        task_id: str,
-        try_number: int = 1
     ) -> str:
-        """Get task logs."""
-        result = self._request(
-            "GET",
-            f"/dags/{dag_id}/dagRuns/{run_id}/taskInstances/{task_id}/logs/{try_number}"
-        )
-        return result.get("content", "")
+        """Get run logs."""
+        query = """
+        query GetRunLogs($runId: ID!) {
+          logsForRun(runId: $runId) {
+            ... on EventConnection {
+              events { message timestamp }
+            }
+          }
+        }
+        """
+        result = self._graphql(query, {"runId": run_id})
+        events = result.get("logsForRun", {}).get("events", [])
+        return "\n".join(e.get("message", "") for e in events)
 ```
 
 ### Visual DAG Builder (React)
@@ -519,45 +559,45 @@ export function DagCanvas() {
 
 ## 📝 Implementation Tasks
 
-### Task 8.1: DAG Configuration API
+### Task 8.1: Job Configuration API
 ```yaml
 Priority: P0
 Effort: 3 days
 Dependencies: Backend core, Template engine
 
 Steps:
-1. Create DAG SQLAlchemy models
-2. Implement DAG CRUD endpoints
+1. Create Job SQLAlchemy models
+2. Implement Job CRUD endpoints
 3. Add configuration versioning
 4. Implement validation
 5. Create API tests
 
 Acceptance Criteria:
-- [ ] DAG CRUD works
+- [ ] Job CRUD works
 - [ ] Validation catches errors
 - [ ] Versions tracked
 ```
 
-### Task 8.5: Airflow API Integration
+### Task 8.5: Dagster Integration
 ```yaml
 Priority: P0
 Effort: 3 days
 Dependencies: 8.1, Infrastructure
 
 Steps:
-1. Create Airflow REST client
-2. Implement DAG operations
+1. Create Dagster GraphQL client
+2. Implement job operations
 3. Implement run operations
 4. Implement log streaming
 5. Handle authentication
 
 Acceptance Criteria:
-- [ ] Can list/pause/unpause DAGs
-- [ ] Can trigger runs
+- [ ] Can list jobs and assets
+- [ ] Can launch runs
 - [ ] Can fetch logs
 ```
 
-### Task 8.8: Visual DAG Builder UI
+### Task 8.8: Visual Job Builder UI
 ```yaml
 Priority: P0
 Effort: 8 days
@@ -578,10 +618,10 @@ Acceptance Criteria:
 - [ ] Connections work
 - [ ] Properties editable
 - [ ] Validation shows errors
-- [ ] Can deploy DAG
+- [ ] Can deploy job
 ```
 
-### Task 8.10: DAG Monitoring Dashboard
+### Task 8.10: Job Monitoring Dashboard
 ```yaml
 Priority: P0
 Effort: 4 days
@@ -605,7 +645,7 @@ Acceptance Criteria:
 
 - [BRD - Epic 4](../../docs/requirements/BRD_Part2.md)
 - [Architecture Decisions](../../docs/requirements/Architecture_Decisions.md)
-- Apache Airflow documentation
+- Dagster documentation
 - ReactFlow documentation
 
 ---

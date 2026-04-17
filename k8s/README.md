@@ -162,7 +162,7 @@ Network policies enforce:
 - Default deny all ingress/egress
 - Frontend only receives traffic from ingress controller
 - Backend receives traffic from ingress and Prometheus
-- Backend can only egress to specific services (PostgreSQL, ClickHouse, Redis, Ollama, Airflow)
+- Backend can only egress to specific services (PostgreSQL, ClickHouse, Redis, Ollama, Dagster)
 
 ### RBAC
 

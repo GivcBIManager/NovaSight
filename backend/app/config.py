@@ -62,11 +62,6 @@ class BaseConfig:
     DAGSTER_SPARK_CONCURRENCY_LIMIT = int(os.getenv("DAGSTER_SPARK_CONCURRENCY_LIMIT", "3"))
     DAGSTER_DBT_CONCURRENCY_LIMIT = int(os.getenv("DAGSTER_DBT_CONCURRENCY_LIMIT", "2"))
     
-    # Airflow Configuration (Deprecated - use Dagster instead)
-    AIRFLOW_BASE_URL = os.getenv("AIRFLOW_BASE_URL", "http://localhost:8080")
-    AIRFLOW_USERNAME = os.getenv("AIRFLOW_USERNAME", "airflow")
-    AIRFLOW_PASSWORD = os.getenv("AIRFLOW_PASSWORD", "airflow")
-    
     # Ollama LLM Configuration
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
@@ -158,6 +153,11 @@ class ProductionConfig(BaseConfig):
     
     DEBUG = False
     TESTING = False
+    
+    # Enforce required secrets — fail fast if missing
+    SECRET_KEY = os.environ["SECRET_KEY"]  # type: ignore[assignment]
+    JWT_SECRET_KEY = os.environ["JWT_SECRET_KEY"]  # type: ignore[assignment]
+    SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URL"]  # type: ignore[assignment]
     
     # Enforce secure settings
     SESSION_COOKIE_SECURE = True

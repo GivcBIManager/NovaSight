@@ -29,7 +29,8 @@ import {
   Power,
   PowerOff,
   Rocket,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -631,10 +632,30 @@ export function PySparkAppDetailPage() {
           {/* Target Configuration */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Target Configuration
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Target Configuration
+                </CardTitle>
+                {app.target_database && app.target_table && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      navigate(
+                        `/app/dbt-studio?source_schema=${encodeURIComponent(
+                          app.target_database!
+                        )}&source_table=${encodeURIComponent(
+                          app.target_table!
+                        )}&tab=builder`
+                      )
+                    }
+                  >
+                    <Sparkles className="h-4 w-4 mr-1" />
+                    Use in dbt Studio
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-3">
               <div>

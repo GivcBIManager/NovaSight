@@ -76,7 +76,7 @@ class TenantContextMiddleware:
                 abort(401, description="Missing tenant context")
 
             # ── Validate tenant ───────────────────────────────────
-            from app.models.tenant import Tenant, TenantStatus
+            from app.domains.tenants.domain.models import Tenant, TenantStatus
             from app.extensions import db
 
             tenant = db.session.get(Tenant, tenant_id)
@@ -99,7 +99,7 @@ class TenantContextMiddleware:
                 g.current_user_id = identity.get("user_id")
                 g.user_roles = identity.get("roles", [])
                 if g.current_user_id:
-                    from app.models.user import User
+                    from app.domains.identity.domain.models import User
                     g.current_user = db.session.get(User, g.current_user_id)
 
             g.user_permissions = claims.get("permissions", [])

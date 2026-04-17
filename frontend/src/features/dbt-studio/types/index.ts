@@ -46,8 +46,8 @@ export type AggregationType =
 /** Resource types in dbt project */
 export type ResourceType = 'model' | 'source' | 'seed' | 'snapshot' | 'test' | 'metric' | 'exposure'
 
-/** dbt model layer */
-export type ModelLayer = 'source' | 'staging' | 'intermediate' | 'mart' | 'marts'
+/** dbt model layer (matches backend VisualModelDefinition.layer) */
+export type ModelLayer = 'source' | 'staging' | 'intermediate' | 'marts'
 
 /** Materialization strategies */
 export type Materialization = 'view' | 'table' | 'incremental' | 'ephemeral'

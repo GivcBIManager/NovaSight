@@ -1,4 +1,4 @@
-"""
+﻿"""
 Visual Model Builder API endpoints.
 
 CRUD for visual canvas state, code generation from visual config,
@@ -9,10 +9,10 @@ All routes extend the existing transformation domain under /api/v1/dbt/*.
 
 import logging
 from flask import g, jsonify, request
-from flask_jwt_extended import jwt_required
 
 from app.api.v1 import api_v1_bp
-from app.decorators import require_roles, require_tenant_context
+from app.platform.auth.decorators import authenticated, require_roles, tenant_required
+from app.platform.auth.identity import get_current_identity
 from app.domains.transformation.application.visual_model_service import (
     VisualModelService,
     get_visual_model_service,
@@ -33,21 +33,20 @@ logger = logging.getLogger(__name__)
 
 def _get_tenant_id() -> str:
     """Extract tenant ID from request context."""
-    if hasattr(g, 'tenant') and g.tenant:
-        return str(g.tenant.id)
-    if hasattr(g, 'tenant_id') and g.tenant_id:
-        return str(g.tenant_id)
+    identity = get_current_identity()
+    if identity and identity.tenant_id:
+        return str(identity.tenant_id)
     raise ValidationError("Tenant context required")
 
 
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Visual Model CRUD
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @api_v1_bp.route('/dbt/visual-models', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def list_visual_models():
     """List all visual model definitions for the tenant."""
@@ -58,8 +57,8 @@ def list_visual_models():
 
 
 @api_v1_bp.route('/dbt/visual-models', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def create_visual_model_route():
     """
@@ -84,8 +83,8 @@ def create_visual_model_route():
 
 
 @api_v1_bp.route('/dbt/visual-models/<model_id>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def get_visual_model(model_id: str):
     """Get a single visual model by ID."""
@@ -96,8 +95,8 @@ def get_visual_model(model_id: str):
 
 
 @api_v1_bp.route('/dbt/visual-models/<model_id>', methods=['PUT'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def update_visual_model(model_id: str):
     """Update an existing visual model and regenerate dbt files."""
@@ -114,8 +113,8 @@ def update_visual_model(model_id: str):
 
 
 @api_v1_bp.route('/dbt/visual-models/<model_id>', methods=['DELETE'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def delete_visual_model(model_id: str):
     """Delete a visual model and its generated files."""
@@ -126,8 +125,8 @@ def delete_visual_model(model_id: str):
 
 
 @api_v1_bp.route('/dbt/visual-models/<model_id>/preview', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def preview_visual_model(model_id: str):
     """Preview generated SQL without writing to disk."""
@@ -138,8 +137,8 @@ def preview_visual_model(model_id: str):
 
 
 @api_v1_bp.route('/dbt/visual-models/<model_id>/canvas', methods=['PUT'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def save_canvas_state(model_id: str):
     """Save canvas position/layout state (no regeneration)."""
@@ -154,14 +153,14 @@ def save_canvas_state(model_id: str):
     return jsonify({"status": "saved"})
 
 
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # DAG / Lineage
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @api_v1_bp.route('/dbt/visual-models/dag', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def get_visual_dag():
     """
@@ -174,14 +173,14 @@ def get_visual_dag():
     return jsonify(dag)
 
 
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Warehouse Introspection
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @api_v1_bp.route('/dbt/warehouse/schemas', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def list_warehouse_schemas():
     """List schemas/databases from the tenant's ClickHouse."""
@@ -192,8 +191,8 @@ def list_warehouse_schemas():
 
 
 @api_v1_bp.route('/dbt/warehouse/tables', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def list_warehouse_tables():
     """List tables in a schema from the tenant's ClickHouse database."""
@@ -205,8 +204,8 @@ def list_warehouse_tables():
 
 
 @api_v1_bp.route('/dbt/warehouse/columns', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def list_warehouse_columns():
     """List columns for a table from the tenant's ClickHouse database."""
@@ -220,14 +219,14 @@ def list_warehouse_columns():
     return jsonify(columns)
 
 
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Execution History
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @api_v1_bp.route('/dbt/executions', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def list_dbt_executions():
     """List dbt execution history for the tenant."""
@@ -245,8 +244,8 @@ def list_dbt_executions():
 
 
 @api_v1_bp.route('/dbt/executions/<exec_id>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def get_dbt_execution(exec_id: str):
     """Get a single dbt execution detail with logs."""
@@ -257,8 +256,8 @@ def get_dbt_execution(exec_id: str):
 
 
 @api_v1_bp.route('/dbt/executions/<exec_id>', methods=['DELETE'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def cancel_dbt_execution(exec_id: str):
     """Cancel a running/pending dbt execution."""
@@ -268,14 +267,14 @@ def cancel_dbt_execution(exec_id: str):
     return jsonify(execution.to_dict())
 
 
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Test Builder
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @api_v1_bp.route('/dbt/tests/singular', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def create_singular_test():
     """Create a singular (custom SQL) data test."""
@@ -298,8 +297,8 @@ def create_singular_test():
 
 
 @api_v1_bp.route('/dbt/tests/results', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def get_test_results():
     """Get latest test results from the most recent dbt test execution."""
@@ -331,14 +330,14 @@ def get_test_results():
     })
 
 
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Source Freshness
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @api_v1_bp.route('/dbt/sources/<source_name>/freshness', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def configure_freshness(source_name: str):
     """Configure source freshness for a source table."""
@@ -356,8 +355,8 @@ def configure_freshness(source_name: str):
 
 
 @api_v1_bp.route('/dbt/sources/freshness/run', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def run_freshness_check():
     """Run dbt source freshness check."""
@@ -368,14 +367,14 @@ def run_freshness_check():
     return jsonify(result.to_dict() if hasattr(result, 'to_dict') else {"status": "ok"})
 
 
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Package Manager
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @api_v1_bp.route('/dbt/packages', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def list_packages():
     """List installed dbt packages from packages.yml."""
@@ -386,8 +385,8 @@ def list_packages():
 
 
 @api_v1_bp.route('/dbt/packages', methods=['PUT'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def update_packages():
     """Update packages.yml with new package list."""
@@ -406,8 +405,8 @@ def update_packages():
 
 
 @api_v1_bp.route('/dbt/packages/install', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def install_packages():
     """Run dbt deps to install packages."""
@@ -417,21 +416,21 @@ def install_packages():
     return jsonify(result)
 
 
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Log Streaming (Polling Fallback)
-# ═══════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
 @api_v1_bp.route('/dbt/executions/<exec_id>/logs', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def get_execution_logs(exec_id: str):
     """
     Get execution log lines since a given offset (polling fallback).
 
     Query params:
-    - offset: int (default 0) — start from this line number
+    - offset: int (default 0) â€” start from this line number
     """
     from app.domains.transformation.infrastructure.websocket_stream import (
         get_logs_since,
@@ -444,3 +443,191 @@ def get_execution_logs(exec_id: str):
         "offset": offset,
         "next_offset": offset + len(lines),
     })
+
+
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Versioning & Optimistic Locking
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+
+@api_v1_bp.route('/dbt/visual-models/<model_id>/versioned', methods=['PUT'])
+@authenticated
+@tenant_required
+@require_roles(['tenant_admin', 'data_engineer'])
+def update_model_versioned(model_id: str):
+    """
+    Update a visual model with optimistic locking.
+
+    Requires `version` in the request body matching the current DB version.
+    """
+    from app.domains.transformation.application.versioning_service import get_versioning_service
+
+    tenant_id = _get_tenant_id()
+    data = request.get_json() or {}
+    expected_version = data.pop("version", None)
+    if expected_version is None:
+        raise ValidationError("'version' field is required for versioned update")
+
+    service = get_versioning_service()
+    user_id = str(g.user.id) if hasattr(g, 'user') and g.user else None
+    model = service.update_with_lock(
+        tenant_id=tenant_id,
+        model_id=model_id,
+        expected_version=int(expected_version),
+        updates=data,
+        changed_by=user_id,
+        change_summary=data.get("change_summary", ""),
+    )
+    return jsonify(model.to_dict())
+
+
+@api_v1_bp.route('/dbt/visual-models/<model_id>/soft-delete', methods=['DELETE'])
+@authenticated
+@tenant_required
+@require_roles(['tenant_admin', 'data_engineer'])
+def soft_delete_model(model_id: str):
+    """Soft-delete a visual model (recoverable)."""
+    from app.domains.transformation.application.versioning_service import get_versioning_service
+
+    tenant_id = _get_tenant_id()
+    service = get_versioning_service()
+    user_id = str(g.user.id) if hasattr(g, 'user') and g.user else None
+    model = service.soft_delete(tenant_id, model_id, deleted_by=user_id)
+    return jsonify({"id": str(model.id), "is_deleted": True, "version": model.version})
+
+
+@api_v1_bp.route('/dbt/visual-models/<model_id>/restore', methods=['POST'])
+@authenticated
+@tenant_required
+@require_roles(['tenant_admin', 'data_engineer'])
+def restore_model(model_id: str):
+    """Restore a soft-deleted visual model."""
+    from app.domains.transformation.application.versioning_service import get_versioning_service
+
+    tenant_id = _get_tenant_id()
+    service = get_versioning_service()
+    user_id = str(g.user.id) if hasattr(g, 'user') and g.user else None
+    model = service.restore(tenant_id, model_id, restored_by=user_id)
+    return jsonify(model.to_dict())
+
+
+@api_v1_bp.route('/dbt/visual-models/<model_id>/versions', methods=['GET'])
+@authenticated
+@tenant_required
+@require_roles(['tenant_admin', 'data_engineer', 'analyst'])
+def get_model_versions(model_id: str):
+    """Get version history for a visual model."""
+    from app.domains.transformation.application.versioning_service import get_versioning_service
+
+    tenant_id = _get_tenant_id()
+    limit = request.args.get('limit', 50, type=int)
+    service = get_versioning_service()
+    versions = service.get_version_history(tenant_id, model_id, limit=limit)
+    return jsonify([v.to_dict() for v in versions])
+
+
+@api_v1_bp.route('/dbt/visual-models/<model_id>/restore-version', methods=['POST'])
+@authenticated
+@tenant_required
+@require_roles(['tenant_admin', 'data_engineer'])
+def restore_model_to_version(model_id: str):
+    """Restore a visual model to a specific historical version."""
+    from app.domains.transformation.application.versioning_service import get_versioning_service
+
+    tenant_id = _get_tenant_id()
+    data = request.get_json() or {}
+    target_version = data.get("version")
+    if target_version is None:
+        raise ValidationError("'version' field is required")
+
+    service = get_versioning_service()
+    user_id = str(g.user.id) if hasattr(g, 'user') and g.user else None
+    model = service.restore_to_version(
+        tenant_id, model_id, int(target_version), restored_by=user_id,
+    )
+    return jsonify(model.to_dict())
+
+
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Bulk Operations
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+
+@api_v1_bp.route('/dbt/visual-models/bulk/delete', methods=['POST'])
+@authenticated
+@tenant_required
+@require_roles(['tenant_admin', 'data_engineer'])
+def bulk_delete_models():
+    """Soft-delete multiple visual models in one call."""
+    from app.domains.transformation.application.bulk_operations_service import get_bulk_operations_service
+
+    tenant_id = _get_tenant_id()
+    data = request.get_json() or {}
+    model_ids = data.get("model_ids", [])
+    if not model_ids:
+        raise ValidationError("'model_ids' list is required")
+
+    user_id = str(g.user.id) if hasattr(g, 'user') and g.user else None
+    service = get_bulk_operations_service()
+    result = service.bulk_delete(tenant_id, model_ids, deleted_by=user_id)
+    return jsonify(result.to_dict())
+
+
+@api_v1_bp.route('/dbt/visual-models/bulk/tags', methods=['POST'])
+@authenticated
+@tenant_required
+@require_roles(['tenant_admin', 'data_engineer'])
+def bulk_update_tags():
+    """Bulk update tags on multiple visual models."""
+    from app.domains.transformation.application.bulk_operations_service import get_bulk_operations_service
+
+    tenant_id = _get_tenant_id()
+    data = request.get_json() or {}
+    model_ids = data.get("model_ids", [])
+    tags = data.get("tags", [])
+    mode = data.get("mode", "replace")
+    if not model_ids:
+        raise ValidationError("'model_ids' list is required")
+
+    service = get_bulk_operations_service()
+    result = service.bulk_update_tags(tenant_id, model_ids, tags, mode=mode)
+    return jsonify(result.to_dict())
+
+
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# Export / Import
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+
+@api_v1_bp.route('/dbt/visual-models/export', methods=['GET'])
+@authenticated
+@tenant_required
+@require_roles(['tenant_admin', 'data_engineer'])
+def export_models():
+    """Export visual models as a JSON package."""
+    from app.domains.transformation.application.export_import_service import get_export_import_service
+
+    tenant_id = _get_tenant_id()
+    model_ids = request.args.getlist('model_ids')
+    service = get_export_import_service()
+    package = service.export_models(tenant_id, model_ids=model_ids or None)
+    return jsonify(package)
+
+
+@api_v1_bp.route('/dbt/visual-models/import', methods=['POST'])
+@authenticated
+@tenant_required
+@require_roles(['tenant_admin', 'data_engineer'])
+def import_models():
+    """Import visual models from an exported JSON package."""
+    from app.domains.transformation.application.export_import_service import get_export_import_service
+
+    tenant_id = _get_tenant_id()
+    data = request.get_json()
+    if not data:
+        raise ValidationError("Request body must contain an export package")
+
+    on_conflict = request.args.get('on_conflict', 'skip')
+    service = get_export_import_service()
+    result = service.import_models(tenant_id, data, on_conflict=on_conflict)
+    return jsonify(result.to_dict()), 201

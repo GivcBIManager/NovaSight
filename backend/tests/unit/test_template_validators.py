@@ -16,9 +16,9 @@ from app.services.template_engine.validator import (
     TableDefinition,
     DbtColumnDefinition,
     DbtModelDefinition,
-    AirflowTaskDefinition,
-    AirflowDefaultArgs,
-    AirflowDagDefinition,
+    PipelineTaskDefinition,
+    PipelineDefaultArgs,
+    PipelineJobDefinition,
     ClickHouseColumnDefinition,
     ClickHouseTableDefinition,
     TemplateParameterValidator,
@@ -198,60 +198,60 @@ class TestDbtModelDefinition:
             DbtModelDefinition(model_name="test", tags=["Invalid Tag!"])
 
 
-class TestAirflowDagDefinition:
-    """Tests for AirflowDagDefinition validator."""
+class TestPipelineJobDefinition:
+    """Tests for PipelineJobDefinition validator."""
 
     def test_valid_dag(self):
-        dag = AirflowDagDefinition(
+        dag = PipelineJobDefinition(
             dag_id="tenant.ingestion_pipeline",
             description="Data ingestion pipeline",
             schedule="0 * * * *",
             start_date=datetime(2026, 1, 1),
             tasks=[
-                AirflowTaskDefinition(task_id="extract", task_type="python"),
-                AirflowTaskDefinition(task_id="transform", task_type="dbt_run"),
+                PipelineTaskDefinition(task_id="extract", task_type="python"),
+                PipelineTaskDefinition(task_id="transform", task_type="dbt_run"),
             ]
         )
         assert dag.dag_id == "tenant.ingestion_pipeline"
         assert len(dag.tasks) == 2
 
     def test_preset_schedule(self):
-        dag = AirflowDagDefinition(
+        dag = PipelineJobDefinition(
             dag_id="test_dag",
             start_date=datetime(2026, 1, 1),
             schedule="@daily",
-            tasks=[AirflowTaskDefinition(task_id="task1", task_type="python")]
+            tasks=[PipelineTaskDefinition(task_id="task1", task_type="python")]
         )
         assert dag.schedule == "@daily"
 
     def test_invalid_schedule(self):
         with pytest.raises(ValidationError):
-            AirflowDagDefinition(
+            PipelineJobDefinition(
                 dag_id="test",
                 start_date=datetime(2026, 1, 1),
                 schedule="invalid cron",
-                tasks=[AirflowTaskDefinition(task_id="t", task_type="python")]
+                tasks=[PipelineTaskDefinition(task_id="t", task_type="python")]
             )
 
     def test_duplicate_task_ids_rejected(self):
         with pytest.raises(ValidationError) as exc_info:
-            AirflowDagDefinition(
+            PipelineJobDefinition(
                 dag_id="test",
                 start_date=datetime(2026, 1, 1),
                 tasks=[
-                    AirflowTaskDefinition(task_id="task1", task_type="python"),
-                    AirflowTaskDefinition(task_id="task1", task_type="bash"),  # Duplicate!
+                    PipelineTaskDefinition(task_id="task1", task_type="python"),
+                    PipelineTaskDefinition(task_id="task1", task_type="bash"),  # Duplicate!
                 ]
             )
         assert "Duplicate task_ids" in str(exc_info.value)
 
     def test_invalid_upstream_reference(self):
         with pytest.raises(ValidationError) as exc_info:
-            AirflowDagDefinition(
+            PipelineJobDefinition(
                 dag_id="test",
                 start_date=datetime(2026, 1, 1),
                 tasks=[
-                    AirflowTaskDefinition(
+                    PipelineTaskDefinition(
                         task_id="task1",
                         task_type="python",
                         upstream_tasks=["nonexistent"]

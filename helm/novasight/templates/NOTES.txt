@@ -59,12 +59,6 @@ SERVICES DEPLOYED:
   {{- end }}
 {{- end }}
 
-{{- if .Values.airflow.enabled }}
-✓ Apache Airflow
-  - Executor: {{ .Values.airflow.executor }}
-  - Workers: {{ .Values.airflow.workers.replicas }}
-{{- end }}
-
 {{- if .Values.ollama.enabled }}
 ✓ Ollama (LLM for NL-to-SQL)
   - Model: {{ .Values.ollama.model }}

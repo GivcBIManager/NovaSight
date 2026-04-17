@@ -29,10 +29,10 @@ os.environ["TESTING"] = "true"
 from app import create_app
 from app.extensions import db
 from app.models import Tenant, User, Role
-from app.models.tenant import TenantStatus, SubscriptionPlan
-from app.models.user import UserStatus
-from app.services.password_service import password_service
-from app.services.rbac_service import RBACService
+from app.domains.tenants.domain.models import TenantStatus, SubscriptionPlan
+from app.domains.identity.domain.models import UserStatus
+from app.platform.security.passwords import password_service
+from app.domains.identity.application.rbac_service import RBACService
 
 
 # =============================================================================
@@ -344,7 +344,7 @@ def seeded_connection(integration_app: Flask, seeded_tenant: Dict[str, Any]) -> 
         Dictionary with connection and related objects
     """
     import uuid
-    from app.models.connection import DataConnection, DatabaseType, ConnectionStatus
+    from app.domains.datasources.domain.models import DataConnection, DatabaseType, ConnectionStatus
     
     unique_suffix = uuid.uuid4().hex[:8]
     with integration_app.app_context():
@@ -394,7 +394,7 @@ def seeded_semantic_layer(
     Returns:
         Dictionary with semantic models and related objects
     """
-    from app.models.semantic import (
+    from app.domains.transformation.domain.models import (
         SemanticModel,
         Dimension,
         Measure,
@@ -532,7 +532,7 @@ def seeded_dashboard(
     Returns:
         Dictionary with dashboard and related objects
     """
-    from app.models.dashboard import Dashboard, Widget, WidgetType
+    from app.domains.analytics.domain.models import Dashboard, Widget, WidgetType
     
     with integration_app.app_context():
         tenant = seeded_semantic_layer["tenant"]

@@ -16,7 +16,7 @@ This document provides instructions for using the NovaSight multi-agent framewor
 │   ├── backend-agent.agent.md              # Flask API
 │   ├── frontend-agent.agent.md             # React UI
 │   ├── template-engine-agent.agent.md      # Jinja2 code generation
-│   ├── orchestration-agent.agent.md        # Airflow DAGs
+│   ├── orchestration-agent.agent.md        # Dagster pipelines
 │   ├── ai-agent.agent.md                   # Ollama/LLM integration
 │   ├── data-sources-agent.agent.md         # Database connections
 │   ├── dbt-agent.agent.md                  # Semantic layer
@@ -98,7 +98,7 @@ Follow the implementation plan phases:
 **When to use:**
 - Setting up development environment
 - Configuring databases (PostgreSQL, ClickHouse)
-- Setting up Airflow, Redis, Ollama
+- Setting up Dagster, Redis, Ollama
 - Creating deployment configurations
 
 **Example:**
@@ -139,7 +139,7 @@ Follow the implementation plan phases:
 
 **When to use:**
 - Creating PySpark job templates
-- Generating Airflow DAG code
+- Generating Dagster pipeline code
 - Building dbt model files
 - Any code generation task
 

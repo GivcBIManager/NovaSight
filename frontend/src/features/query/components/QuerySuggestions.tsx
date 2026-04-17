@@ -52,7 +52,7 @@ export function QuerySuggestions({ onSelect }: QuerySuggestionsProps) {
     queryKey: ['query-suggestions'],
     queryFn: async () => {
       try {
-        const response = await api.get<string[]>('/assistant/suggestions')
+        const response = await api.get<string[]>('/assistant/nl-to-sql/suggestions')
         return response.data
       } catch {
         return null
@@ -61,7 +61,7 @@ export function QuerySuggestions({ onSelect }: QuerySuggestionsProps) {
     staleTime: 10 * 60 * 1000, // 10 minutes
   })
 
-  const suggestions = personalSuggestions?.length
+  const suggestions = Array.isArray(personalSuggestions) && personalSuggestions.length > 0
     ? personalSuggestions.map((text, i) => ({
         text,
         icon: DEFAULT_SUGGESTIONS[i % DEFAULT_SUGGESTIONS.length].icon,

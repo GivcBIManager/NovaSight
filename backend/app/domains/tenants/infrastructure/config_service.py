@@ -96,7 +96,7 @@ class InfrastructureConfigService:
             )
 
     def _get_credential_manager(self, tenant_id: Optional[str] = None):
-        from app.services.credential_manager import CredentialManager
+        from app.platform.security.credentials import CredentialManager
 
         return CredentialManager(tenant_id=tenant_id)
 
@@ -392,7 +392,6 @@ class InfrastructureConfigService:
             InfrastructureType.CLICKHOUSE.value: self._test_clickhouse,
             InfrastructureType.SPARK.value: self._test_spark,
             InfrastructureType.DAGSTER.value: self._test_dagster,
-            InfrastructureType.AIRFLOW.value: self._test_airflow,
             InfrastructureType.OLLAMA.value: self._test_ollama,
         }
 
@@ -529,69 +528,6 @@ class InfrastructureConfigService:
             )
         except socket.error as e:
             raise InfrastructureConnectionError(f"Socket error: {e}")
-
-    def _test_airflow(
-        self, host: str, port: int, settings: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        import httpx
-
-        base_url = settings.get(
-            "base_url", f"http://{host}:{port}"
-        ).rstrip("/")
-        username = settings.get("username", "airflow")
-        password = settings.get("password", "airflow")
-        timeout = settings.get("request_timeout", 30)
-
-        try:
-            api_resp = httpx.get(
-                f"{base_url}/api/v1/health",
-                auth=(username, password),
-                timeout=timeout,
-            )
-            api_resp.raise_for_status()
-            health = api_resp.json()
-
-            version = "unknown"
-            try:
-                vr = httpx.get(
-                    f"{base_url}/api/v1/version",
-                    auth=(username, password),
-                    timeout=timeout,
-                )
-                if vr.status_code == 200:
-                    version = vr.json().get("version", "unknown")
-            except Exception:
-                pass
-
-            return {
-                "success": True,
-                "message": "Connection successful",
-                "server_version": version,
-                "details": {
-                    "metadatabase": health.get("metadatabase", {}).get(
-                        "status"
-                    ),
-                    "scheduler": health.get("scheduler", {}).get(
-                        "status"
-                    ),
-                },
-            }
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401:
-                raise InfrastructureConnectionError(
-                    "Authentication failed"
-                )
-            raise InfrastructureConnectionError(
-                f"HTTP error: {e.response.status_code}"
-            )
-        except httpx.ConnectError as e:
-            raise InfrastructureConnectionError(
-                f"Connection failed: {e}"
-            )
-        except Exception as e:
-            raise InfrastructureConnectionError(
-                f"Connection test failed: {e}"
-            )
 
     def _test_dagster(
         self, host: str, port: int, settings: Dict[str, Any]
@@ -806,23 +742,6 @@ class InfrastructureConfigService:
                     "DAGSTER_DBT_CONCURRENCY_LIMIT", 2
                 ),
                 "compute_logs_dir": "/var/dagster/logs",
-            }
-        if service_type == InfrastructureType.AIRFLOW.value:
-            return {
-                "host": "localhost",
-                "port": 8080,
-                "base_url": current_app.config.get(
-                    "AIRFLOW_BASE_URL", "http://localhost:8080"
-                ),
-                "username": current_app.config.get(
-                    "AIRFLOW_USERNAME", "airflow"
-                ),
-                "password": current_app.config.get(
-                    "AIRFLOW_PASSWORD", "airflow"
-                ),
-                "api_version": "v1",
-                "dag_folder": "/opt/airflow/dags",
-                "request_timeout": 30,
             }
         if service_type == InfrastructureType.OLLAMA.value:
             return {

@@ -207,7 +207,7 @@ class TestRequirePermissionDecorator:
 
             from app.platform.auth.decorators import require_permission
 
-            with patch("app.services.rbac_service.rbac_service") as mock_rbac:
+            with patch("app.domains.identity.application.rbac_service.rbac_service") as mock_rbac:
                 mock_rbac.check_permission.return_value = True
 
                 @require_permission("dashboards.create")
@@ -224,7 +224,7 @@ class TestRequirePermissionDecorator:
 
             from app.platform.auth.decorators import require_permission
 
-            with patch("app.services.rbac_service.rbac_service") as mock_rbac:
+            with patch("app.domains.identity.application.rbac_service.rbac_service") as mock_rbac:
                 mock_rbac.check_permission.return_value = False
 
                 @require_permission("dashboards.create")

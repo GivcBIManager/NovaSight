@@ -13,9 +13,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
-from flask import g
 
 from app.extensions import db
+from app.platform.auth.identity import get_current_identity
 from app.domains.transformation.domain.visual_models import (
     DbtExecution,
     ExecutionStatus,
@@ -61,10 +61,9 @@ class VisualModelService:
         return TenantDbtProjectManager.from_current_tenant()
 
     def _get_tenant_id(self) -> str:
-        if hasattr(g, 'tenant') and g.tenant:
-            return str(g.tenant.id)
-        if hasattr(g, 'tenant_id') and g.tenant_id:
-            return str(g.tenant_id)
+        identity = get_current_identity()
+        if identity and identity.tenant_id:
+            return str(identity.tenant_id)
         raise ValueError("Tenant context required")
 
     # ── Visual Model CRUD ────────────────────────────────────
@@ -333,9 +332,8 @@ class VisualModelService:
         target: Optional[str] = None,
     ) -> DbtExecution:
         """Create a new execution record (PENDING status)."""
-        user_id = None
-        if hasattr(g, 'current_user') and g.current_user:
-            user_id = g.current_user.id
+        identity = get_current_identity()
+        user_id = str(identity.user_id) if identity else None
 
         execution = DbtExecution(
             tenant_id=tenant_id,

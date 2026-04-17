@@ -13,7 +13,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
@@ -72,15 +72,34 @@ import type {
   VisualModelCreatePayload,
   WarehouseColumn,
 } from '../types/visualModel'
+import { useDataSources } from '@/features/datasources/hooks'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { AlertTriangle, Zap } from 'lucide-react'
+
+const TENANT_WAREHOUSE_ID = '__tenant__'
 
 export function EnhancedDbtStudioPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('models')
   const [logExecutionId, setLogExecutionId] = useState<string | undefined>()
   const [availableColumns, setAvailableColumns] = useState<WarehouseColumn[]>([])
   const [selectedSchema, setSelectedSchema] = useState<string>()
   const [selectedTable, setSelectedTable] = useState<string>()
+  // Warehouse source binding — defaults to the tenant-managed ClickHouse
+  // warehouse (which is the only valid dbt target per platform design).
+  // Selecting an external connection does NOT repoint dbt at that DB;
+  // it surfaces a CTA to ingest via PySpark first (see X4 flow).
+  const [sourceConnectionId, setSourceConnectionId] = useState<string>(
+    TENANT_WAREHOUSE_ID
+  )
 
   // Existing API hooks
   const { data: modelsData, refetch: refetchModels } = useModels()
@@ -99,12 +118,39 @@ export function EnhancedDbtStudioPage() {
   // Warehouse column introspection — enabled when a table is selected
   const { data: fetchedColumns } = useWarehouseColumns(selectedSchema, selectedTable)
 
+  // Connections for the warehouse-source picker
+  const { data: connectionsData } = useDataSources()
+  const connections = connectionsData?.items ?? []
+  const externalConnection =
+    sourceConnectionId !== TENANT_WAREHOUSE_ID
+      ? connections.find((c) => c.id === sourceConnectionId)
+      : null
+
   // Sync fetched columns into local state
   useEffect(() => {
     if (fetchedColumns && fetchedColumns.length > 0) {
       setAvailableColumns(fetchedColumns)
     }
   }, [fetchedColumns])
+
+  // Deep-link handler: accept ?source_schema=&source_table=&tab= from
+  // upstream modules (PySpark detail "Use in dbt Studio"). Apply once,
+  // then strip the params so page state is the source of truth.
+  useEffect(() => {
+    const schema = searchParams.get('source_schema')
+    const table = searchParams.get('source_table')
+    const tab = searchParams.get('tab')
+    if (!schema && !table && !tab) return
+    if (schema) setSelectedSchema(schema)
+    if (table) setSelectedTable(table)
+    if (tab) setActiveTab(tab)
+    const next = new URLSearchParams(searchParams)
+    next.delete('source_schema')
+    next.delete('source_table')
+    next.delete('tab')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Server control
   const handleStartServer = async () => {
@@ -237,6 +283,27 @@ export function EnhancedDbtStudioPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Warehouse source picker */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 whitespace-nowrap">
+              Warehouse source
+            </span>
+            <Select value={sourceConnectionId} onValueChange={setSourceConnectionId}>
+              <SelectTrigger className="h-8 text-xs min-w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TENANT_WAREHOUSE_ID} className="text-xs">
+                  Tenant-managed (ClickHouse)
+                </SelectItem>
+                {connections.map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="text-xs font-mono">
+                    {c.name} · {c.db_type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center gap-2">
             <Badge
               variant={serverStatus?.is_running ? 'default' : 'secondary'}
@@ -302,6 +369,30 @@ export function EnhancedDbtStudioPage() {
           </Button>
         </div>
       </motion.div>
+
+      {/* External connection CTA — ingest via PySpark before dbt modeling */}
+      {externalConnection && (
+        <div className="rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+          <div className="flex-1 text-sm text-amber-900 dark:text-amber-100">
+            <strong>{externalConnection.name}</strong>{' '}
+            <span className="text-xs opacity-70">({externalConnection.db_type})</span>{' '}
+            is an external connection. dbt models are materialized into the tenant-managed ClickHouse warehouse —
+            ingest this source via a PySpark job first, then model it here.
+          </div>
+          <Button
+            size="sm"
+            onClick={() =>
+              navigate(
+                `/app/pyspark/new?connection_id=${externalConnection.id}&intent=dbt_source`
+              )
+            }
+          >
+            <Zap className="h-4 w-4 mr-1" />
+            Create PySpark App
+          </Button>
+        </div>
+      )}
 
       {/* Stats */}
       <motion.div

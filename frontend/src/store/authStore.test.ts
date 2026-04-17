@@ -25,7 +25,6 @@ describe('AuthStore', () => {
     useAuthStore.setState({
       user: null,
       accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,

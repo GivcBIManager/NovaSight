@@ -7,7 +7,7 @@ Unit tests for authentication endpoints.
 
 import pytest
 from unittest.mock import patch, MagicMock
-from app.services.password_service import password_service
+from app.platform.security.passwords import password_service
 
 
 class TestPasswordService:
@@ -287,7 +287,7 @@ class TestTokenBlacklist:
     
     def test_blacklist_add_and_check(self):
         """Test adding token to blacklist and checking."""
-        from app.services.token_service import token_blacklist
+        from app.platform.auth.token_service import token_blacklist
         
         jti = "test-jti-12345"
         
@@ -308,7 +308,7 @@ class TestLoginAttemptTracker:
     
     def test_lockout_after_max_attempts(self):
         """Test account lockout after max failed attempts."""
-        from app.services.token_service import LoginAttemptTracker
+        from app.platform.auth.token_service import LoginAttemptTracker
         
         tracker = LoginAttemptTracker()
         identifier = "test@example.com"

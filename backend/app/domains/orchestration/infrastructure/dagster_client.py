@@ -3,7 +3,7 @@ NovaSight Orchestration Domain — Dagster Client
 =================================================
 
 GraphQL client for Dagster API.
-Replaces AirflowClient with equivalent Dagster functionality.
+Provides a GraphQL-based Dagster client for orchestration.
 
 Canonical location: ``app.domains.orchestration.infrastructure.dagster_client``
 """
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class JobRun:
-    """Represents a Dagster job run (equivalent to Airflow DagRun)."""
+    """Represents a Dagster job run."""
     job_name: str
     run_id: str
     status: str
@@ -94,7 +94,7 @@ class DagsterClient:
         if self._config_loaded or not self._use_infrastructure_config:
             return
         try:
-            from app.services.infrastructure_config_service import InfrastructureConfigService
+            from app.domains.tenants.infrastructure.config_service import InfrastructureConfigService
             config_service = InfrastructureConfigService()
             self._loaded_settings = config_service.get_effective_settings("dagster", self._tenant_id)
             self._config_loaded = True

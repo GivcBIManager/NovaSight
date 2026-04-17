@@ -14,8 +14,8 @@ import uuid
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-from app.models.connection import DataConnection, DatabaseType, ConnectionStatus
-from app.services.connection_service import ConnectionService
+from app.domains.datasources.domain.models import DataConnection, DatabaseType, ConnectionStatus
+from app.domains.datasources.application.connection_service import ConnectionService
 
 
 class TestConnectionServiceCreate:

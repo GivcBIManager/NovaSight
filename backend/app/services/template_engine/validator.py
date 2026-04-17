@@ -291,11 +291,11 @@ class DbtModelDefinition(BaseModel):
 
 
 # =============================================================================
-# Airflow Validators
+# Pipeline Validators
 # =============================================================================
 
-class AirflowTaskDefinition(BaseModel):
-    """Task definition for Airflow DAG templates."""
+class PipelineTaskDefinition(BaseModel):
+    """Task definition for pipeline templates."""
     
     task_id: str = Field(..., min_length=1, max_length=250)
     task_type: Literal[
@@ -320,8 +320,8 @@ class AirflowTaskDefinition(BaseModel):
         return v
 
 
-class AirflowDefaultArgs(BaseModel):
-    """Default arguments for Airflow DAG."""
+class PipelineDefaultArgs(BaseModel):
+    """Default arguments for pipeline job."""
     
     retries: int = Field(default=3, ge=0, le=10)
     retry_delay_minutes: int = Field(default=5, ge=1, le=60)
@@ -341,8 +341,8 @@ class AirflowDefaultArgs(BaseModel):
         return v
 
 
-class AirflowDagDefinition(BaseModel):
-    """Complete DAG definition for Airflow templates."""
+class PipelineJobDefinition(BaseModel):
+    """Complete job definition for pipeline templates."""
     
     dag_id: str = Field(..., min_length=1, max_length=250)
     description: str = Field(default="", max_length=2000)
@@ -350,9 +350,9 @@ class AirflowDagDefinition(BaseModel):
     start_date: datetime = Field(...)
     catchup: bool = Field(default=False)
     max_active_runs: int = Field(default=1, ge=1, le=10)
-    default_args: AirflowDefaultArgs = Field(default_factory=AirflowDefaultArgs)
+    default_args: PipelineDefaultArgs = Field(default_factory=PipelineDefaultArgs)
     tags: List[str] = Field(default_factory=list)
-    tasks: List[AirflowTaskDefinition] = Field(..., min_length=1)
+    tasks: List[PipelineTaskDefinition] = Field(..., min_length=1)
     
     @field_validator('dag_id')
     @classmethod
@@ -368,7 +368,7 @@ class AirflowDagDefinition(BaseModel):
         if v is None:
             return v
         
-        # Allow Airflow presets
+        # Allow schedule presets
         presets = {'@once', '@hourly', '@daily', '@weekly', '@monthly', '@yearly', 'None'}
         if v in presets:
             return v
@@ -376,7 +376,7 @@ class AirflowDagDefinition(BaseModel):
         # Validate cron expression (basic check)
         cron_pattern = r'^(\S+\s+){4}\S+$'
         if not re.match(cron_pattern, v):
-            raise ValueError(f"Invalid schedule '{v}'. Must be a valid cron expression or Airflow preset.")
+            raise ValueError(f"Invalid schedule '{v}'. Must be a valid cron expression or schedule preset.")
         
         return v
     
@@ -389,7 +389,7 @@ class AirflowDagDefinition(BaseModel):
         return v
     
     @model_validator(mode='after')
-    def validate_dag(self) -> 'AirflowDagDefinition':
+    def validate_dag(self) -> 'PipelineJobDefinition':
         """Validate DAG-level constraints."""
         # Check for duplicate task IDs
         task_ids = [t.task_id for t in self.tasks]
@@ -635,7 +635,6 @@ class TemplateParameterValidator:
         'sql/tenant_schema.sql.j2': TenantSchemaDefinition,
         'dbt/model.sql.j2': DbtModelDefinition,
         'dbt/schema.yml.j2': DbtModelDefinition,
-        'airflow/dag.py.j2': AirflowDagDefinition,
         'clickhouse/create_table.sql.j2': ClickHouseTableDefinition,
         'clickhouse/tenant_database.sql.j2': ClickHouseTenantDatabaseDefinition,
         'pyspark/extract_job.py.j2': PySparkExtractJobDefinition,

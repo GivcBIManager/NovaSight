@@ -14,10 +14,11 @@ from flask_jwt_extended import (
     get_jwt_identity,
     get_jwt,
 )
+from app.platform.auth.decorators import authenticated
 from pydantic import ValidationError as PydanticValidationError
-from app.services.auth_service import AuthService
-from app.services.token_service import token_blacklist
-from app.schemas.auth_schemas import LoginRequest, RegisterRequest
+from app.domains.identity.application.auth_service import AuthService
+from app.platform.auth.token_service import token_blacklist
+from app.domains.identity.schemas.auth_schemas import LoginRequest, RegisterRequest
 from app.errors import ValidationError, AuthenticationError
 from app.extensions import limiter
 import logging
@@ -247,7 +248,7 @@ class CurrentUser(Resource):
     @ns.doc('get_current_user', security='Bearer')
     @ns.marshal_with(user_brief)
     @ns.response(401, 'Unauthorized', error_response)
-    @jwt_required()
+    @authenticated
     def get(self):
         """
         Get current authenticated user information.
@@ -269,7 +270,7 @@ class Logout(Resource):
     @ns.doc('logout_user', security='Bearer')
     @ns.response(200, 'Successfully logged out')
     @ns.response(401, 'Unauthorized', error_response)
-    @jwt_required()
+    @authenticated
     def post(self):
         """
         Logout current user.

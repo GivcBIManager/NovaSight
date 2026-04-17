@@ -8,8 +8,8 @@ Integration tests for connection endpoints.
 import pytest
 import uuid
 from unittest.mock import Mock, patch, MagicMock
-from app.models.connection import DataConnection, DatabaseType, ConnectionStatus
-from app.services.connection_service import ConnectionService
+from app.domains.datasources.domain.models import DataConnection, DatabaseType, ConnectionStatus
+from app.domains.datasources.application.connection_service import ConnectionService
 
 
 class TestConnectionService:
@@ -148,7 +148,7 @@ class TestConnectionSchemas:
     
     def test_connection_create_schema(self):
         """Test ConnectionCreateSchema validation."""
-        from app.schemas.connection_schemas import ConnectionCreateSchema
+        from app.domains.datasources.schemas.connection_schemas import ConnectionCreateSchema
         
         # Valid data
         data = {
@@ -167,7 +167,7 @@ class TestConnectionSchemas:
     
     def test_connection_create_schema_validation(self):
         """Test schema validation errors."""
-        from app.schemas.connection_schemas import ConnectionCreateSchema
+        from app.domains.datasources.schemas.connection_schemas import ConnectionCreateSchema
         from pydantic import ValidationError
         
         # Invalid port
@@ -196,7 +196,7 @@ class TestConnectionSchemas:
     
     def test_connection_test_result_schema(self):
         """Test ConnectionTestResultSchema."""
-        from app.schemas.connection_schemas import ConnectionTestResultSchema
+        from app.domains.datasources.schemas.connection_schemas import ConnectionTestResultSchema
         
         result = ConnectionTestResultSchema(
             success=True,

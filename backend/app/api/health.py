@@ -3,6 +3,10 @@ NovaSight Health Check Endpoints
 ================================
 
 System health and readiness endpoints.
+
+Exposes both root-level and /api/v1/ health endpoints.
+Root-level: /health, /ready (for container health probes)
+API-level: /api/v1/health, /api/v1/health/db, /api/v1/health/redis (for CI/deploy)
 """
 
 from flask import Blueprint, jsonify, current_app
@@ -12,9 +16,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 health_bp = Blueprint("health", __name__)
+health_api_bp = Blueprint("health_api", __name__)
 
 
 @health_bp.route("/health", methods=["GET"])
+@health_api_bp.route("/health", methods=["GET"])
 def health_check():
     """
     Basic health check endpoint.
@@ -30,6 +36,7 @@ def health_check():
 
 
 @health_bp.route("/ready", methods=["GET"])
+@health_api_bp.route("/health/ready", methods=["GET"])
 def readiness_check():
     """
     Readiness check endpoint.
@@ -52,6 +59,22 @@ def readiness_check():
         "status": overall_status,
         "checks": checks,
     }), status_code
+
+
+@health_api_bp.route("/health/db", methods=["GET"])
+def db_health_check():
+    """Database health check endpoint for CI/deploy verification."""
+    result = _check_database()
+    status_code = 200 if result["status"] == "healthy" else 503
+    return jsonify(result), status_code
+
+
+@health_api_bp.route("/health/redis", methods=["GET"])
+def redis_health_check():
+    """Redis health check endpoint for CI/deploy verification."""
+    result = _check_redis()
+    status_code = 200 if result["status"] == "healthy" else 503
+    return jsonify(result), status_code
 
 
 def _check_database() -> dict:

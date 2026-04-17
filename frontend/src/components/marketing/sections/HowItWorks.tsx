@@ -27,7 +27,7 @@ const steps = [
   {
     number: 2,
     title: 'Transform',
-    description: 'Build automated pipelines with dbt and Apache Airflow',
+    description: 'Build automated pipelines with dbt and Dagster',
     icon: GitBranch,
     color: 'green',
   },

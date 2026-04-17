@@ -4,11 +4,11 @@ dbt API endpoints.
 Provides REST API for dbt operations with multi-tenant support.
 """
 
-from flask import g, jsonify, request
-from flask_jwt_extended import jwt_required
+from flask import jsonify, request
 
 from app.api.v1 import api_v1_bp
-from app.decorators import require_roles, require_tenant_context
+from app.platform.auth.decorators import authenticated, require_roles, tenant_required
+from app.platform.auth.identity import get_current_identity
 from app.domains.transformation.application.dbt_service import get_dbt_service
 from app.domains.transformation.schemas.dbt_schemas import (
     DbtRunRequest,
@@ -26,14 +26,15 @@ from app.errors import ValidationError
 
 def get_tenant_id() -> str:
     """Get current tenant ID from request context."""
-    if hasattr(g, 'tenant_id') and g.tenant_id:
-        return g.tenant_id
+    identity = get_current_identity()
+    if identity and identity.tenant_id:
+        return identity.tenant_id
     raise ValidationError("Tenant context required", details={"field": "tenant_id"})
 
 
 @api_v1_bp.route('/dbt/run', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def dbt_run_models():
     """
@@ -76,8 +77,8 @@ def dbt_run_models():
 
 
 @api_v1_bp.route('/dbt/test', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def dbt_run_tests():
     """
@@ -114,8 +115,8 @@ def dbt_run_tests():
 
 
 @api_v1_bp.route('/dbt/build', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def dbt_build():
     """
@@ -152,8 +153,8 @@ def dbt_build():
 
 
 @api_v1_bp.route('/dbt/compile', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_compile_models():
     """
@@ -188,8 +189,8 @@ def dbt_compile_models():
 
 
 @api_v1_bp.route('/dbt/seed', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def dbt_seed():
     """
@@ -225,8 +226,8 @@ def dbt_seed():
 
 
 @api_v1_bp.route('/dbt/snapshot', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer'])
 def dbt_snapshot():
     """
@@ -261,7 +262,7 @@ def dbt_snapshot():
 
 
 @api_v1_bp.route('/dbt/deps', methods=['POST'])
-@jwt_required()
+@authenticated
 @require_roles(['tenant_admin'])
 def dbt_install_deps():
     """
@@ -283,8 +284,8 @@ def dbt_install_deps():
 
 
 @api_v1_bp.route('/dbt/debug', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_debug():
     """
@@ -317,8 +318,8 @@ def dbt_debug():
 
 
 @api_v1_bp.route('/dbt/docs/generate', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_generate_docs():
     """
@@ -341,8 +342,8 @@ def dbt_generate_docs():
 
 
 @api_v1_bp.route('/dbt/models', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_list_models():
     """
@@ -399,8 +400,8 @@ def dbt_list_models():
 
 
 @api_v1_bp.route('/dbt/lineage/<model_name>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_get_lineage(model_name: str):
     """
@@ -418,9 +419,21 @@ def dbt_get_lineage(model_name: str):
         schema:
           type: string
         description: Model name
+      - name: upstream_depth
+        in: query
+        schema:
+          type: integer
+          default: 3
+        description: Levels of upstream dependencies to include
+      - name: downstream_depth
+        in: query
+        schema:
+          type: integer
+          default: 3
+        description: Levels of downstream dependencies to include
     responses:
       200:
-        description: Model lineage
+        description: Model lineage graph
         content:
           application/json:
             schema:
@@ -429,7 +442,14 @@ def dbt_get_lineage(model_name: str):
     tenant_id = get_tenant_id()
     dbt_service = get_dbt_service()
     
-    lineage = dbt_service.get_lineage(tenant_id, model_name)
+    upstream_depth = request.args.get('upstream_depth', 3, type=int)
+    downstream_depth = request.args.get('downstream_depth', 3, type=int)
+    
+    lineage = dbt_service.get_lineage(
+        tenant_id, model_name,
+        upstream_depth=upstream_depth,
+        downstream_depth=downstream_depth
+    )
     
     if "error" in lineage:
         return jsonify(lineage), 404
@@ -437,9 +457,59 @@ def dbt_get_lineage(model_name: str):
     return jsonify(lineage), 200
 
 
+@api_v1_bp.route('/dbt/lineage/<model_name>/impact', methods=['GET'])
+@authenticated
+@tenant_required
+@require_roles(['tenant_admin', 'data_engineer', 'analyst'])
+def dbt_get_impact_analysis(model_name: str):
+    """
+    Get impact analysis for a model (downstream dependency counts).
+    
+    ---
+    tags:
+      - dbt
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: model_name
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Model name
+    responses:
+      200:
+        description: Impact analysis
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                affected_models:
+                  type: integer
+                affected_tests:
+                  type: integer
+                affected_exposures:
+                  type: integer
+                model_names:
+                  type: array
+                  items:
+                    type: string
+    """
+    tenant_id = get_tenant_id()
+    dbt_service = get_dbt_service()
+    
+    impact = dbt_service.get_impact_analysis(tenant_id, model_name)
+    
+    if "error" in impact:
+        return jsonify(impact), 404
+    
+    return jsonify(impact), 200
+
+
 @api_v1_bp.route('/dbt/parse', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(['tenant_admin', 'data_engineer', 'analyst'])
 def dbt_parse_project():
     """

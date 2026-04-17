@@ -15,13 +15,12 @@ All jobs execute spark-submit on remote Spark clusters via SSH.
 """
 
 from flask import request, jsonify, Blueprint
-from flask_jwt_extended import jwt_required
 
 from app.api.v1 import api_v1_bp
 from app.platform.auth.identity import get_current_identity
-from app.decorators import require_roles, require_tenant_context
+from app.platform.auth.decorators import authenticated, require_roles, tenant_required
 from app.errors import ValidationError, NotFoundError
-from app.services.audit_service import AuditService
+from app.platform.audit.service import AuditService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -32,8 +31,8 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 @api_v1_bp.route("/jobs", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def list_jobs():
     """
     List all Dagster jobs for the current tenant.
@@ -70,8 +69,8 @@ def list_jobs():
 
 
 @api_v1_bp.route("/jobs", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def create_job():
     """
@@ -138,8 +137,8 @@ def create_job():
 
 
 @api_v1_bp.route("/jobs/pipeline", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def create_pipeline_job():
     """
@@ -206,8 +205,8 @@ def create_pipeline_job():
 
 
 @api_v1_bp.route("/jobs/<job_id>", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_job(job_id: str):
     """Get Dagster job details."""
     identity = get_current_identity()
@@ -225,8 +224,8 @@ def get_job(job_id: str):
 
 
 @api_v1_bp.route("/jobs/<job_id>", methods=["PUT"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def update_job(job_id: str):
     """Update Dagster job configuration."""
@@ -259,8 +258,8 @@ def update_job(job_id: str):
 
 
 @api_v1_bp.route("/jobs/<job_id>", methods=["DELETE"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def delete_job(job_id: str):
     """Delete a Dagster job."""
@@ -292,8 +291,8 @@ def delete_job(job_id: str):
 # =============================================================================
 
 @api_v1_bp.route("/jobs/<job_id>/trigger", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def trigger_job(job_id: str):
     """
@@ -349,8 +348,8 @@ def trigger_job(job_id: str):
 
 
 @api_v1_bp.route("/jobs/<job_id>/pause", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def pause_job(job_id: str):
     """Pause job scheduling."""
@@ -378,8 +377,8 @@ def pause_job(job_id: str):
 
 
 @api_v1_bp.route("/jobs/<job_id>/resume", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def resume_job(job_id: str):
     """Resume job scheduling."""
@@ -411,8 +410,8 @@ def resume_job(job_id: str):
 # =============================================================================
 
 @api_v1_bp.route("/jobs/<job_id>/runs", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def list_job_runs(job_id: str):
     """
     List run history for a job.
@@ -446,8 +445,8 @@ def list_job_runs(job_id: str):
 
 
 @api_v1_bp.route("/jobs/<job_id>/runs/<run_id>", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_job_run(job_id: str, run_id: str):
     """Get detailed information about a specific job run."""
     identity = get_current_identity()
@@ -465,8 +464,8 @@ def get_job_run(job_id: str, run_id: str):
 
 
 @api_v1_bp.route("/jobs/<job_id>/runs/<run_id>/logs", methods=["GET"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 def get_job_run_logs(job_id: str, run_id: str):
     """Get execution logs for a job run."""
     identity = get_current_identity()
@@ -484,8 +483,8 @@ def get_job_run_logs(job_id: str, run_id: str):
 
 
 @api_v1_bp.route("/jobs/<job_id>/runs/<run_id>/cancel", methods=["POST"])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_roles(["data_engineer", "tenant_admin"])
 def cancel_job_run(job_id: str, run_id: str):
     """Cancel a running job."""

@@ -13,7 +13,7 @@ from flask import Flask
 from flask_jwt_extended import create_access_token
 
 from app import create_app
-from app.services.ollama.nl_to_params import QueryIntent, FilterCondition
+from app.domains.ai.infrastructure.ollama.nl_to_params import QueryIntent, FilterCondition
 
 
 class TestAssistantAPI:

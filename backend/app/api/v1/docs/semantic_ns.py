@@ -1,4 +1,4 @@
-"""
+﻿"""
 Semantic Layer API Namespace
 =============================
 
@@ -7,10 +7,8 @@ Flask-RESTX namespace for semantic layer endpoint documentation.
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required
-from app.middleware.jwt_handlers import get_jwt_identity_dict
-from app.decorators import require_tenant_context
-from app.middleware.permissions import require_permission
+from app.platform.auth.jwt_handler import get_jwt_identity_dict
+from app.platform.auth.decorators import authenticated, tenant_required, require_permission
 import logging
 
 logger = logging.getLogger(__name__)
@@ -161,7 +159,7 @@ class SemanticModelList(Resource):
     @ns.param('model_type', 'Filter by type (fact, dimension, aggregate)', type=str)
     @ns.marshal_list_with(model_response)
     @ns.response(401, 'Unauthorized', error_response)
-    @require_tenant_context
+    @tenant_required
     def get(self):
         """
         List all semantic models for the current tenant.
@@ -169,7 +167,7 @@ class SemanticModelList(Resource):
         Returns a list of semantic models with dimension and measure counts.
         Use the detail endpoint for full dimension/measure definitions.
         """
-        from app.services.semantic_service import SemanticService
+        from app.domains.transformation.application.semantic_service import SemanticService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -198,7 +196,7 @@ class SemanticModelList(Resource):
     @ns.response(400, 'Validation Error', error_response)
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(403, 'Forbidden', error_response)
-    @require_tenant_context
+    @tenant_required
     def post(self):
         """
         Create a new semantic model.
@@ -208,9 +206,9 @@ class SemanticModelList(Resource):
         
         **Permissions Required:** `semantic:create`
         """
-        from app.services.semantic_service import SemanticService, SemanticServiceError
+        from app.domains.transformation.application.semantic_service import SemanticService, SemanticServiceError
         from pydantic import ValidationError
-        from app.schemas.semantic_schemas import SemanticModelCreateSchema
+        from app.domains.transformation.schemas.semantic_schemas import SemanticModelCreateSchema
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -237,14 +235,14 @@ class SemanticModelDetail(Resource):
     @ns.marshal_with(model_detail)
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(404, 'Model not found', error_response)
-    @require_tenant_context
+    @tenant_required
     def get(self, model_id):
         """
         Get a semantic model with full details.
         
         Returns the model including all dimensions and measures.
         """
-        from app.services.semantic_service import SemanticService, ModelNotFoundError
+        from app.domains.transformation.application.semantic_service import SemanticService, ModelNotFoundError
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -262,7 +260,7 @@ class SemanticModelDetail(Resource):
     @ns.response(204, 'Model deleted')
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(404, 'Model not found', error_response)
-    @require_tenant_context
+    @tenant_required
     def delete(self, model_id):
         """
         Delete a semantic model.
@@ -270,7 +268,7 @@ class SemanticModelDetail(Resource):
         **Warning:** This also deletes all dimensions, measures,
         and relationships defined on this model.
         """
-        from app.services.semantic_service import SemanticService, ModelNotFoundError
+        from app.domains.transformation.application.semantic_service import SemanticService, ModelNotFoundError
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -287,12 +285,12 @@ class SemanticModelDetail(Resource):
 class DimensionList(Resource):
     @ns.doc('list_dimensions', security='Bearer')
     @ns.marshal_list_with(dimension_response)
-    @require_tenant_context
+    @tenant_required
     def get(self, model_id):
         """
         List all dimensions for a semantic model.
         """
-        from app.services.semantic_service import SemanticService
+        from app.domains.transformation.application.semantic_service import SemanticService
         
         dimensions = SemanticService.list_dimensions(str(model_id))
         return [d.to_dict() for d in dimensions]
@@ -300,7 +298,7 @@ class DimensionList(Resource):
     @ns.doc('create_dimension', security='Bearer')
     @ns.expect(dimension_create, validate=True)
     @ns.marshal_with(dimension_response, code=201)
-    @require_tenant_context
+    @tenant_required
     def post(self, model_id):
         """
         Add a dimension to a semantic model.
@@ -308,8 +306,8 @@ class DimensionList(Resource):
         Dimensions represent categorical data that can be used
         to slice and filter measures.
         """
-        from app.services.semantic_service import SemanticService
-        from app.schemas.semantic_schemas import DimensionCreateSchema
+        from app.domains.transformation.application.semantic_service import SemanticService
+        from app.domains.transformation.schemas.semantic_schemas import DimensionCreateSchema
         from pydantic import ValidationError
         
         try:
@@ -329,12 +327,12 @@ class DimensionList(Resource):
 class MeasureList(Resource):
     @ns.doc('list_measures', security='Bearer')
     @ns.marshal_list_with(measure_response)
-    @require_tenant_context
+    @tenant_required
     def get(self, model_id):
         """
         List all measures for a semantic model.
         """
-        from app.services.semantic_service import SemanticService
+        from app.domains.transformation.application.semantic_service import SemanticService
         
         measures = SemanticService.list_measures(str(model_id))
         return [m.to_dict() for m in measures]
@@ -342,7 +340,7 @@ class MeasureList(Resource):
     @ns.doc('create_measure', security='Bearer')
     @ns.expect(measure_create, validate=True)
     @ns.marshal_with(measure_response, code=201)
-    @require_tenant_context
+    @tenant_required
     def post(self, model_id):
         """
         Add a measure to a semantic model.
@@ -350,8 +348,8 @@ class MeasureList(Resource):
         Measures represent aggregated numeric values (sum, count, avg, etc.)
         that can be computed across dimensions.
         """
-        from app.services.semantic_service import SemanticService
-        from app.schemas.semantic_schemas import MeasureCreateSchema
+        from app.domains.transformation.application.semantic_service import SemanticService
+        from app.domains.transformation.schemas.semantic_schemas import MeasureCreateSchema
         from pydantic import ValidationError
         
         try:
@@ -370,7 +368,7 @@ class MeasureList(Resource):
 class RelationshipList(Resource):
     @ns.doc('list_relationships', security='Bearer')
     @ns.marshal_list_with(relationship_response)
-    @require_tenant_context
+    @tenant_required
     def get(self):
         """
         List all relationships between semantic models.
@@ -378,7 +376,7 @@ class RelationshipList(Resource):
         Relationships define how models can be joined together
         for multi-model queries.
         """
-        from app.services.semantic_service import SemanticService
+        from app.domains.transformation.application.semantic_service import SemanticService
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -389,7 +387,7 @@ class RelationshipList(Resource):
     @ns.doc('create_relationship', security='Bearer')
     @ns.expect(relationship_create, validate=True)
     @ns.marshal_with(relationship_response, code=201)
-    @require_tenant_context
+    @tenant_required
     def post(self):
         """
         Create a relationship between two semantic models.
@@ -397,8 +395,8 @@ class RelationshipList(Resource):
         Defines how models can be joined, enabling cross-model queries
         and automatic join path resolution.
         """
-        from app.services.semantic_service import SemanticService
-        from app.schemas.semantic_schemas import RelationshipCreateSchema
+        from app.domains.transformation.application.semantic_service import SemanticService
+        from app.domains.transformation.schemas.semantic_schemas import RelationshipCreateSchema
         from pydantic import ValidationError
         
         try:

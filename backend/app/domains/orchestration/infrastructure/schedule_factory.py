@@ -23,10 +23,10 @@ class ScheduleFactory:
     """
     Builds Dagster schedules from DagConfig models.
     
-    Maps Airflow schedule_interval to Dagster ScheduleDefinition.
+    Maps cron schedule expressions to Dagster ScheduleDefinition.
     """
 
-    # Airflow preset to cron mapping
+    # Preset to cron mapping
     PRESET_TO_CRON = {
         "hourly": "0 * * * *",
         "daily": "0 0 * * *",

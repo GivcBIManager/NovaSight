@@ -27,7 +27,7 @@ import {
 } from 'recharts';
 import { ChartType, ChartData, ChartVizConfig, DEFAULT_CHART_COLORS } from './types';
 import { ChartTooltip } from './ChartTooltip';
-import { MetricCard } from './MetricCard';
+import { MetricCard } from '@/components/dashboard/MetricCard';
 import { DataTable } from './DataTable';
 
 interface ChartRendererProps {

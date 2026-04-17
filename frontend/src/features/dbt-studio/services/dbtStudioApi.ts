@@ -288,10 +288,33 @@ export const dbtCoreApi = {
   },
 
   /**
-   * Get model lineage (legacy endpoint)
+   * Get model lineage with depth control
    */
-  async getLineage(modelName: string) {
-    const response = await apiClient.get(`/api/v1/dbt/lineage/${encodeURIComponent(modelName)}`)
+  async getLineage(
+    modelName: string,
+    options?: { upstreamDepth?: number; downstreamDepth?: number }
+  ) {
+    const params = new URLSearchParams()
+    if (options?.upstreamDepth !== undefined) {
+      params.set('upstream_depth', String(options.upstreamDepth))
+    }
+    if (options?.downstreamDepth !== undefined) {
+      params.set('downstream_depth', String(options.downstreamDepth))
+    }
+    const url = params.toString()
+      ? `/api/v1/dbt/lineage/${encodeURIComponent(modelName)}?${params}`
+      : `/api/v1/dbt/lineage/${encodeURIComponent(modelName)}`
+    const response = await apiClient.get(url)
+    return response.data
+  },
+
+  /**
+   * Get impact analysis for a model (downstream dependency counts)
+   */
+  async getImpactAnalysis(modelName: string) {
+    const response = await apiClient.get(
+      `/api/v1/dbt/lineage/${encodeURIComponent(modelName)}/impact`
+    )
     return response.data
   },
 }

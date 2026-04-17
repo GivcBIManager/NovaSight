@@ -78,7 +78,7 @@ backend/tests/
 │   │   ├── test_tenant_isolation.py
 │   │   └── test_migrations.py
 │   └── external/
-│       ├── test_airflow_client.py
+│       ├── test_dagster_client.py
 │       └── test_clickhouse_client.py
 └── fixtures/
     ├── connections.json

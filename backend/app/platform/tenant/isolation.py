@@ -98,7 +98,7 @@ class TenantIsolationService:
     
     @property
     def tenant_dag_folder(self) -> str:
-        """Get the Airflow DAGs folder for this tenant."""
+        """Get the pipeline artifacts folder for this tenant."""
         return f"tenant_{self._sanitize_slug(self.tenant_slug)}"
     
     @property
@@ -306,17 +306,17 @@ class TenantIsolationService:
     
     def get_dag_file_path(self, dag_id: str) -> str:
         """
-        Get the file path for a tenant's DAG file.
+        Get the file path for a tenant's DAG/job definition file.
         
-        DAG files are stored in tenant-specific folders for isolation.
+        Job files are stored in tenant-specific folders for isolation.
         
         Args:
-            dag_id: The DAG ID
+            dag_id: The DAG/job ID
             
         Returns:
-            The full path for the DAG file
+            The full path for the job file
         """
-        return f"/opt/airflow/dags/{self.tenant_dag_folder}/{dag_id}.py"
+        return f"/opt/dagster/jobs/{self.tenant_dag_folder}/{dag_id}.py"
     
     def get_pyspark_job_path(self, job_id: str) -> str:
         """
@@ -328,7 +328,7 @@ class TenantIsolationService:
         Returns:
             The full path for the PySpark job file
         """
-        return f"/opt/airflow/spark_apps/{self.tenant_dag_folder}/{job_id}.py"
+        return f"/opt/dagster/spark_apps/{self.tenant_dag_folder}/{job_id}.py"
     
     def get_dbt_model_path(self, model_name: str) -> str:
         """

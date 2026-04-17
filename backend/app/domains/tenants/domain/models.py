@@ -47,8 +47,6 @@ class InfrastructureType(enum.Enum):
     SPARK = "spark"
     DAGSTER = "dagster"
     OLLAMA = "ollama"
-    # Deprecated: use DAGSTER instead
-    AIRFLOW = "airflow"
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +141,7 @@ class InfrastructureConfig(db.Model):
     """
     Infrastructure server configuration model.
 
-    Stores connection settings for ClickHouse, Spark, Airflow, Ollama.
+    Stores connection settings for ClickHouse, Spark, Dagster, Ollama.
     Configs can be global (``tenant_id = None``) or tenant-specific.
     Only one active config per (type, tenant) pair is allowed.
     """

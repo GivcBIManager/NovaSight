@@ -1,4 +1,4 @@
-"""
+﻿"""
 Query / AI Assistant API Namespace
 ===================================
 
@@ -7,9 +7,9 @@ Flask-RESTX namespace for natural language query endpoint documentation.
 
 from flask import request, g
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required
-from app.decorators import require_tenant_context, async_route
-from app.middleware.permissions import require_permission
+from app.platform.auth.decorators import authenticated, tenant_required, require_permission
+from app.platform.auth.identity import get_current_identity
+from app.platform.async_utils import async_route
 import logging
 
 logger = logging.getLogger(__name__)
@@ -113,7 +113,7 @@ class NaturalLanguageQuery(Resource):
     @ns.response(400, 'Invalid query or parsing failed', error_response)
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(503, 'AI service unavailable', error_response)
-    @require_tenant_context
+    @tenant_required
     @require_permission('analytics.query')
     @async_route
     async def post(self):
@@ -165,12 +165,12 @@ class NaturalLanguageQuery(Resource):
         except PydanticValidationError as e:
             return {'error': 'Invalid request', 'details': e.errors()}, 400
         
-        tenant_id = g.tenant_id
+        tenant_id = get_current_identity().tenant_id
         
         try:
-            from app.services.semantic_service import SemanticService
-            from app.services.ollama.client import get_ollama_client, OllamaError
-            from app.services.ollama.nl_to_params import NLToParametersService
+            from app.domains.transformation.application.semantic_service import SemanticService
+            from app.domains.ai.infrastructure.ollama.client import get_ollama_client, OllamaError
+            from app.domains.ai.infrastructure.ollama.nl_to_params import NLToParametersService
             
             # Get available schema
             semantic_models = SemanticService.list_models(tenant_id)
@@ -260,7 +260,7 @@ class QuerySuggestions(Resource):
     @ns.marshal_with(suggestion_response)
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(503, 'AI service unavailable', error_response)
-    @require_tenant_context
+    @tenant_required
     @async_route
     async def post(self):
         """
@@ -273,9 +273,9 @@ class QuerySuggestions(Resource):
         
         Useful for helping users discover what questions they can ask.
         """
-        from app.services.ollama.client import get_ollama_client, OllamaError
-        from app.services.semantic_service import SemanticService
-        from app.middleware.jwt_handlers import get_jwt_identity_dict
+        from app.domains.ai.infrastructure.ollama.client import get_ollama_client, OllamaError
+        from app.domains.transformation.application.semantic_service import SemanticService
+        from app.platform.auth.jwt_handler import get_jwt_identity_dict
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")
@@ -334,7 +334,7 @@ class ExplainResults(Resource):
     @ns.response(400, 'Invalid request', error_response)
     @ns.response(401, 'Unauthorized', error_response)
     @ns.response(503, 'AI service unavailable', error_response)
-    @require_tenant_context
+    @tenant_required
     @async_route
     async def post(self):
         """
@@ -348,7 +348,7 @@ class ExplainResults(Resource):
         This is useful for helping non-technical users understand
         what the data is telling them.
         """
-        from app.services.ollama.client import get_ollama_client, OllamaError
+        from app.domains.ai.infrastructure.ollama.client import get_ollama_client, OllamaError
         
         data = request.json
         
@@ -394,7 +394,7 @@ class QuerySchema(Resource):
     @ns.doc('get_query_schema', security='Bearer')
     @ns.response(200, 'Available dimensions and measures')
     @ns.response(401, 'Unauthorized', error_response)
-    @require_tenant_context
+    @tenant_required
     def get(self):
         """
         Get available dimensions and measures for querying.
@@ -404,8 +404,8 @@ class QuerySchema(Resource):
         
         Useful for building query builders or autocomplete.
         """
-        from app.services.semantic_service import SemanticService
-        from app.middleware.jwt_handlers import get_jwt_identity_dict
+        from app.domains.transformation.application.semantic_service import SemanticService
+        from app.platform.auth.jwt_handler import get_jwt_identity_dict
         
         identity = get_jwt_identity_dict()
         tenant_id = identity.get("tenant_id")

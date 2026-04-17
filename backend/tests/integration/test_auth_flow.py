@@ -344,7 +344,7 @@ class TestAuthTenantIsolation:
         integration_app
     ):
         """Test that users cannot access other tenants."""
-        from app.models.tenant import Tenant, TenantStatus, SubscriptionPlan
+        from app.domains.tenants.domain.models import Tenant, TenantStatus, SubscriptionPlan
         from app.extensions import db
         
         with integration_app.app_context():

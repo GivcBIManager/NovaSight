@@ -49,7 +49,7 @@ export function DashboardsListPage() {
             <Skeleton key={i} className="h-48" />
           ))}
         </div>
-      ) : dashboards && dashboards.length > 0 ? (
+      ) : Array.isArray(dashboards) && dashboards.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {dashboards.map((dashboard: Dashboard) => (
             <Card 

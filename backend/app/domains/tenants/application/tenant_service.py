@@ -285,7 +285,7 @@ class TenantService:
     @staticmethod
     def _get_storage_usage(tenant: Tenant) -> float:
         try:
-            from app.services.clickhouse_client import (
+            from app.domains.analytics.infrastructure.clickhouse_client import (
                 ClickHouseClient,
                 ClickHouseError,
             )

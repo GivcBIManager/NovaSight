@@ -13,7 +13,6 @@ export interface AuthState {
   // State
   user: User | null
   accessToken: string | null
-  refreshToken: string | null
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
@@ -37,7 +36,6 @@ export const useAuthStore = create<AuthState>()(
       // Initial state
       user: null,
       accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
@@ -49,13 +47,12 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response: LoginResponse = await authService.login({ email, password })
           
-          // Store tokens
-          authService.setTokens(response.access_token, response.refresh_token)
+          // Store access token only (refresh token is in HTTP-only cookie)
+          authService.setTokens(response.access_token)
           
           set({
             user: response.user,
             accessToken: response.access_token,
-            refreshToken: response.refresh_token,
             isAuthenticated: true,
             isLoading: false,
             rememberMe,
@@ -87,12 +84,11 @@ export const useAuthStore = create<AuthState>()(
             password: data.password,
           })
 
-          authService.setTokens(loginResponse.access_token, loginResponse.refresh_token)
+          authService.setTokens(loginResponse.access_token)
 
           set({
             user: loginResponse.user,
             accessToken: loginResponse.access_token,
-            refreshToken: loginResponse.refresh_token,
             isAuthenticated: true,
             isLoading: false,
           })
@@ -115,20 +111,13 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           accessToken: null,
-          refreshToken: null,
           isAuthenticated: false,
           error: null,
         })
       },
 
-      // Refresh auth token
+      // Refresh auth token (refresh token sent via HTTP-only cookie)
       refreshAuth: async () => {
-        const { refreshToken } = get()
-        if (!refreshToken) {
-          set({ isAuthenticated: false, user: null })
-          return
-        }
-
         try {
           const newAccessToken = await authService.refreshAccessToken()
           set({ accessToken: newAccessToken })
@@ -159,7 +148,6 @@ export const useAuthStore = create<AuthState>()(
           set({
             user,
             accessToken: token,
-            refreshToken: authService.getRefreshToken(),
             isAuthenticated: true,
             isLoading: false,
           })
@@ -168,7 +156,6 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: null,
             accessToken: null,
-            refreshToken: null,
             isAuthenticated: false,
             isLoading: false,
           })
@@ -215,7 +202,6 @@ export const useAuthStore = create<AuthState>()(
       name: 'novasight-auth',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        refreshToken: state.rememberMe ? state.refreshToken : null,
         rememberMe: state.rememberMe,
       }),
     }

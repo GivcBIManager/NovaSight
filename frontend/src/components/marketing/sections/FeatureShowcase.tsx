@@ -39,7 +39,7 @@ const features = [
     title: 'Pipeline Orchestration',
     subtitle: 'Automate Your Data Workflows',
     description:
-      'Build, schedule, and monitor complex data pipelines with Apache Airflow integration. Visual DAG builder makes orchestration intuitive.',
+      'Build, schedule, and monitor complex data pipelines with Dagster integration. Visual DAG builder makes orchestration intuitive.',
     bullets: [
       'Drag-and-drop DAG designer',
       'Built-in dbt integration for transformations',

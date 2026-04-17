@@ -70,7 +70,7 @@ export function DagMonitorPage() {
       refetch()
     } catch (error: unknown) {
       console.error('Failed to trigger DAG:', error)
-      let message = 'Failed to trigger DAG. Make sure the DAG is deployed to Airflow.'
+      let message = 'Failed to trigger DAG. Make sure the DAG is deployed to Dagster.'
       if (error instanceof Error) {
         message = error.message
       } else if (typeof error === 'object' && error !== null && 'response' in error) {

@@ -1,4 +1,4 @@
-"""
+﻿"""
 NovaSight Dashboard API
 ========================
 
@@ -6,15 +6,13 @@ REST API endpoints for dashboard and widget management.
 """
 
 from flask import request, g, jsonify
-from flask_jwt_extended import jwt_required
 from app.platform.auth.identity import get_current_identity
 from pydantic import ValidationError
-from app.services.audit_service import AuditService
+from app.platform.audit.service import AuditService
 import logging
 
 from app.api.v1 import api_v1_bp
-from app.decorators import require_tenant_context
-from app.middleware.permissions import require_permission
+from app.platform.auth.decorators import authenticated, tenant_required, require_permission
 from app.domains.analytics.schemas.dashboard_schemas import (
     DashboardCreateSchema,
     DashboardUpdateSchema,
@@ -54,8 +52,8 @@ def get_user_id():
 # =============================================================================
 
 @api_v1_bp.route('/dashboards', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.view')
 def list_dashboards():
     """
@@ -103,8 +101,8 @@ def list_dashboards():
 
 
 @api_v1_bp.route('/dashboards', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.create')
 def create_dashboard():
     """
@@ -164,8 +162,8 @@ def create_dashboard():
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.view')
 def get_dashboard(dashboard_id):
     """
@@ -199,8 +197,8 @@ def get_dashboard(dashboard_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>', methods=['PUT'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.edit')
 def update_dashboard(dashboard_id):
     """
@@ -265,8 +263,8 @@ def update_dashboard(dashboard_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>', methods=['DELETE'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.delete')
 def delete_dashboard(dashboard_id):
     """
@@ -314,8 +312,8 @@ def delete_dashboard(dashboard_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/clone', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.create')
 def clone_dashboard(dashboard_id):
     """
@@ -364,8 +362,8 @@ def clone_dashboard(dashboard_id):
 # =============================================================================
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/layout', methods=['PUT'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.edit')
 def update_dashboard_layout(dashboard_id):
     """
@@ -413,8 +411,8 @@ def update_dashboard_layout(dashboard_id):
 # =============================================================================
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/share', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.share')
 def share_dashboard(dashboard_id):
     """
@@ -466,8 +464,8 @@ def share_dashboard(dashboard_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/unshare', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.share')
 def unshare_dashboard(dashboard_id):
     """
@@ -514,8 +512,8 @@ def unshare_dashboard(dashboard_id):
 # =============================================================================
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/widgets', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.edit')
 def add_widget(dashboard_id):
     """
@@ -572,8 +570,8 @@ def add_widget(dashboard_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/widgets/<uuid:widget_id>', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.view')
 def get_widget(dashboard_id, widget_id):
     """
@@ -608,8 +606,8 @@ def get_widget(dashboard_id, widget_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/widgets/<uuid:widget_id>', methods=['PUT'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.edit')
 def update_widget(dashboard_id, widget_id):
     """
@@ -679,8 +677,8 @@ def update_widget(dashboard_id, widget_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/widgets/<uuid:widget_id>', methods=['DELETE'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.edit')
 def delete_widget(dashboard_id, widget_id):
     """
@@ -722,8 +720,8 @@ def delete_widget(dashboard_id, widget_id):
 # =============================================================================
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/widgets/<uuid:widget_id>/data', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('analytics.query')
 def get_widget_data(dashboard_id, widget_id):
     """
@@ -774,8 +772,8 @@ def get_widget_data(dashboard_id, widget_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/widgets/<uuid:widget_id>/data', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('analytics.query')
 def get_widget_data_with_filters(dashboard_id, widget_id):
     """
@@ -835,8 +833,8 @@ def get_widget_data_with_filters(dashboard_id, widget_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/widgets/<uuid:widget_id>/refresh', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('analytics.query')
 def refresh_widget_data(dashboard_id, widget_id):
     """
@@ -875,8 +873,8 @@ def refresh_widget_data(dashboard_id, widget_id):
 
 
 @api_v1_bp.route('/dashboards/<uuid:dashboard_id>/refresh', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('analytics.query')
 def refresh_all_widgets(dashboard_id):
     """
@@ -914,8 +912,8 @@ def refresh_all_widgets(dashboard_id):
 # =============================================================================
 
 @api_v1_bp.route('/dashboards/stats', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('dashboards.view')
 def get_dashboard_stats():
     """

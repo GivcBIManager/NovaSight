@@ -17,8 +17,8 @@ os.environ["FLASK_ENV"] = "testing"
 from app import create_app
 from app.extensions import db
 from app.models import Tenant, User, Role
-from app.models.tenant import TenantStatus
-from app.models.user import UserStatus
+from app.domains.tenants.domain.models import TenantStatus
+from app.domains.identity.domain.models import UserStatus
 
 
 @pytest.fixture(scope="session")
@@ -81,7 +81,7 @@ def sample_tenant(db_session) -> Tenant:
 @pytest.fixture
 def sample_user(db_session, sample_tenant) -> User:
     """Create a sample user for testing."""
-    from app.services.password_service import password_service
+    from app.platform.security.passwords import password_service
     
     user = User(
         tenant_id=sample_tenant.id,
@@ -143,7 +143,7 @@ def mock_clickhouse(mocker):
         def test_query(mock_clickhouse):
             mock_clickhouse.return_value.execute.return_value = [{"id": 1}]
     """
-    mock = mocker.patch('app.services.clickhouse_client.ClickHouseClient')
+    mock = mocker.patch('app.domains.analytics.infrastructure.clickhouse_client.ClickHouseClient')
     mock_instance = mock.return_value
     mock_instance.execute.return_value = []
     mock_instance.query.return_value = {"data": [], "rows": 0}
@@ -169,19 +169,19 @@ def mock_ollama(mocker):
 
 
 @pytest.fixture
-def mock_airflow(mocker):
+def mock_dagster(mocker):
     """
-    Mock Airflow client for DAG testing.
+    Mock Dagster client for job testing.
     
     Usage:
-        def test_dag_trigger(mock_airflow):
-            mock_airflow.return_value.trigger_dag.return_value = {"run_id": "123"}
+        def test_job_trigger(mock_dagster):
+            mock_dagster.return_value.trigger_job.return_value = {"run_id": "123"}
     """
-    mock = mocker.patch('app.services.airflow_client.AirflowClient')
+    mock = mocker.patch('app.domains.orchestration.infrastructure.dagster_client.DagsterClient')
     mock_instance = mock.return_value
-    mock_instance.trigger_dag.return_value = {"run_id": "test-run-123"}
-    mock_instance.get_dag_status.return_value = {"state": "success"}
-    mock_instance.list_dags.return_value = []
+    mock_instance.trigger_job.return_value = {"run_id": "test-run-123"}
+    mock_instance.get_run_status.return_value = {"status": "SUCCESS"}
+    mock_instance.list_jobs.return_value = []
     return mock
 
 
@@ -200,7 +200,7 @@ def mock_postgresql_connector(mocker):
 @pytest.fixture
 def mock_encryption_service(mocker):
     """Mock encryption service for credential testing."""
-    mock = mocker.patch('app.services.encryption_service.EncryptionService')
+    mock = mocker.patch('app.platform.security.encryption.EncryptionService')
     mock_instance = mock.return_value
     mock_instance.encrypt.side_effect = lambda x: f"encrypted:{x}"
     mock_instance.decrypt.side_effect = lambda x: x.replace("encrypted:", "") if x.startswith("encrypted:") else x
@@ -214,7 +214,7 @@ def mock_encryption_service(mocker):
 @pytest.fixture
 def sample_connection(db_session, sample_tenant, sample_user):
     """Create a sample data connection for testing."""
-    from app.models.connection import DataConnection, DatabaseType, ConnectionStatus
+    from app.domains.datasources.domain.models import DataConnection, DatabaseType, ConnectionStatus
     
     connection = DataConnection(
         tenant_id=sample_tenant.id,
@@ -236,7 +236,7 @@ def sample_connection(db_session, sample_tenant, sample_user):
 @pytest.fixture
 def sample_semantic_model(db_session, sample_tenant, sample_user):
     """Create a sample semantic model for testing."""
-    from app.models.semantic import SemanticModel, ModelType
+    from app.domains.transformation.domain.models import SemanticModel, ModelType
     
     model = SemanticModel(
         tenant_id=sample_tenant.id,
@@ -255,7 +255,7 @@ def sample_semantic_model(db_session, sample_tenant, sample_user):
 @pytest.fixture
 def sample_dashboard(db_session, sample_tenant, sample_user):
     """Create a sample dashboard for testing."""
-    from app.models.dashboard import Dashboard
+    from app.domains.analytics.domain.models import Dashboard
     
     dashboard = Dashboard(
         tenant_id=sample_tenant.id,
@@ -324,7 +324,7 @@ class TestConfig:
     @staticmethod
     def mock_query_result(columns: list, rows: list):
         """Create a mock QueryResult for semantic queries."""
-        from app.services.clickhouse_client import QueryResult
+        from app.domains.analytics.infrastructure.clickhouse_client import QueryResult
         return QueryResult(
             columns=columns,
             data=rows,

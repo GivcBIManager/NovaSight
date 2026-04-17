@@ -18,6 +18,8 @@ import { SelectBuilder } from './SelectBuilder'
 import { JoinBuilder } from './JoinBuilder'
 import { WhereBuilder } from './WhereBuilder'
 import { GroupByBuilder } from './GroupByBuilder'
+import { SavedQueryPicker } from '../shared/SavedQueryPicker'
+import type { SavedQuery } from '../../hooks/useDbtSavedQueries'
 import type {
   VisualModelCreatePayload,
   VisualColumnConfig,
@@ -74,6 +76,8 @@ export function VisualQueryBuilder({
   const [whereClause, setWhereClause] = useState(initialValues?.where_clause || '')
   const [groupBy, setGroupBy] = useState<string[]>(initialValues?.group_by || [])
   const [tags, setTags] = useState(initialValues?.tags?.join(', ') || '')
+  const [referenceSql, setReferenceSql] = useState<string | null>(null)
+  const [referenceSource, setReferenceSource] = useState<string | null>(null)
 
   // Auto-fill source from Schema Explorer selection
   useEffect(() => {
@@ -82,6 +86,22 @@ export function VisualQueryBuilder({
   useEffect(() => {
     if (selectedSourceTable) setSourceTable(selectedSourceTable)
   }, [selectedSourceTable])
+
+  // Loading a saved query pre-fills model metadata and keeps the raw
+  // SQL as a read-only reference. The raw SQL is NOT injected into the
+  // generated dbt model (ADR-002 — all code goes through approved
+  // Jinja templates). Analysts transcribe the logic using the builder
+  // below, or save the query as a singular test instead.
+  const handleSavedQuery = useCallback((q: SavedQuery) => {
+    setReferenceSql(q.sql)
+    setReferenceSource(q.name)
+    if (!modelName) {
+      const safe = q.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+      setModelName(safe)
+    }
+    if (!description && q.description) setDescription(q.description)
+    if (!tags && q.tags.length > 0) setTags(q.tags.join(', '))
+  }, [modelName, description, tags])
 
   const buildPayload = useCallback((): VisualModelCreatePayload => ({
     model_name: modelName,
@@ -101,12 +121,47 @@ export function VisualQueryBuilder({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Code className="h-5 w-5" />
-          Visual Query Builder
+        <CardTitle className="text-lg flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <Code className="h-5 w-5" />
+            Visual Query Builder
+          </span>
+          <SavedQueryPicker onSelect={handleSavedQuery} size="sm" />
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {referenceSql && (
+          <div className="mb-4 rounded-md border border-dashed bg-muted/40 p-3">
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-[11px] font-medium">
+                Reference SQL from{' '}
+                <span className="font-mono">{referenceSource}</span>
+              </Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[11px]"
+                onClick={() => {
+                  setReferenceSql(null)
+                  setReferenceSource(null)
+                }}
+              >
+                Dismiss
+              </Button>
+            </div>
+            <pre className="text-[11px] font-mono max-h-40 overflow-auto whitespace-pre-wrap text-muted-foreground">
+              {referenceSql}
+            </pre>
+            <p className="text-[10px] text-muted-foreground mt-2">
+              Raw SQL is shown for reference only. Recreate the logic using the
+              builder below, or save as a singular test in the Tests tab
+              (ADR-002: all generated dbt code must pass through approved
+              templates).
+            </p>
+          </div>
+        )}
+
         {/* Model Identity */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="space-y-1">

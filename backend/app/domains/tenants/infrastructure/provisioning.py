@@ -86,7 +86,7 @@ class ProvisioningService:
         """Create a tenant-specific ClickHouse database."""
         try:
             from app.services.template_engine import template_engine
-            from app.services.clickhouse_client import ClickHouseClient
+            from app.domains.analytics.infrastructure.clickhouse_client import ClickHouseClient
 
             engine = template_engine()  # Call to get the TemplateEngine instance
             sql = engine.render(
@@ -160,7 +160,7 @@ class ProvisioningService:
             force: If True, drop even if tables contain data
         """
         import re
-        from app.services.clickhouse_client import ClickHouseClient
+        from app.domains.analytics.infrastructure.clickhouse_client import ClickHouseClient
         
         db_name = f"tenant_{re.sub(r'[^a-z0-9_]', '_', tenant.slug.lower())}"
         
@@ -207,7 +207,7 @@ class ProvisioningService:
 
     def database_exists(self, tenant: "Tenant") -> bool:
         """Check if the tenant's ClickHouse database exists."""
-        from app.services.clickhouse_client import ClickHouseClient
+        from app.domains.analytics.infrastructure.clickhouse_client import ClickHouseClient
         
         db_name = self.get_tenant_database_name(tenant)
         try:

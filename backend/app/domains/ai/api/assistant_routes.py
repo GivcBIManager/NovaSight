@@ -1,4 +1,4 @@
-"""
+﻿"""
 NovaSight AI Assistant API Routes
 ===================================
 
@@ -11,12 +11,12 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from flask import g, jsonify, request
-from flask_jwt_extended import jwt_required
 from pydantic import BaseModel, Field, ValidationError
 
 from app.api.v1 import api_v1_bp
-from app.decorators import async_route, require_tenant_context
-from app.middleware.permissions import require_permission
+from app.platform.async_utils import async_route
+from app.platform.auth.decorators import authenticated, tenant_required
+from app.platform.auth.decorators import require_permission
 from app.platform.auth.identity import get_current_identity
 from app.domains.ai.infrastructure.ollama.client import (
     OllamaClient, 
@@ -29,7 +29,7 @@ from app.domains.ai.infrastructure.ollama.nl_to_params import (
     QueryIntent,
     QueryExplanation
 )
-from app.services.semantic_service import SemanticService, SemanticServiceError
+from app.domains.transformation.application.semantic_service import SemanticService, SemanticServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +65,8 @@ class SuggestRequest(BaseModel):
 # =============================================================================
 
 @api_v1_bp.route('/assistant/query', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('analytics.query')
 @async_route
 async def natural_language_query():
@@ -281,8 +281,8 @@ async def natural_language_query():
 
 
 @api_v1_bp.route('/assistant/explain', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('analytics.query')
 @async_route
 async def explain_query_results():
@@ -363,8 +363,8 @@ async def explain_query_results():
 
 
 @api_v1_bp.route('/assistant/suggest', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('analytics.query')
 @async_route
 async def suggest_analyses():
@@ -450,8 +450,8 @@ Model: {model.name}
 
 
 @api_v1_bp.route('/assistant/health', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @async_route
 async def ollama_health():
     """
@@ -514,8 +514,8 @@ class NLToSQLRequest(BaseModel):
 
 
 @api_v1_bp.route('/assistant/nl-to-sql', methods=['POST'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('analytics.query')
 @async_route
 async def nl_to_sql():
@@ -683,8 +683,8 @@ async def nl_to_sql():
 
 
 @api_v1_bp.route('/assistant/nl-to-sql/suggestions', methods=['GET'])
-@jwt_required()
-@require_tenant_context
+@authenticated
+@tenant_required
 @require_permission('analytics.query')
 @async_route
 async def nl_to_sql_suggestions():
@@ -735,7 +735,7 @@ async def nl_to_sql_suggestions():
 
 
 @api_v1_bp.route('/assistant/models', methods=['GET'])
-@jwt_required()
+@authenticated
 @async_route
 async def list_ollama_models():
     """

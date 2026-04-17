@@ -48,7 +48,7 @@ const testimonials = [
   {
     id: 4,
     quote:
-      "The dbt integration and Airflow orchestration made our data pipelines so much more reliable. We went from daily data issues to nearly zero incidents.",
+      "The dbt integration and Dagster orchestration made our data pipelines so much more reliable. We went from daily data issues to nearly zero incidents.",
     author: 'James Wilson',
     role: 'Data Engineering Lead',
     company: 'InsightAI Labs',
