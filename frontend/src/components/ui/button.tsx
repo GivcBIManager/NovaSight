@@ -4,32 +4,60 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * ## Button hierarchy contract
+ *
+ * Pick exactly ONE primary-class button per interaction zone (page header,
+ * dialog footer, card CTA row). Everything else must be lower in the
+ * hierarchy so the primary wins the visual-weight competition.
+ *
+ * | Tier       | Variants                                  | When to use                                  |
+ * | ---------- | ----------------------------------------- | -------------------------------------------- |
+ * | Primary    | `default` · `destructive` · `gradient`    | The ONE action you want the user to take.    |
+ * | Secondary  | `outline` · `secondary`                   | Alternative actions (cancel, filter, edit).  |
+ * | Tertiary   | `ghost` · `link`                          | Icon buttons, inline links, nav chrome.      |
+ * | Decorative | `ai` · `neon` · `neon-pink` · `gradient-outline` | Marketing / hero / brand moments only. |
+ *
+ * Primary-class variants use `font-semibold` so they pull attention (Fitts's
+ * Law): larger perceived weight ⇒ faster target acquisition. Secondary and
+ * tertiary tiers stay at `font-medium` so they recede.
+ */
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {
     variants: {
       variant: {
-        default: 
-          "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-glow-sm",
+        /** Primary CTA — use once per interaction zone. */
+        default:
+          "bg-primary text-primary-foreground font-semibold hover:bg-primary/90 hover:shadow-glow-sm",
+        /** Primary destructive CTA (delete, irreversible). Use once per dialog. */
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground font-semibold hover:bg-destructive/90",
+        /** Secondary action. Neutral weight; pairs with one primary. */
         outline:
           "border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-accent-indigo/50",
+        /** Secondary action (filled, softer than primary). */
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: 
+        /** Tertiary action. Reserve for icon buttons, nav, and inline chrome. */
+        ghost:
           "hover:bg-accent hover:text-accent-foreground",
-        link: 
+        /** Tertiary inline link. Never use as a primary CTA. */
+        link:
           "text-primary underline-offset-4 hover:underline",
-        // New NovaSight variants
+        /** Primary-class hero CTA (marketing / onboarding). */
         gradient:
-          "bg-gradient-primary text-white hover:shadow-glow-md hover:scale-[1.02]",
+          "bg-gradient-primary text-white font-semibold hover:shadow-glow-md hover:scale-[1.02]",
+        /** Decorative — use only on marketing / landing pages. */
         "gradient-outline":
           "border-2 border-transparent bg-clip-padding bg-gradient-primary text-white hover:shadow-glow-sm [background:linear-gradient(hsl(var(--color-bg-secondary)),hsl(var(--color-bg-secondary)))_padding-box,linear-gradient(135deg,hsl(var(--color-accent-indigo)),hsl(var(--color-accent-purple)))_border-box]",
+        /** Decorative — AI / Ask-AI entry points only. */
         ai:
           "relative overflow-hidden bg-bg-tertiary text-foreground hover:shadow-glow-md before:absolute before:inset-0 before:bg-gradient-ai before:opacity-0 before:transition-opacity hover:before:opacity-100 before:bg-[length:200%_100%] before:animate-gradient-flow",
+        /** Decorative — brand neon treatment. */
         neon:
           "bg-transparent border border-neon-cyan text-neon-cyan hover:bg-neon-cyan/10 hover:shadow-glow-neon",
+        /** Decorative — brand neon treatment. */
         "neon-pink":
           "bg-transparent border border-neon-pink text-neon-pink hover:bg-neon-pink/10 hover:shadow-glow-pink",
       },

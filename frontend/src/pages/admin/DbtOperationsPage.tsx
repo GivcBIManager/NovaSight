@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { PageHeader } from '@/components/common'
 import api from '@/lib/api'
 
 interface DbtCommandResult {
@@ -241,44 +242,40 @@ export function DbtOperationsPage() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">dbt Transformations</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and run dbt operations for your data transformations
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Connection Status */}
-          <Badge
-            variant={connectionStatus?.connected ? 'default' : 'destructive'}
-            className="gap-1"
-          >
-            {isCheckingConnection ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : connectionStatus?.connected ? (
-              <CheckCircle2 className="h-3 w-3" />
-            ) : (
-              <XCircle className="h-3 w-3" />
-            )}
-            {connectionStatus?.connected ? 'Connected' : 'Disconnected'}
-          </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => parseMutation.mutate()}
-            disabled={parseMutation.isPending}
-          >
-            {parseMutation.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            Parse Project
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<FileCode className="h-5 w-5" />}
+        title="dbt Transformations"
+        description="Manage and run dbt operations for your data transformations"
+        actions={
+          <>
+            <Badge
+              variant={connectionStatus?.connected ? 'default' : 'destructive'}
+              className="gap-1"
+            >
+              {isCheckingConnection ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : connectionStatus?.connected ? (
+                <CheckCircle2 className="h-3 w-3" />
+              ) : (
+                <XCircle className="h-3 w-3" />
+              )}
+              {connectionStatus?.connected ? 'Connected' : 'Disconnected'}
+            </Badge>
+            <Button
+              size="sm"
+              onClick={() => parseMutation.mutate()}
+              disabled={parseMutation.isPending}
+            >
+              {parseMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Parse Project
+            </Button>
+          </>
+        }
+      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

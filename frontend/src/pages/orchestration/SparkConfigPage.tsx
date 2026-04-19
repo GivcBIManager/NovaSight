@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PageHeader } from '@/components/common'
 import {
   ArrowLeft,
   Save,
@@ -152,18 +153,21 @@ export function SparkConfigPage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Spark Cluster Configuration</h1>
-          <p className="text-muted-foreground">
-            Configure connection settings for remote Spark execution
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Server className="h-5 w-5" />}
+        title="Spark Cluster Configuration"
+        description="Configure connection settings for remote Spark execution"
+        eyebrow={
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back
+          </button>
+        }
+      />
 
       {/* Connection Status */}
       <Card>

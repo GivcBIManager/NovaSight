@@ -45,6 +45,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/components/ui/use-toast'
+import { PageHeader } from '@/components/common'
 import api from '@/lib/api'
 
 interface Permission {
@@ -136,27 +137,22 @@ export function RolesManagementPage() {
 
   return (
     <div className="container py-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Key className="h-8 w-8 text-primary" />
-            Roles & Permissions
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage access control roles and their permissions
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Role
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Key className="h-5 w-5" />}
+        title="Roles & Permissions"
+        description="Manage access control roles and their permissions"
+        actions={
+          <>
+            <Button variant="outline" size="icon" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Role
+            </Button>
+          </>
+        }
+      />
 
       {/* Roles Grid */}
       {rolesLoading ? (

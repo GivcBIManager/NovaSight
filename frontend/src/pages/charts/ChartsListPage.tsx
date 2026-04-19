@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageHeader } from '@/components/common';
 import { chartService } from '@/services/chartService';
 import type { Chart, ChartFolder, ChartType } from '@/components/charts/types';
 import { useToast } from '@/components/ui/use-toast';
@@ -222,19 +223,16 @@ export const ChartsListPage: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Charts</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Create and manage your data visualizations
-          </p>
-        </div>
-        <Button onClick={handleCreateChart} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Chart
-        </Button>
-      </div>
+      <PageHeader
+        icon={<BarChart3 className="h-5 w-5" />}
+        title="Charts"
+        description="Create and manage your data visualizations"
+        actions={
+          <Button onClick={handleCreateChart} leftIcon={<Plus className="h-4 w-4" />}>
+            New Chart
+          </Button>
+        }
+      />
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm">

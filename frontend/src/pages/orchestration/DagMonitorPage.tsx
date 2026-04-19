@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { dagService } from '@/services/dagService'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/common'
 import {
   Loader2,
   Play,
@@ -12,6 +13,7 @@ import {
   XCircle,
   Clock,
   AlertTriangle,
+  GitBranch,
 } from 'lucide-react'
 import { formatDate, formatDuration } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
@@ -97,27 +99,27 @@ export function DagMonitorPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{dagId}</h1>
-          <p className="text-muted-foreground">DAG run monitoring and logs</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => refetch()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-          <Button onClick={handleTrigger} disabled={isTriggering}>
-            {isTriggering ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Play className="mr-2 h-4 w-4" />
-            )}
-            {isTriggering ? 'Triggering...' : 'Trigger Run'}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<GitBranch className="h-5 w-5" />}
+        title={dagId ?? 'DAG Monitor'}
+        description="DAG run monitoring and logs"
+        actions={
+          <>
+            <Button variant="outline" onClick={() => refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+            <Button onClick={handleTrigger} disabled={isTriggering}>
+              {isTriggering ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="mr-2 h-4 w-4" />
+              )}
+              {isTriggering ? 'Triggering...' : 'Trigger Run'}
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">

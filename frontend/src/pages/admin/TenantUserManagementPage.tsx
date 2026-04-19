@@ -74,6 +74,7 @@ import {
   Building2,
 } from 'lucide-react'
 import { getStatusClasses, getRoleClasses } from '@/lib/colors'
+import { PageHeader } from '@/components/common'
 
 export const TenantUserManagementPage: React.FC = () => {
   const navigate = useNavigate()
@@ -236,19 +237,17 @@ export const TenantUserManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground">
-            Manage users in your organization.
-          </p>
-        </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
-          <UserPlus className="h-4 w-4" />
-          Add User
-        </Button>
-      </div>
+      <PageHeader
+        icon={<Users className="h-5 w-5" />}
+        title="User Management"
+        description="Manage users in your organization."
+        actions={
+          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+            <UserPlus className="h-4 w-4" />
+            Add User
+          </Button>
+        }
+      />
 
       {/* Filters */}
       <Card>

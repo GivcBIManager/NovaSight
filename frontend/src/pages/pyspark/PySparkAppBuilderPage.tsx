@@ -6,10 +6,11 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Save, Loader2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Save, Loader2, FileCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
+import { PageHeader } from '@/components/common'
 import {
   SourceSelector,
   ColumnSelector,
@@ -240,16 +241,25 @@ export function PySparkAppBuilderPage() {
   
   return (
     <div className="container max-w-5xl py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">{isEditMode ? 'Edit' : 'Create'} PySpark App</h1>
-        <p className="text-muted-foreground mt-2">
-          {isEditMode 
+      <PageHeader
+        icon={<FileCode className="h-5 w-5" />}
+        title={`${isEditMode ? 'Edit' : 'Create'} PySpark App`}
+        description={
+          isEditMode
             ? `Modify the configuration for "${state.name}"`
             : 'Configure a PySpark extraction job step by step'
-          }
-        </p>
-      </div>
+        }
+        eyebrow={
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back
+          </button>
+        }
+      />
       
       {/* Progress Steps - In edit mode, allow clicking on any step */}
       <div className="mb-8">

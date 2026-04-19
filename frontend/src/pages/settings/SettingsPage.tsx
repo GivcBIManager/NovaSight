@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
+import { PageHeader } from '@/components/common'
 import { 
   User, 
   Bell, 
@@ -21,7 +22,8 @@ import {
   Palette, 
   Database,
   Save,
-  Loader2 
+  Loader2,
+  Settings as SettingsIcon,
 } from 'lucide-react'
 
 export function SettingsPage() {
@@ -60,12 +62,11 @@ export function SettingsPage() {
 
   return (
     <div className="container max-w-4xl py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage your account settings and preferences
-        </p>
-      </div>
+      <PageHeader
+        icon={<SettingsIcon className="h-5 w-5" />}
+        title="Settings"
+        description="Manage your account settings and preferences"
+      />
 
       <Tabs defaultValue="profile" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">

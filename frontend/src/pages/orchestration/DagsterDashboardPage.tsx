@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PageHeader } from '@/components/common';
 import {
   Sheet,
   SheetContent,
@@ -80,22 +81,20 @@ export function DagsterDashboardPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Dagster Orchestration</h1>
-          <p className="text-muted-foreground">
-            Manage data pipelines, assets, schedules, and sensors
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <InstanceStatus compact />
-          <Button onClick={handleOpenDagsterUI}>
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Open Dagster UI
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<GitBranch className="h-5 w-5" />}
+        title="Dagster Orchestration"
+        description="Manage data pipelines, assets, schedules, and sensors"
+        actions={
+          <>
+            <InstanceStatus compact />
+            <Button onClick={handleOpenDagsterUI}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open Dagster UI
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">

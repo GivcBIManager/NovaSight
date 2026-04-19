@@ -40,6 +40,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { PageHeader } from '@/components/common';
 import { infrastructureService } from '../../services/infrastructureService';
 import type {
   InfrastructureConfig,
@@ -764,39 +765,37 @@ const InfrastructureConfigPage: React.FC = () => {
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        {/* ── Header ──────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Infrastructure</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage connections to your core infrastructure services.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => loadConfigs(true)}
-                  disabled={isRefreshing}
-                >
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Reload all configurations</TooltipContent>
-            </Tooltip>
-            <Button
-              size="sm"
-              onClick={handleTestAll}
-              disabled={testingServices.size > 0}
-            >
-              <Zap className="h-4 w-4" />
-              Test All
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          icon={<Server className="h-5 w-5" />}
+          title="Infrastructure"
+          description="Manage connections to your core infrastructure services."
+          actions={
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => loadConfigs(true)}
+                    disabled={isRefreshing}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Reload all configurations</TooltipContent>
+              </Tooltip>
+              <Button
+                size="sm"
+                onClick={handleTestAll}
+                disabled={testingServices.size > 0}
+              >
+                <Zap className="h-4 w-4" />
+                Test All
+              </Button>
+            </>
+          }
+        />
 
         {/* ── Stats bar ───────────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-4">

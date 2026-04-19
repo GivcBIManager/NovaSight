@@ -19,6 +19,13 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    /* --- Strict tightening roadmap (enable one per PR after clearing errors) ---
+     * "noUncheckedIndexedAccess": true,   // ~193 errors — array/record access guards
+     * "exactOptionalPropertyTypes": true, // ~127 errors — optional-prop shape fixes
+     * "verbatimModuleSyntax": true,       //  ~64 errors — `import type` everywhere
+     */
 
     /* Paths */
     "baseUrl": ".",

@@ -47,6 +47,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/components/ui/use-toast'
+import { PageHeader } from '@/components/common'
 import { 
   usePySparkApp, 
   useDeletePySparkApp, 
@@ -313,103 +314,110 @@ export function PySparkAppDetailPage() {
   
   return (
     <div className="container py-8">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/app/pyspark">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold">{app.name}</h1>
-              <Badge variant={statusConfig.variant}>
-                <span className="flex items-center gap-1">
-                  {statusConfig.icon}
-                  {statusConfig.label}
-                </span>
-              </Badge>
-            </div>
-            {app.description && (
-              <p className="text-muted-foreground mt-2">{app.description}</p>
-            )}
-            <p className="text-sm text-muted-foreground mt-1">
-              Last updated: {formatDate(app.updated_at)}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {/* Run Now button - only for active apps */}
-          {app.status === 'active' && app.generated_code && (
-            <Button
-              variant="default"
-              onClick={handleRunNow}
-              disabled={runApp.isPending}
+      <PageHeader
+        icon={<FileCode className="h-5 w-5" />}
+        title={app.name}
+        description={
+          app.description
+            ? `${app.description} · Last updated ${formatDate(app.updated_at)}`
+            : `Last updated ${formatDate(app.updated_at)}`
+        }
+        eyebrow={
+          <div className="flex items-center gap-2">
+            <Link
+              to="/app/pyspark"
+              className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
             >
-              {runApp.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Rocket className="h-4 w-4 mr-2" />
-              )}
-              Run Now
-            </Button>
-          )}
-          
-          {/* Activate/Deactivate button */}
-          {app.status === 'active' ? (
+              <ArrowLeft className="h-3 w-3" />
+              PySpark Apps
+            </Link>
+            <Badge variant={statusConfig.variant}>
+              <span className="flex items-center gap-1">
+                {statusConfig.icon}
+                {statusConfig.label}
+              </span>
+            </Badge>
+          </div>
+        }
+        actions={
+          <>
+            {/* Run Now button - only for active apps */}
+            {app.status === 'active' && app.generated_code && (
+              <Button
+                variant="default"
+                onClick={handleRunNow}
+                disabled={runApp.isPending}
+              >
+                {runApp.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Rocket className="h-4 w-4 mr-2" />
+                )}
+                Run Now
+              </Button>
+            )}
+
+            {/* Activate/Deactivate button (demoted to outline) */}
+            {app.status === 'active' ? (
+              <Button
+                variant="outline"
+                onClick={handleDeactivate}
+                disabled={deactivateApp.isPending}
+              >
+                {deactivateApp.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <PowerOff className="h-4 w-4 mr-2" />
+                )}
+                Deactivate
+              </Button>
+            ) : app.generated_code ? (
+              <Button
+                variant="outline"
+                onClick={handleActivate}
+                disabled={activateApp.isPending}
+              >
+                {activateApp.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Power className="h-4 w-4 mr-2" />
+                )}
+                Activate
+              </Button>
+            ) : null}
+
             <Button
               variant="outline"
-              onClick={handleDeactivate}
-              disabled={deactivateApp.isPending}
+              onClick={handleGenerateCode}
+              disabled={generateCode.isPending}
             >
-              {deactivateApp.isPending ? (
+              {generateCode.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
-                <PowerOff className="h-4 w-4 mr-2" />
+                <Play className="h-4 w-4 mr-2" />
               )}
-              Deactivate
+              Generate Code
             </Button>
-          ) : app.generated_code ? (
             <Button
-              variant="default"
-              onClick={handleActivate}
-              disabled={activateApp.isPending}
+              variant={app.status === 'active' && app.generated_code ? 'outline' : 'default'}
+              asChild
             >
-              {activateApp.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Power className="h-4 w-4 mr-2" />
-              )}
-              Activate
+              <Link to={`/app/pyspark/${app.id}/edit`}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Link>
             </Button>
-          ) : null}
-          
-          <Button
-            variant="outline"
-            onClick={handleGenerateCode}
-            disabled={generateCode.isPending}
-          >
-            {generateCode.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Play className="h-4 w-4 mr-2" />
-            )}
-            Generate Code
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to={`/app/pyspark/${app.id}/edit`}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Link>
-          </Button>
-          <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        </div>
-      </div>
+            <Button
+              variant="ghost"
+              onClick={() => setDeleteDialogOpen(true)}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </>
+        }
+      />
       
       {/* Workflow Status Indicator */}
       <Card className="mb-6">

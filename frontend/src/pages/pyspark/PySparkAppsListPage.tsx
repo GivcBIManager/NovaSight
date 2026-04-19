@@ -54,6 +54,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/components/ui/use-toast'
+import { PageHeader } from '@/components/common'
 import { 
   usePySparkApps, 
   useDeletePySparkApp, 
@@ -254,21 +255,18 @@ export function PySparkAppsListPage() {
   
   return (
     <div className="container py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">PySpark Apps</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your PySpark data extraction applications
-          </p>
-        </div>
-        <Button asChild>
-          <Link to="/app/pyspark/new">
-            <Plus className="h-4 w-4 mr-2" />
-            New PySpark App
-          </Link>
-        </Button>
-      </div>
+      <PageHeader
+        icon={<FileCode className="h-5 w-5" />}
+        title="PySpark Apps"
+        description="Manage your PySpark data extraction applications"
+        actions={
+          <Button asChild leftIcon={<Plus className="h-4 w-4" />}>
+            <Link to="/app/pyspark/new">
+              New PySpark App
+            </Link>
+          </Button>
+        }
+      />
       
       {/* Search and Filter */}
       <Card className="mb-6">

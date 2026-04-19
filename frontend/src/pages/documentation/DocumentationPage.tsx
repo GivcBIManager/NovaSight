@@ -6,6 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { PageHeader } from '@/components/common'
 import {
   Book,
   Rocket,
@@ -435,26 +436,22 @@ export function DocumentationPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Book className="h-8 w-8 text-primary" />
-            Documentation
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Everything you need to know about NovaSight
-          </p>
-        </div>
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search documentation..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
+      <PageHeader
+        icon={<Book className="h-5 w-5" />}
+        title="Documentation"
+        description="Everything you need to know about NovaSight"
+        actions={
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search documentation..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        }
+      />
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-4">

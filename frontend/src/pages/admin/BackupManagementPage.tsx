@@ -55,6 +55,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { PageHeader } from '@/components/common'
 import api from '@/lib/api'
 
 interface Backup {
@@ -212,25 +213,23 @@ export function BackupManagementPage() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Backup & Recovery</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage database backups, restore points, and disaster recovery
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['backups'] })}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Backup
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<HardDrive className="h-5 w-5" />}
+        title="Backup & Recovery"
+        description="Manage database backups, restore points, and disaster recovery"
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['backups'] })}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Backup
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       {statsData && (

@@ -5,7 +5,8 @@
  * Placeholder to be expanded in Phase 2.
  */
 
-import { SectionHeader, SEOHead } from '@/components/marketing/shared';
+import { SEOHead } from '@/components/marketing/shared';
+import { PageHeader } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,13 +25,14 @@ export function ContactPage() {
 
       {/* Hero Section */}
       <section className="px-4 pb-16 pt-32">
-        <SectionHeader
-          badge="Contact"
-          title="Get in touch with our team"
-          titleHighlight="Get in touch"
-          subtitle="Have questions? We'd love to hear from you."
-          align="center"
-        />
+        <div className="mx-auto max-w-4xl">
+          <PageHeader
+            accentTitle
+            eyebrow="Contact"
+            title="Get in touch with our team"
+            description="Have questions? We'd love to hear from you."
+          />
+        </div>
       </section>
 
       {/* Contact Section */}

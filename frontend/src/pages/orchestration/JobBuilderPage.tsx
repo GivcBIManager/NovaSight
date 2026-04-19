@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CronBuilder } from '@/components/ui/cron-builder'
+import { PageHeader } from '@/components/common'
 import {
   ArrowLeft,
   Save,
@@ -236,22 +237,25 @@ export function JobBuilderPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">
-            {isEditing ? 'Edit Job' : 'Create Spark Job'}
-          </h1>
-          <p className="text-muted-foreground">
-            {isEditing
-              ? 'Modify job configuration'
-              : 'Create a Dagster job that runs PySpark apps on remote Spark cluster'}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Zap className="h-5 w-5" />}
+        title={isEditing ? 'Edit Job' : 'Create Spark Job'}
+        description={
+          isEditing
+            ? 'Modify job configuration'
+            : 'Create a Dagster job that runs PySpark apps on remote Spark cluster'
+        }
+        eyebrow={
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back
+          </button>
+        }
+      />
 
       {/* Job Type Selection (only for new jobs) */}
       {!isEditing && (

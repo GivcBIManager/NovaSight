@@ -7,6 +7,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageHeader } from '@/components/common'
 import { portalAdminService, type PortalStats } from '@/services/portalAdminService'
 import { Building2, Users, Activity, Server, ArrowRight, Loader2 } from 'lucide-react'
 import { getRoleClasses } from '@/lib/colors'
@@ -42,13 +43,11 @@ export const PortalOverviewPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Portal Overview</h1>
-        <p className="text-muted-foreground">
-          Platform-wide statistics and quick access to management tools.
-        </p>
-      </div>
+      <PageHeader
+        icon={<Activity className="h-5 w-5" />}
+        title="Portal Overview"
+        description="Platform-wide statistics and quick access to management tools."
+      />
 
       {error && (
         <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">

@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PageHeader } from '@/components/common'
 import {
   Select,
   SelectContent,
@@ -277,28 +278,26 @@ export function SchedulingPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Scheduling</h1>
-          <p className="text-muted-foreground">
-            Manage jobs, monitor runs, and control orchestration
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <InstanceStatus compact />
-          <Button variant="outline" onClick={handleOpenDagsterUI}>
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Dagster UI
-          </Button>
-          <Button asChild>
-            <Link to="/app/jobs/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Job
-            </Link>
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Calendar className="h-5 w-5" />}
+        title="Scheduling"
+        description="Manage jobs, monitor runs, and control orchestration"
+        actions={
+          <>
+            <InstanceStatus compact />
+            <Button variant="outline" onClick={handleOpenDagsterUI}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Dagster UI
+            </Button>
+            <Button asChild>
+              <Link to="/app/jobs/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Job
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">

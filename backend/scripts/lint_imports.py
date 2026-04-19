@@ -54,10 +54,33 @@ ACCEPTED_EXCEPTIONS = {
     # AI domain injects QueryBuilder + SemanticService via constructor DI
     ("ai", "app.domains.analytics.infrastructure.query_builder"),
     ("ai", "app.domains.transformation.application.semantic_service"),
+    # AI NL2SQL reads semantic model definitions
+    ("ai", "app.domains.transformation.domain.models"),
     # Identity resolves Tenant via lazy import inside a method
     ("identity", "app.domains.tenants.domain.models"),
     # Transformation uses ClickHouse (shared infra — candidate for platform/)
     ("transformation", "app.domains.analytics.infrastructure.clickhouse_client"),
+    # Transformation dbt reads tenant info for project paths
+    ("transformation", "app.domains.tenants.domain.models"),
+    # Transformation dbt model generator reads data source value objects
+    ("transformation", "app.domains.datasources.domain.value_objects"),
+    # Analytics dashboard/chart services use semantic service
+    ("analytics", "app.domains.transformation.application.semantic_service"),
+    # Analytics query builder uses semantic models
+    ("analytics", "app.domains.transformation.domain.models"),
+    # Analytics ClickHouse client resolves tenant config
+    ("analytics", "app.domains.tenants.domain.models"),
+    ("analytics", "app.domains.tenants.infrastructure.config_service"),
+    # Compute PySpark reads data connections and tenant info
+    ("compute", "app.domains.datasources.domain.models"),
+    ("compute", "app.domains.datasources.application.connection_service"),
+    ("compute", "app.domains.tenants.domain.models"),
+    # Orchestration job service reads PySpark models
+    ("orchestration", "app.domains.compute.domain.models"),
+    # Orchestration Dagster client reads tenant config
+    ("orchestration", "app.domains.tenants.infrastructure.config_service"),
+    # Tenants provisioning creates ClickHouse databases
+    ("tenants", "app.domains.analytics.infrastructure.clickhouse_client"),
 }
 
 # Domains we scan
@@ -169,25 +192,25 @@ def main() -> int:
     accepted = [v for v in violations if v.accepted]
 
     if accepted:
-        print(f"ℹ {len(accepted)} accepted cross-domain dependency(ies):")
+        print(f"[INFO] {len(accepted)} accepted cross-domain dependency(ies):")
         for v in accepted:
             rel = os.path.relpath(v.file, DOMAINS_ROOT.parent.parent)
-            print(f"  {rel}:{v.line}  {v.source_domain} → {v.target_domain}.{v.target_layer}")
+            print(f"  {rel}:{v.line}  {v.source_domain} -> {v.target_domain}.{v.target_layer}")
         print()
 
     if not real:
-        print(f"✓ No cross-domain import violations found (scanned {len(ALL_DOMAINS)} domains)")
+        print(f"[OK] No cross-domain import violations found (scanned {len(ALL_DOMAINS)} domains)")
         return 0
 
     print(
-        f"✗ {len(real)} cross-domain import violation(s) found:\n",
+        f"[FAIL] {len(real)} cross-domain import violation(s) found:\n",
         file=sys.stderr,
     )
     for v in real:
         rel = os.path.relpath(v.file, DOMAINS_ROOT.parent.parent)
         print(
             f"  {rel}:{v.line}  "
-            f"{v.source_domain} → {v.target_domain}.{v.target_layer}  "
+            f"{v.source_domain} -> {v.target_domain}.{v.target_layer}  "
             f"({v.import_path})",
             file=sys.stderr,
         )

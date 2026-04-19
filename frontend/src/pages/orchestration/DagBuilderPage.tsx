@@ -23,6 +23,7 @@ import { dagService, TaskConfig } from '@/services/dagService'
 import { pysparkApi } from '@/services/pysparkApi'
 import { CronBuilder } from '@/components/ui/cron-builder'
 import { DagCodePreview } from '@/components/ui/dag-code-preview'
+import { PageHeader } from '@/components/common'
 import type { PySparkApp } from '@/types/pyspark'
 import {
   Play,
@@ -701,8 +702,25 @@ ${indent})`
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] gap-4">
-      {/* Task Palette */}
+    <div className="flex flex-col h-[calc(100vh-8rem)]">
+      <PageHeader
+        icon={<GitBranch className="h-5 w-5" />}
+        title={isEditing ? 'Edit DAG' : 'Create DAG'}
+        description="Design DAG workflows visually and schedule them on your cluster"
+        eyebrow={
+          <button
+            type="button"
+            onClick={() => navigate('/app/dags')}
+            className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            DAGs
+          </button>
+        }
+      />
+
+      <div className="flex flex-1 min-h-0 gap-4">
+        {/* Task Palette */}
       <Card className="w-64 shrink-0">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Task Types</CardTitle>
@@ -745,7 +763,7 @@ ${indent})`
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleSaveWithPreview} disabled={isSaving}>
+            <Button onClick={handleSaveWithPreview} disabled={isSaving}>
               {isSaving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -753,8 +771,9 @@ ${indent})`
               )}
               Preview & Save
             </Button>
-            <Button 
-              onClick={handleTriggerRun} 
+            <Button
+              variant="outline"
+              onClick={handleTriggerRun}
               disabled={isTriggering || (!isEditing && nodes.length === 0)}
             >
               {isTriggering ? (
@@ -994,6 +1013,7 @@ ${indent})`
         onConfirmSave={handleConfirmSave}
         isSaving={isSaving}
       />
+      </div>
     </div>
   )
 }

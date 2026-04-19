@@ -8,7 +8,7 @@ REST API endpoints for backup management and recovery operations.
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 
-from app.services.backup_service import (
+from app.domains.backup.application.backup_service import (
     BackupService,
     PointInTimeRecovery,
     TenantRecoveryService

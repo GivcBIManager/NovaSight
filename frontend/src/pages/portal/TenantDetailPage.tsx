@@ -51,6 +51,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
+import { PageHeader } from '@/components/common'
 import {
   portalAdminService,
   type PortalTenant,
@@ -292,41 +293,29 @@ export const TenantDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
+      <PageHeader
+        icon={<Building2 className="h-5 w-5" />}
+        title={tenant.name}
+        description={`${tenant.slug} · ${tenant.plan} · ${tenant.status}`}
+        eyebrow={
+          <button
+            type="button"
             onClick={() => navigate('/app/portal/tenants')}
+            className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg">
-              {tenant.name.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">{tenant.name}</h1>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <code className="bg-muted px-2 py-0.5 rounded text-xs">{tenant.slug}</code>
-                <Badge variant="outline" className={getPlanClasses(tenant.plan)}>
-                  {tenant.plan}
-                </Badge>
-                <Badge variant="outline" className={getStatusClasses(tenant.status)}>
-                  {tenant.status}
-                </Badge>
-              </div>
-            </div>
-          </div>
-        </div>
-        {isSuperAdmin && (
-          <Button variant="outline" onClick={() => setShowEditDialog(true)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Tenant
-          </Button>
-        )}
-      </div>
+            <ArrowLeft className="h-3 w-3" />
+            Tenants
+          </button>
+        }
+        actions={
+          isSuperAdmin ? (
+            <Button onClick={() => setShowEditDialog(true)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Tenant
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

@@ -6,7 +6,8 @@
  */
 
 import { motion } from 'framer-motion';
-import { SectionHeader, SEOHead } from '@/components/marketing/shared';
+import { SEOHead } from '@/components/marketing/shared';
+import { PageHeader } from '@/components/common';
 import { Zap, Database, BarChart3, Bot, Shield, Workflow } from 'lucide-react';
 import { seoConfig, getCanonicalUrl } from '@/data/seo-config';
 
@@ -54,13 +55,14 @@ export function FeaturesPage() {
 
       {/* Hero Section */}
       <section className="px-4 pb-16 pt-32">
-        <SectionHeader
-          badge="Features"
-          title="Everything you need to master your data"
-          titleHighlight="master your data"
-          subtitle="A complete platform for data ingestion, transformation, analysis, and visualization."
-          align="center"
-        />
+        <div className="mx-auto max-w-4xl">
+          <PageHeader
+            accentTitle
+            eyebrow="Features"
+            title="Everything you need to master your data"
+            description="A complete platform for data ingestion, transformation, analysis, and visualization."
+          />
+        </div>
       </section>
 
       {/* Features Grid */}

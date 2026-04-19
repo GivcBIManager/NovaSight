@@ -5,7 +5,6 @@ NovaSight Utilities Package
 Common utility functions and helpers.
 """
 
-from app.utils.encryption import encrypt_credential, decrypt_credential
 from app.utils.pagination import paginate, PaginationParams
 from app.utils.validators import validate_slug, validate_email
 from app.platform.tenant.schema import (
@@ -37,9 +36,6 @@ from app.utils.logger import (
 )
 
 __all__ = [
-    # Encryption
-    "encrypt_credential",
-    "decrypt_credential",
     # Pagination
     "paginate",
     "PaginationParams",

@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PageHeader } from '@/components/common'
 import {
   Select,
   SelectContent,
@@ -183,44 +184,38 @@ export function AuditLogsPage() {
 
   return (
     <div className="container py-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Shield className="h-8 w-8 text-primary" />
-            Audit Logs
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Track all actions and security events across the platform
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => verifyIntegrity.mutate()}
-            disabled={verifyIntegrity.isPending}
-          >
-            {verifyIntegrity.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <ShieldCheck className="h-4 w-4 mr-2" />
-            )}
-            Verify Integrity
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => exportLogs.mutate()}
-            disabled={exportLogs.isPending}
-          >
-            {exportLogs.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            Export
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Shield className="h-5 w-5" />}
+        title="Audit Logs"
+        description="Track all actions and security events across the platform"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => verifyIntegrity.mutate()}
+              disabled={verifyIntegrity.isPending}
+            >
+              {verifyIntegrity.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <ShieldCheck className="h-4 w-4 mr-2" />
+              )}
+              Verify Integrity
+            </Button>
+            <Button
+              onClick={() => exportLogs.mutate()}
+              disabled={exportLogs.isPending}
+            >
+              {exportLogs.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Export
+            </Button>
+          </>
+        }
+      />
 
       <Tabs defaultValue="logs">
         <TabsList>

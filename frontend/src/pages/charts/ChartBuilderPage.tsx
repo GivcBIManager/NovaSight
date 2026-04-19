@@ -54,6 +54,7 @@ import type {
 } from '@/components/charts/types';
 import { chartService, ChartCreateRequest } from '@/services/chartService';
 import { useToast } from '@/components/ui/use-toast';
+import { PageHeader } from '@/components/common';
 
 interface SemanticModel {
   id: string;
@@ -306,37 +307,51 @@ export const ChartBuilderPage: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/app/charts')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <Input
-              value={chartName}
-              onChange={(e) => setChartName(e.target.value)}
-              className="text-lg font-semibold border-none px-0 focus-visible:ring-0 bg-transparent"
-              placeholder="Chart name..."
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handlePreview} disabled={isPreviewing}>
-            {isPreviewing ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Play className="h-4 w-4 mr-2" />
-            )}
-            Preview
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Save
-          </Button>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <PageHeader
+          className="mb-0"
+          icon={<BarChart3 className="h-5 w-5" />}
+          title={isEditing ? 'Edit Chart' : 'Create Chart'}
+          eyebrow={
+            <button
+              type="button"
+              onClick={() => navigate('/app/charts')}
+              className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-3 w-3" />
+              Charts
+            </button>
+          }
+          actions={
+            <>
+              <Button variant="outline" onClick={handlePreview} disabled={isPreviewing}>
+                {isPreviewing ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4 mr-2" />
+                )}
+                Preview
+              </Button>
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Save
+              </Button>
+            </>
+          }
+        />
+        <div className="mt-3 max-w-md">
+          <Label htmlFor="chart-name" className="sr-only">Chart Name</Label>
+          <Input
+            id="chart-name"
+            value={chartName}
+            onChange={(e) => setChartName(e.target.value)}
+            className="text-lg font-semibold"
+            placeholder="Chart name..."
+          />
         </div>
       </div>
 

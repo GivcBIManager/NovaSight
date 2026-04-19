@@ -5,7 +5,8 @@
  * Placeholder to be expanded in Phase 2.
  */
 
-import { SectionHeader, SEOHead } from '@/components/marketing/shared';
+import { SEOHead } from '@/components/marketing/shared';
+import { PageHeader } from '@/components/common';
 import { seoConfig, getCanonicalUrl } from '@/data/seo-config';
 
 export function SolutionsPage() {
@@ -19,13 +20,14 @@ export function SolutionsPage() {
 
       {/* Hero Section */}
       <section className="px-4 pb-16 pt-32">
-        <SectionHeader
-          badge="Solutions"
-          title="Solutions for every team"
-          titleHighlight="every team"
-          subtitle="Tailored solutions for startups, enterprises, and everything in between."
-          align="center"
-        />
+        <div className="mx-auto max-w-4xl">
+          <PageHeader
+            accentTitle
+            eyebrow="Solutions"
+            title="Solutions for every team"
+            description="Tailored solutions for startups, enterprises, and everything in between."
+          />
+        </div>
       </section>
 
       {/* Placeholder content */}

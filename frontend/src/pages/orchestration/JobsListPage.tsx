@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { PageHeader } from '@/components/common'
 import {
   Select,
   SelectContent,
@@ -218,23 +219,19 @@ export function JobsListPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Spark Jobs</h1>
-          <p className="text-muted-foreground">
-            Manage PySpark jobs running on remote Spark clusters
-          </p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        icon={<Zap className="h-5 w-5" />}
+        title="Spark Jobs"
+        description="Manage PySpark jobs running on remote Spark clusters"
+        actions={
           <Button asChild>
             <Link to="/app/jobs/new">
               <Plus className="mr-2 h-4 w-4" />
               Create Job
             </Link>
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Filters */}
       <div className="flex items-center gap-4">

@@ -5,7 +5,8 @@
  * Placeholder to be expanded in Phase 2.
  */
 
-import { SectionHeader, SEOHead } from '@/components/marketing/shared';
+import { SEOHead } from '@/components/marketing/shared';
+import { PageHeader } from '@/components/common';
 import { motion } from 'framer-motion';
 import { seoConfig, getCanonicalUrl } from '@/data/seo-config';
 
@@ -20,13 +21,14 @@ export function AboutPage() {
 
       {/* Hero Section */}
       <section className="px-4 pb-16 pt-32">
-        <SectionHeader
-          badge="About Us"
-          title="Building the future of data analytics"
-          titleHighlight="future of data"
-          subtitle="We're on a mission to democratize data intelligence for every organization."
-          align="center"
-        />
+        <div className="mx-auto max-w-4xl">
+          <PageHeader
+            accentTitle
+            eyebrow="About Us"
+            title="Building the future of data analytics"
+            description="We're on a mission to democratize data intelligence for every organization."
+          />
+        </div>
       </section>
 
       {/* Story Section */}

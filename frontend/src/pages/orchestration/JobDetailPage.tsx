@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { PageHeader } from '@/components/common'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -192,64 +193,65 @@ export function JobDetailPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/app/jobs">
-              <ArrowLeft className="h-4 w-4" />
+      <PageHeader
+        icon={<GitBranch className="h-5 w-5" />}
+        title={job.dag_id}
+        description={job.description || 'No description'}
+        eyebrow={
+          <div className="flex items-center gap-2">
+            <Link
+              to="/app/jobs"
+              className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-3 w-3" />
+              Jobs
             </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">{job.dag_id}</h1>
-              {job.type === 'pipeline' ? (
-                <Badge variant="outline" className="border-purple-400 text-purple-600">
-                  <GitBranch className="mr-1 h-3 w-3" /> Pipeline
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="border-orange-400 text-orange-600">
-                  <Zap className="mr-1 h-3 w-3" /> Spark
-                </Badge>
-              )}
-              {getStatusBadge(job.status)}
-            </div>
-            <p className="text-muted-foreground">{job.description || 'No description'}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="default"
-            onClick={() => triggerMutation.mutate()}
-            disabled={triggerMutation.isPending || job.status === 'archived'}
-          >
-            {triggerMutation.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            {job.type === 'pipeline' ? (
+              <Badge variant="outline" className="border-purple-400 text-purple-600">
+                <GitBranch className="mr-1 h-3 w-3" /> Pipeline
+              </Badge>
             ) : (
-              <Play className="mr-2 h-4 w-4" />
+              <Badge variant="outline" className="border-orange-400 text-orange-600">
+                <Zap className="mr-1 h-3 w-3" /> Spark
+              </Badge>
             )}
-            Run Now
-          </Button>
-          {job.status === 'active' && (
-            <Button variant="outline" onClick={() => pauseMutation.mutate()}>
-              <Pause className="mr-2 h-4 w-4" /> Pause
+            {getStatusBadge(job.status)}
+          </div>
+        }
+        actions={
+          <>
+            <Button
+              onClick={() => triggerMutation.mutate()}
+              disabled={triggerMutation.isPending || job.status === 'archived'}
+            >
+              {triggerMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="mr-2 h-4 w-4" />
+              )}
+              Run Now
             </Button>
-          )}
-          {job.status === 'paused' && (
-            <Button variant="outline" onClick={() => resumeMutation.mutate()}>
-              <Play className="mr-2 h-4 w-4" /> Resume
+            {job.status === 'active' && (
+              <Button variant="outline" onClick={() => pauseMutation.mutate()}>
+                <Pause className="mr-2 h-4 w-4" /> Pause
+              </Button>
+            )}
+            {job.status === 'paused' && (
+              <Button variant="outline" onClick={() => resumeMutation.mutate()}>
+                <Play className="mr-2 h-4 w-4" /> Resume
+              </Button>
+            )}
+            <Button variant="outline" asChild>
+              <Link to={`/app/jobs/${jobId}/edit`}>
+                <Settings className="mr-2 h-4 w-4" /> Edit
+              </Link>
             </Button>
-          )}
-          <Button variant="outline" asChild>
-            <Link to={`/app/jobs/${jobId}/edit`}>
-              <Settings className="mr-2 h-4 w-4" /> Edit
-            </Link>
-          </Button>
-          <Button variant="destructive" size="icon" onClick={() => setShowDelete(true)}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+            <Button variant="ghost" size="icon" onClick={() => setShowDelete(true)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        }
+      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

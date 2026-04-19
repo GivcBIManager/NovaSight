@@ -6,7 +6,8 @@
  */
 
 import { motion } from 'framer-motion';
-import { SectionHeader, SEOHead } from '@/components/marketing/shared';
+import { SEOHead } from '@/components/marketing/shared';
+import { PageHeader } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -71,13 +72,14 @@ export function PricingPage() {
 
       {/* Hero Section */}
       <section className="px-4 pb-16 pt-32">
-        <SectionHeader
-          badge="Pricing"
-          title="Simple, transparent pricing"
-          titleHighlight="transparent"
-          subtitle="Start free and scale as you grow. No hidden fees."
-          align="center"
-        />
+        <div className="mx-auto max-w-4xl">
+          <PageHeader
+            accentTitle
+            eyebrow="Pricing"
+            title="Simple, transparent pricing"
+            description="Start free and scale as you grow. No hidden fees."
+          />
+        </div>
       </section>
 
       {/* Pricing Grid */}

@@ -9,13 +9,12 @@ Allows portal admins to configure ClickHouse, Spark, and Ollama connections.
 from flask import request, jsonify
 from app.api.v1.admin import admin_bp
 from app.platform.auth.decorators import authenticated
-from app.platform.auth.jwt_handler import get_jwt_identity_dict
+from app.platform.auth.identity import get_current_identity
 
 
 def _get_user_id() -> str:
-    """Extract user_id from JWT identity."""
-    identity = get_jwt_identity_dict()
-    return identity.get("user_id", "")
+    """Extract user_id from current identity."""
+    return str(get_current_identity().user_id)
 from app.domains.tenants.infrastructure.config_service import (
     InfrastructureConfigService,
     InfrastructureConfigError,
@@ -471,8 +470,8 @@ def create_tenant_clickhouse_config(tenant_id):
         raise ValidationError(str(e.messages))
     
     # Verify tenant exists
-    from app.domains.tenants.domain.models import Tenant
-    tenant = Tenant.query.filter(Tenant.id == tenant_id).first()
+    from app.domains.tenants.application.tenant_service import TenantService
+    tenant = TenantService().get_tenant(str(tenant_id))
     if not tenant:
         raise NotFoundError(f'Tenant not found: {tenant_id}')
     

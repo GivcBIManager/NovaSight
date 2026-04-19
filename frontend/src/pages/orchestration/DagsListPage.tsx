@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { dagService, DagConfig } from '@/services/dagService'
+import { dagService } from '@/services/dagService'
+import type { DagConfig } from '@/services/dagService'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageHeader, EmptyState } from '@/components/common'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,20 +40,29 @@ import { formatDate } from '@/lib/utils'
 import { toast } from '@/components/ui/use-toast'
 import { getStatusClasses } from '@/lib/colors'
 
+/**
+ * DagsListPage -- canonical "list + create" module page.
+ *
+ * UX hierarchy applied:
+ * 1. PageHeader places the single primary CTA ("Create DAG") top-right --
+ *    the user''s reading path lands on it after absorbing page context.
+ * 2. Per-card action density is reduced: only the TWO most common actions
+ *    (Edit, Monitor) render as inline outline buttons; enable/disable +
+ *    delete move under the overflow menu. Hick''s Law: fewer visible choices
+ *    means faster decisions.
+ * 3. Status is communicated via ONE channel (the badge) -- card borders and
+ *    backgrounds stay neutral so nothing competes with the badge''s signal.
+ * 4. The empty state uses the canonical EmptyState with a single primary
+ *    CTA ("Create Your First DAG") -- the only thing the user can/should do.
+ */
 export function DagsListPage() {
   const queryClient = useQueryClient()
   const [deleteTarget, setDeleteTarget] = useState<DagConfig | null>(null)
 
-  const {
-    data: dags,
-    isLoading,
-    error,
-  } = useQuery({
+  const { data: dags, isLoading, error } = useQuery({
     queryKey: ['dags'],
     queryFn: () => dagService.list(),
   })
-
-  // --- Mutations ---
 
   const pauseMutation = useMutation({
     mutationFn: (dagId: string) => dagService.pause(dagId),
@@ -102,66 +113,50 @@ export function DagsListPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    return (
-      <span
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusClasses(status)}`}
-      >
-        {status}
-      </span>
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-destructive">Failed to load DAGs</p>
-      </div>
-    )
-  }
+  const getStatusBadge = (status: string) => (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusClasses(status)}`}
+    >
+      {status}
+    </span>
+  )
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">DAG Workflows</h1>
-          <p className="text-muted-foreground">
-            Manage your data pipeline orchestration
-          </p>
-        </div>
-        <Button asChild>
-          <Link to="/app/dags/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Create DAG
-          </Link>
-        </Button>
-      </div>
+    <div>
+      <PageHeader
+        icon={<GitBranch className="h-5 w-5" />}
+        title="DAG Workflows"
+        description="Manage your data pipeline orchestration"
+        actions={
+          <Button asChild leftIcon={<Plus className="h-4 w-4" />}>
+            <Link to="/app/dags/new">Create DAG</Link>
+          </Button>
+        }
+      />
 
-      {/* DAGs Grid */}
-      {dags && dags.length > 0 ? (
+      {isLoading ? (
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : error ? (
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-destructive">Failed to load DAGs</p>
+        </div>
+      ) : dags && dags.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {dags.map((dag: DagConfig) => (
-            <Card key={dag.id} className="hover:shadow-md transition-shadow">
+            <Card key={dag.id} className="transition-shadow hover:shadow-md">
               <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{dag.dag_id}</CardTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="truncate text-lg">{dag.dag_id}</CardTitle>
                   {getStatusBadge(dag.status)}
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                <p className="mb-4 line-clamp-2 text-sm text-muted-foreground">
                   {dag.description || 'No description'}
                 </p>
-                
+
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Schedule:</span>
@@ -169,20 +164,20 @@ export function DagsListPage() {
                       {dag.schedule_type === 'cron'
                         ? dag.schedule_cron
                         : dag.schedule_type === 'preset'
-                        ? dag.schedule_preset
-                        : 'Manual'}
+                          ? dag.schedule_preset
+                          : 'Manual'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Version:</span>
                     <span className="font-medium">v{dag.current_version}</span>
                   </div>
-                  {dag.deployed_at && (
+                  {dag.deployed_at ? (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Last deployed:</span>
                       <span className="font-medium">{formatDate(dag.deployed_at)}</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="mt-4 flex items-center gap-2">
@@ -199,57 +194,44 @@ export function DagsListPage() {
                     </Link>
                   </Button>
 
-                  {/* Enable / Disable toggle */}
-                  {dag.status === 'active' ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleTogglePause(dag)}
-                      disabled={pauseMutation.isPending}
-                    >
-                      {pauseMutation.isPending ? (
-                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                      ) : (
-                        <Pause className="mr-1 h-3 w-3" />
-                      )}
-                      Disable
-                    </Button>
-                  ) : dag.status === 'paused' ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleTogglePause(dag)}
-                      disabled={unpauseMutation.isPending}
-                    >
-                      {unpauseMutation.isPending ? (
-                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                      ) : (
-                        <Play className="mr-1 h-3 w-3" />
-                      )}
-                      Enable
-                    </Button>
-                  ) : null}
-
-                  {/* More actions menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="ml-auto h-8 w-8 p-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto h-8 w-8 p-0"
+                        aria-label={`More actions for ${dag.dag_id}`}
+                      >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {dag.status === 'active' && (
-                        <DropdownMenuItem onClick={() => handleTogglePause(dag)}>
-                          <PowerOff className="mr-2 h-4 w-4" />
+                      {dag.status === 'active' ? (
+                        <DropdownMenuItem
+                          onClick={() => handleTogglePause(dag)}
+                          disabled={pauseMutation.isPending}
+                        >
+                          {pauseMutation.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <PowerOff className="mr-2 h-4 w-4" />
+                          )}
                           Disable DAG
                         </DropdownMenuItem>
-                      )}
-                      {dag.status === 'paused' && (
-                        <DropdownMenuItem onClick={() => handleTogglePause(dag)}>
-                          <Power className="mr-2 h-4 w-4" />
+                      ) : null}
+                      {dag.status === 'paused' ? (
+                        <DropdownMenuItem
+                          onClick={() => handleTogglePause(dag)}
+                          disabled={unpauseMutation.isPending}
+                        >
+                          {unpauseMutation.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Power className="mr-2 h-4 w-4" />
+                          )}
                           Enable DAG
                         </DropdownMenuItem>
-                      )}
+                      ) : null}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
@@ -261,29 +243,45 @@ export function DagsListPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
+
+                {dag.status === 'active' || dag.status === 'paused' ? (
+                  <div className="mt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleTogglePause(dag)}
+                      disabled={pauseMutation.isPending || unpauseMutation.isPending}
+                      className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      {dag.status === 'active' ? (
+                        <>
+                          <Pause className="mr-1 h-3 w-3" /> Disable
+                        </>
+                      ) : (
+                        <>
+                          <Play className="mr-1 h-3 w-3" /> Enable
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           ))}
         </div>
       ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <GitBranch className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No DAGs yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Create your first workflow to start orchestrating data pipelines.
-            </p>
-            <Button asChild>
-              <Link to="/app/dags/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Your First DAG
-              </Link>
+        <EmptyState
+          icon={<GitBranch className="h-12 w-12" />}
+          title="No DAGs yet"
+          description="Create your first workflow to start orchestrating data pipelines."
+          action={
+            <Button asChild leftIcon={<Plus className="h-4 w-4" />}>
+              <Link to="/app/dags/new">Create Your First DAG</Link>
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       )}
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -291,8 +289,8 @@ export function DagsListPage() {
             <AlertDialogDescription>
               Are you sure you want to delete{' '}
               <span className="font-semibold">{deleteTarget?.dag_id}</span>?
-              This will remove the pipeline from Dagster and archive it. This action
-              cannot be undone.
+              This will remove the pipeline from Dagster and archive it. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -302,12 +300,12 @@ export function DagsListPage() {
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={deleteMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive font-semibold text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting…
+                  Deleting...
                 </>
               ) : (
                 <>

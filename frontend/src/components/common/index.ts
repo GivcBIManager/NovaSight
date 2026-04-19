@@ -12,4 +12,6 @@
 export { LoadingSpinner } from './LoadingSpinner'
 export { ErrorBoundary } from './ErrorBoundary'
 export { EmptyState } from './EmptyState'
+export { PageHeader } from './PageHeader'
+export type { PageHeaderProps } from './PageHeader'
 export { ProtectedRoute } from '../auth/ProtectedRoute'

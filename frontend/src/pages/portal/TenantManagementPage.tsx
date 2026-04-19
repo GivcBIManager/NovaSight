@@ -38,6 +38,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/components/ui/use-toast'
+import { PageHeader } from '@/components/common'
 import {
   portalAdminService,
   type PortalTenant,
@@ -165,19 +166,17 @@ export const TenantManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Tenant Management</h1>
-          <p className="text-muted-foreground">
-            Create, configure, and manage platform organizations.
-          </p>
-        </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Tenant
-        </Button>
-      </div>
+      <PageHeader
+        icon={<Building2 className="h-5 w-5" />}
+        title="Tenant Management"
+        description="Create, configure, and manage platform organizations."
+        actions={
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Tenant
+          </Button>
+        }
+      />
 
       {/* Filters */}
       <Card>
