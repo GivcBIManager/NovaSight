@@ -2,6 +2,10 @@
 dbt Service for NovaSight.
 
 Provides dbt command execution with multi-tenant context support.
+
+Supports dual-adapter pattern (Spark → dlt migration):
+- dbt-duckdb: Reads from Iceberg tables on S3 (data lake layer)
+- dbt-clickhouse: Writes to ClickHouse marts (data warehouse layer)
 """
 
 import subprocess
@@ -31,6 +35,14 @@ class DbtCommand(str, Enum):
     DOCS_GENERATE = "docs generate"
     LS = "ls"
     PARSE = "parse"
+
+
+class DbtTarget(str, Enum):
+    """dbt target environments for dual-adapter pattern."""
+    LAKE = "lake"          # dbt-duckdb reading from Iceberg
+    WAREHOUSE = "warehouse"  # dbt-clickhouse writing to marts
+    DEV = "dev"             # Legacy ClickHouse-only (backward compat)
+    PROD = "prod"           # Legacy ClickHouse-only (backward compat)
 
 
 @dataclass
@@ -558,6 +570,254 @@ class DbtService:
             )
             
             # Try to load run_results.json if it exists
+            run_results_path = self.project_path / 'target' / 'run_results.json'
+            if run_results_path.exists():
+                try:
+                    with open(run_results_path, 'r') as f:
+                        dbt_result.run_results = json.load(f)
+                except json.JSONDecodeError:
+                    pass
+            
+            if dbt_result.success:
+                logger.info(f"dbt command succeeded: {full_cmd}")
+            else:
+                logger.warning(f"dbt command failed: {full_cmd}\n{result.stderr}")
+            
+            return dbt_result
+            
+        except subprocess.TimeoutExpired:
+            logger.error(f"dbt command timed out: {full_cmd}")
+            return DbtResult(
+                success=False,
+                command=full_cmd,
+                stdout="",
+                stderr="Command timed out after 300 seconds",
+                return_code=-1,
+            )
+        except Exception as e:
+            logger.error(f"dbt command error: {full_cmd} - {str(e)}")
+            return DbtResult(
+                success=False,
+                command=full_cmd,
+                stdout="",
+                stderr=str(e),
+                return_code=-1,
+            )
+
+    # =========================================================================
+    # Dual-Adapter Pattern Methods (Spark → dlt migration)
+    # =========================================================================
+
+    def run_lake(
+        self,
+        tenant_id: str,
+        tenant_slug: str,
+        select: Optional[str] = None,
+        exclude: Optional[str] = None,
+        full_refresh: bool = False,
+        vars: Optional[Dict[str, Any]] = None,
+    ) -> DbtResult:
+        """
+        Run dbt models against the Iceberg data lake using dbt-duckdb.
+        
+        This reads from Iceberg tables on S3 and produces intermediate
+        tables (views, ephemeral models) used by the warehouse layer.
+        
+        Args:
+            tenant_id: Tenant identifier
+            tenant_slug: Tenant slug for S3 bucket and namespace resolution
+            select: Model selection criteria (defaults to staging+intermediate)
+            exclude: Models to exclude
+            full_refresh: Force full refresh
+            vars: Additional dbt variables
+            
+        Returns:
+            DbtResult with execution details
+        """
+        cmd = ['dbt', 'run', '--target', 'lake']
+        
+        # Default to staging and intermediate layers for lake
+        if select is None:
+            select = "staging+ intermediate+"
+        
+        cmd.extend(['--select', select])
+        
+        if exclude:
+            cmd.extend(['--exclude', exclude])
+        if full_refresh:
+            cmd.append('--full-refresh')
+        if vars:
+            cmd.extend(['--vars', json.dumps(vars)])
+        
+        return self._execute_lake(cmd, tenant_id, tenant_slug)
+
+    def run_warehouse(
+        self,
+        tenant_id: str,
+        tenant_slug: str,
+        select: Optional[str] = None,
+        exclude: Optional[str] = None,
+        full_refresh: bool = False,
+        vars: Optional[Dict[str, Any]] = None,
+    ) -> DbtResult:
+        """
+        Run dbt models against ClickHouse warehouse using dbt-clickhouse.
+        
+        This reads from the lake layer (via dbt-duckdb refs) and produces
+        materialized mart tables in ClickHouse for analytics queries.
+        
+        Args:
+            tenant_id: Tenant identifier
+            tenant_slug: Tenant slug for database naming
+            select: Model selection criteria (defaults to marts)
+            exclude: Models to exclude
+            full_refresh: Force full refresh
+            vars: Additional dbt variables
+            
+        Returns:
+            DbtResult with execution details
+        """
+        cmd = ['dbt', 'run', '--target', 'warehouse']
+        
+        # Default to marts layer for warehouse
+        if select is None:
+            select = "marts+"
+        
+        cmd.extend(['--select', select])
+        
+        if exclude:
+            cmd.extend(['--exclude', exclude])
+        if full_refresh:
+            cmd.append('--full-refresh')
+        if vars:
+            cmd.extend(['--vars', json.dumps(vars)])
+        
+        return self._execute_warehouse(cmd, tenant_id, tenant_slug)
+
+    def _execute_lake(
+        self,
+        cmd: List[str],
+        tenant_id: str,
+        tenant_slug: str,
+    ) -> DbtResult:
+        """
+        Execute dbt command for lake layer (dbt-duckdb).
+        
+        Injects S3/Iceberg environment variables.
+        """
+        env = self._build_lake_env(tenant_id, tenant_slug)
+        full_cmd = ' '.join(cmd)
+        
+        logger.info(f"Executing dbt lake command: {full_cmd} for tenant: {tenant_slug}")
+        
+        return self._run_subprocess(cmd, env, full_cmd)
+
+    def _execute_warehouse(
+        self,
+        cmd: List[str],
+        tenant_id: str,
+        tenant_slug: str,
+    ) -> DbtResult:
+        """
+        Execute dbt command for warehouse layer (dbt-clickhouse).
+        
+        Injects ClickHouse environment variables.
+        """
+        env = self._build_warehouse_env(tenant_id, tenant_slug)
+        full_cmd = ' '.join(cmd)
+        
+        logger.info(f"Executing dbt warehouse command: {full_cmd} for tenant: {tenant_slug}")
+        
+        return self._run_subprocess(cmd, env, full_cmd)
+
+    def _build_lake_env(self, tenant_id: str, tenant_slug: str) -> Dict[str, str]:
+        """
+        Build environment variables for dbt-duckdb lake execution.
+        
+        Sets up S3 credentials and Iceberg configuration.
+        """
+        env = os.environ.copy()
+        
+        # Tenant context
+        env['TENANT_ID'] = tenant_id
+        env['TENANT_SLUG'] = tenant_slug
+        env['DBT_TARGET'] = 'lake'
+        
+        # Iceberg namespace
+        safe_slug = tenant_slug.lower().replace('-', '_').replace('.', '_')
+        env['ICEBERG_NAMESPACE'] = f"tenant_{safe_slug}.raw"
+        
+        # Get S3 config for this tenant
+        try:
+            from app.domains.tenants.infrastructure.config_service import InfrastructureConfigService
+            service = InfrastructureConfigService()
+            configs = service.list_configs(
+                service_type="object_storage",
+                tenant_id=tenant_id,
+                include_global=False,
+                page=1,
+                per_page=1,
+            )
+            
+            if configs.get("items"):
+                settings = configs["items"][0].get("settings", {})
+                decrypted = service.decrypt_settings(settings, "object_storage")
+                
+                env['S3_BUCKET'] = decrypted.get("bucket", "")
+                env['AWS_ACCESS_KEY_ID'] = decrypted.get("access_key", "")
+                env['AWS_SECRET_ACCESS_KEY'] = decrypted.get("secret_key", "")
+                env['S3_ENDPOINT_URL'] = decrypted.get("endpoint_url", "")
+                env['AWS_REGION'] = decrypted.get("region", "us-east-1")
+                
+        except Exception as e:
+            logger.warning(f"Could not load S3 config for lake env: {e}")
+        
+        # DuckDB settings
+        env['DUCKDB_MEMORY_LIMIT'] = os.getenv('DUCKDB_MEMORY_LIMIT', '4GB')
+        env['DUCKDB_THREADS'] = os.getenv('DUCKDB_THREADS', '4')
+        
+        return env
+
+    def _build_warehouse_env(self, tenant_id: str, tenant_slug: str) -> Dict[str, str]:
+        """
+        Build environment variables for dbt-clickhouse warehouse execution.
+        """
+        # Start with the standard env builder
+        env = self._build_env(tenant_id, tenant_slug)
+        env['DBT_TARGET'] = 'warehouse'
+        
+        return env
+
+    def _run_subprocess(
+        self,
+        cmd: List[str],
+        env: Dict[str, str],
+        full_cmd: str,
+    ) -> DbtResult:
+        """
+        Run a subprocess and return DbtResult.
+        
+        Shared by both lake and warehouse execution paths.
+        """
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=self.project_path,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+            
+            dbt_result = DbtResult(
+                success=result.returncode == 0,
+                command=full_cmd,
+                stdout=result.stdout,
+                stderr=result.stderr,
+                return_code=result.returncode,
+            )
+            
+            # Try to load run_results.json
             run_results_path = self.project_path / 'target' / 'run_results.json'
             if run_results_path.exists():
                 try:
