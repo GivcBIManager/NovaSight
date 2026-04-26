@@ -35,10 +35,7 @@ from app.domains.transformation.api import dbt_routes  # noqa: F401
 from app.domains.transformation.api import mcp_routes  # noqa: F401
 from app.domains.transformation.api import visual_model_routes  # noqa: F401
 
-# Compute domain routes (canonical) - PySpark (legacy, to be removed in Phase 6)
-from app.domains.compute.api import pyspark_routes  # noqa: F401
-
-# Ingestion domain routes (canonical) - dlt pipelines (new)
+# Ingestion domain routes (canonical) - dlt pipelines
 from app.domains.ingestion.api.dlt_routes import dlt_pipeline_bp  # noqa: F401
 
 # AI domain routes (canonical)

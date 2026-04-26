@@ -2,15 +2,14 @@
  * NovaSight Job Builder Page
  * ===========================
  *
- * Page for creating/editing Dagster jobs that run PySpark apps
- * on remote Spark clusters.
+ * Page for creating/editing Dagster jobs that run dlt pipelines.
  */
 
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { jobService, CreateJobRequest, CreatePipelineRequest } from '@/services/jobService'
-import { pysparkApi } from '@/services/pysparkApi'
+import { pipelineService } from '@/services/pipelineService'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -82,13 +81,13 @@ export function JobBuilderPage() {
   const [numExecutors, setNumExecutors] = useState(2)
   const [additionalConfigs, setAdditionalConfigs] = useState('')
 
-  // Load PySpark apps
+  // Load dlt pipelines
   const { data: appsData, isLoading: loadingApps } = useQuery({
-    queryKey: ['pyspark-apps'],
-    queryFn: () => pysparkApi.list({ per_page: 100 }),
+    queryKey: ['pipelines'],
+    queryFn: () => pipelineService.list({ per_page: 100 }),
   })
 
-  const pysparkApps = appsData?.apps || []
+  const pysparkApps = appsData?.pipelines || []
 
   // Load existing job if editing
   const { data: existingJob, isLoading: loadingJob } = useQuery({

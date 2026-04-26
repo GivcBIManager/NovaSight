@@ -2,14 +2,12 @@
 NovaSight Unified Job Service
 ==============================
 
-Business logic for managing Dagster jobs that execute PySpark apps
-on remote Spark clusters.
+Business logic for managing Dagster jobs.
 
 This service provides:
 1. Job CRUD operations
 2. Job execution (trigger, pause, resume)
 3. Run monitoring and logging
-4. Spark configuration management
 """
 
 from typing import Dict, Any, List, Optional
@@ -27,7 +25,6 @@ from app.domains.orchestration.domain.models import (
     TaskConfig,
     TaskType,
 )
-from app.domains.compute.domain.models import PySparkApp, PySparkAppStatus
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +92,8 @@ class UnifiedJobService:
     
     def create_job(
         self,
-        pyspark_app_id: str,
+        pipeline_id: str,
         schedule: Optional[str] = None,
-        spark_config: Optional[Dict[str, Any]] = None,
         name: Optional[str] = None,
         description: Optional[str] = None,
         notifications: Optional[Dict[str, Any]] = None,
@@ -105,26 +101,28 @@ class UnifiedJobService:
         retry_delay_minutes: int = 5,
         created_by: str = None,
     ) -> Dict[str, Any]:
-        """Create a new Dagster job for a PySpark app."""
+        """Create a new Dagster job for a dlt pipeline."""
+        from app.domains.ingestion.domain.models import DltPipeline
+
         # Validate UUID format
         try:
-            UUID(str(pyspark_app_id))
+            UUID(str(pipeline_id))
         except (ValueError, AttributeError):
-            raise ValueError(f"Invalid PySpark app ID format: {pyspark_app_id}")
+            raise ValueError(f"Invalid pipeline ID format: {pipeline_id}")
 
-        # Validate PySpark app exists
-        pyspark_app = PySparkApp.query.filter(
-            PySparkApp.id == pyspark_app_id,
-            PySparkApp.tenant_id == self.tenant_id,
+        # Validate pipeline exists
+        pipeline = DltPipeline.query.filter(
+            DltPipeline.id == pipeline_id,
+            DltPipeline.tenant_id == self.tenant_id,
         ).first()
         
-        if not pyspark_app:
-            raise ValueError(f"PySpark app not found: {pyspark_app_id}")
+        if not pipeline:
+            raise ValueError(f"Pipeline not found: {pipeline_id}")
         
         # Generate job name if not provided
         if not name:
-            safe_name = pyspark_app.name.lower().replace(" ", "_").replace("-", "_")
-            name = f"spark_{safe_name}"
+            safe_name = pipeline.name.lower().replace(" ", "_").replace("-", "_")
+            name = f"dlt_{safe_name}"
         
         # Check for duplicate dag_id (exclude archived/deleted jobs)
         existing = DagConfig.query.filter(
@@ -155,25 +153,24 @@ class UnifiedJobService:
         dag_config = DagConfig(
             tenant_id=self.tenant_id,
             dag_id=name,
-            description=description or f"Spark job for {pyspark_app.name}",
+            description=description or f"dlt pipeline job for {pipeline.name}",
             schedule_type=schedule_type,
             schedule_cron=schedule_cron,
             schedule_preset=schedule_preset,
             status=DagStatus.DRAFT,
             default_retries=retries,
             default_retry_delay_minutes=retry_delay_minutes,
-            tags=["spark", "pyspark", str(pyspark_app_id)],
+            tags=["dlt", "pipeline", str(pipeline_id)],
             created_by=created_by or "system",
         )
         
-        # Create the spark_submit task
+        # Create the dlt_run task
         task_config = TaskConfig(
             dag_config=dag_config,
-            task_id=f"spark_submit_{pyspark_app.name.lower().replace(' ', '_')}",
-            task_type=TaskType.SPARK_SUBMIT,
+            task_id=f"dlt_run_{pipeline.name.lower().replace(' ', '_')}",
+            task_type=TaskType.DLT_RUN,
             config={
-                "pyspark_app_id": pyspark_app_id,
-                "spark_config": spark_config or {},
+                "pipeline_id": pipeline_id,
                 "notifications": notifications or {},
             },
             timeout_minutes=120,
@@ -192,30 +189,31 @@ class UnifiedJobService:
     
     def create_pipeline_job(
         self,
-        pyspark_app_ids: List[str],
+        pipeline_ids: List[str],
         name: str,
         description: Optional[str] = None,
         schedule: Optional[str] = None,
         parallel: bool = False,
-        spark_config: Optional[Dict[str, Any]] = None,
         created_by: str = None,
     ) -> Dict[str, Any]:
-        """Create a pipeline job that runs multiple PySpark apps."""
-        # Validate UUID formats
-        for app_id in pyspark_app_ids:
-            try:
-                UUID(str(app_id))
-            except (ValueError, AttributeError):
-                raise ValueError(f"Invalid PySpark app ID format: {app_id}")
+        """Create a pipeline job that runs multiple dlt pipelines."""
+        from app.domains.ingestion.domain.models import DltPipeline
 
-        # Validate all PySpark apps exist
-        apps = PySparkApp.query.filter(
-            PySparkApp.id.in_(pyspark_app_ids),
-            PySparkApp.tenant_id == self.tenant_id,
+        # Validate UUID formats
+        for pid in pipeline_ids:
+            try:
+                UUID(str(pid))
+            except (ValueError, AttributeError):
+                raise ValueError(f"Invalid pipeline ID format: {pid}")
+
+        # Validate all pipelines exist
+        pipelines = DltPipeline.query.filter(
+            DltPipeline.id.in_(pipeline_ids),
+            DltPipeline.tenant_id == self.tenant_id,
         ).all()
         
-        if len(apps) != len(pyspark_app_ids):
-            raise ValueError("One or more PySpark apps not found")
+        if len(pipelines) != len(pipeline_ids):
+            raise ValueError("One or more pipelines not found")
         
         # Generate safe name
         safe_name = name.lower().replace(" ", "_").replace("-", "_")
@@ -250,21 +248,21 @@ class UnifiedJobService:
         dag_config = DagConfig(
             tenant_id=self.tenant_id,
             dag_id=dag_id,
-            description=description or f"Pipeline executing {len(apps)} PySpark jobs",
+            description=description or f"Pipeline executing {len(pipelines)} dlt jobs",
             schedule_type=schedule_type,
             schedule_cron=schedule_cron,
             schedule_preset=schedule_preset,
             status=DagStatus.DRAFT,
-            tags=["pipeline", "pyspark"] + pyspark_app_ids,
+            tags=["pipeline", "dlt"] + pipeline_ids,
             created_by=created_by or "system",
         )
         
         db.session.add(dag_config)
         
-        # Create tasks for each app
+        # Create tasks for each pipeline
         previous_task_id = None
-        for i, app in enumerate(apps):
-            task_id = f"spark_{app.name.lower().replace(' ', '_')}"
+        for i, pipeline in enumerate(pipelines):
+            task_id = f"dlt_{pipeline.name.lower().replace(' ', '_')}"
             
             depends_on = []
             if not parallel and previous_task_id:
@@ -273,10 +271,9 @@ class UnifiedJobService:
             task_config = TaskConfig(
                 dag_config=dag_config,
                 task_id=task_id,
-                task_type=TaskType.SPARK_SUBMIT,
+                task_type=TaskType.DLT_RUN,
                 config={
-                    "pyspark_app_id": str(app.id),
-                    "spark_config": spark_config or {},
+                    "pipeline_id": str(pipeline.id),
                 },
                 depends_on=depends_on,
                 position_x=200 if parallel else 100,

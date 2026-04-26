@@ -47,11 +47,6 @@ _register(
     "ScheduleType", "TriggerRule", "TaskType",
 )
 _register(
-    "app.domains.compute.domain.models",
-    "PySparkApp", "PySparkAppStatus", "SourceType",
-    "WriteMode", "SCDType", "CDCType",
-)
-_register(
     "app.domains.ingestion.domain.models",
     "DltPipeline", "DltPipelineStatus", "WriteDisposition",
     "IncrementalCursorType",
@@ -109,14 +104,7 @@ __all__ = [
     "ResourcePermission",
     "RoleHierarchy",
     "role_permissions",
-    # PySpark models (legacy)
-    "PySparkApp",
-    "PySparkAppStatus",
-    "SourceType",
-    "WriteMode",
-    "SCDType",
-    "CDCType",
-    # dlt Pipeline models (new)
+    # dlt Pipeline models
     "DltPipeline",
     "DltPipelineStatus",
     "WriteDisposition",

@@ -40,7 +40,7 @@ DEFAULT_TENANT = {
         "features": {
             "ai_assistant": True,
             "dbt_operations": True,
-            "pyspark_apps": True,
+            "data_pipelines": True,
         },
     },
 }

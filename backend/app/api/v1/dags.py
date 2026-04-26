@@ -28,12 +28,6 @@ from app.domains.orchestration.api.dag_routes import (  # noqa: F401
     list_dag_runs,
     get_dag_run,
     get_task_logs,
-    generate_pyspark_dag,
-    generate_pyspark_pipeline_dag,
-    list_pyspark_dags,
-    get_pyspark_dag,
-    delete_pyspark_dag,
-    update_pyspark_dag_schedule,
 )
 
 __all__ = [
@@ -50,10 +44,4 @@ __all__ = [
     "list_dag_runs",
     "get_dag_run",
     "get_task_logs",
-    "generate_pyspark_dag",
-    "generate_pyspark_pipeline_dag",
-    "list_pyspark_dags",
-    "get_pyspark_dag",
-    "delete_pyspark_dag",
-    "update_pyspark_dag_schedule",
 ]

@@ -11,6 +11,6 @@
 export * from './api'
 export * from './models'
 export * from './datasource'
-export * from './pyspark'
+export * from './pipeline'
 export * from './infrastructure'
 export * from './dashboard'

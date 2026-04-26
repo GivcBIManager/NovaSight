@@ -20,11 +20,11 @@ import { useToast } from '@/components/ui/use-toast'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/contexts/AuthContext'
 import { dagService, TaskConfig } from '@/services/dagService'
-import { pysparkApi } from '@/services/pysparkApi'
+import { pipelineService } from '@/services/pipelineService'
 import { CronBuilder } from '@/components/ui/cron-builder'
 import { DagCodePreview } from '@/components/ui/dag-code-preview'
 import { PageHeader } from '@/components/common'
-import type { PySparkApp } from '@/types/pyspark'
+import type { Pipeline } from '@/types/pipeline'
 import {
   Play,
   ArrowLeft,
@@ -80,7 +80,7 @@ export function DagBuilderPage() {
   const tenantSlug = tenantName.toLowerCase().replace(/\s+/g, '-')
   
   // PySpark apps for Spark Submit task configuration
-  const [pysparkApps, setPysparkApps] = useState<PySparkApp[]>([])
+  const [pysparkApps, setPysparkApps] = useState<Pipeline[]>([])
   const [loadingApps, setLoadingApps] = useState(false)
   const [taskConfigs, setTaskConfigs] = useState<Record<string, Record<string, unknown>>>({})
   
@@ -97,16 +97,16 @@ export function DagBuilderPage() {
     }
   }, [tenantSlug])
   
-  // Load PySpark apps on component mount
+  // Load dlt pipelines on component mount
   useEffect(() => {
     setLoadingApps(true)
-    pysparkApi.list({ per_page: 100 })
+    pipelineService.list({ per_page: 100 })
       .then(response => {
-        console.log('[DagBuilder] PySpark apps loaded:', response)
-        setPysparkApps(response.apps || [])
+        console.log('[DagBuilder] Pipelines loaded:', response)
+        setPysparkApps(response.pipelines || [])
       })
       .catch(err => {
-        console.error('Failed to load PySpark apps:', err)
+        console.error('Failed to load pipelines:', err)
       })
       .finally(() => setLoadingApps(false))
   }, [])

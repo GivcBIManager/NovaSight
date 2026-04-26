@@ -7,6 +7,7 @@ Flask-RESTX namespace for natural language query endpoint documentation.
 
 from flask import request, g
 from flask_restx import Namespace, Resource, fields
+from flask_jwt_extended import jwt_required
 from app.platform.auth.decorators import authenticated, tenant_required, require_permission
 from app.platform.auth.identity import get_current_identity
 from app.platform.async_utils import async_route

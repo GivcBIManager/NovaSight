@@ -152,7 +152,7 @@ export function PipelineList() {
             Extract data from sources into your Iceberg data lake
           </p>
         </div>
-        <Button onClick={() => navigate('/pipelines/new')}>
+        <Button onClick={() => navigate('/app/pipelines/new')}>
           <Plus className="h-4 w-4 mr-2" />
           Create Pipeline
         </Button>

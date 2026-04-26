@@ -88,14 +88,14 @@ class DltPipeline(db.Model):
     
     # Status
     status = db.Column(
-        SQLEnum(DltPipelineStatus),
+        SQLEnum(DltPipelineStatus, values_callable=lambda e: [m.value for m in e]),
         default=DltPipelineStatus.DRAFT,
         nullable=False
     )
     
     # Source Configuration
     source_type = db.Column(
-        SQLEnum(SourceType),
+        SQLEnum(SourceType, values_callable=lambda e: [m.value for m in e]),
         default=SourceType.TABLE,
         nullable=False
     )
@@ -114,14 +114,14 @@ class DltPipeline(db.Model):
     # Incremental Loading Configuration
     incremental_cursor_column = db.Column(String(255), nullable=True)
     incremental_cursor_type = db.Column(
-        SQLEnum(IncrementalCursorType),
+        SQLEnum(IncrementalCursorType, values_callable=lambda e: [m.value for m in e]),
         default=IncrementalCursorType.NONE,
         nullable=False
     )
     
     # Write Disposition
     write_disposition = db.Column(
-        SQLEnum(WriteDisposition),
+        SQLEnum(WriteDisposition, values_callable=lambda e: [m.value for m in e]),
         default=WriteDisposition.APPEND,
         nullable=False
     )

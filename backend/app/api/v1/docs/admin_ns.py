@@ -7,6 +7,7 @@ Flask-RESTX namespace for administration endpoint documentation.
 
 from flask import request
 from flask_restx import Namespace, Resource, fields
+from flask_jwt_extended import jwt_required
 from app.platform.auth.jwt_handler import get_jwt_identity_dict
 from app.platform.auth.decorators import authenticated, tenant_required, require_roles
 import logging

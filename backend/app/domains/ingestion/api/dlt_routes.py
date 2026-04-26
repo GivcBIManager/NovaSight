@@ -8,6 +8,7 @@ REST API endpoints for dlt pipeline management.
 from flask import Blueprint, request, jsonify
 from pydantic import ValidationError as PydanticValidationError
 
+from app.extensions import db
 from app.platform.auth.decorators import authenticated
 from app.platform.auth.identity import get_current_identity
 from app.platform.tenant.context import get_current_tenant_id
@@ -31,7 +32,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-dlt_pipeline_bp = Blueprint("dlt_pipelines", __name__, url_prefix="/api/v1/pipelines")
+dlt_pipeline_bp = Blueprint("dlt_pipelines", __name__, url_prefix="/pipelines")
 
 
 def _get_service() -> DltPipelineService:
@@ -135,6 +136,11 @@ def create_pipeline():
         raise ValidationError(str(e))
     except DltPipelineValidationError as e:
         raise ValidationError(str(e))
+    except Exception as e:
+        db.session.rollback()
+        if "is not present in table" in str(e):
+            raise ValidationError("Invalid connection_id: connection not found")
+        raise
 
 
 @dlt_pipeline_bp.route("/<uuid:pipeline_id>", methods=["PUT"])

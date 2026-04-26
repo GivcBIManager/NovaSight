@@ -86,79 +86,6 @@ services:
       - novasight-network
 
   # ============================================
-  # Apache Spark - Distributed Processing
-  # ============================================
-  spark-master:
-    build:
-      context: .
-      dockerfile: docker/spark/Dockerfile
-      args:
-        SPARK_IMAGE: ${SPARK_IMAGE:-apache/spark:3.5.4}
-    container_name: ${SPARK_MASTER_CONTAINER:-novasight-spark-master}
-    restart: unless-stopped
-    ports:
-      - "8080:${SPARK_MASTER_WEBUI_PORT:-8080}"   # Spark Master Web UI
-      - "${SPARK_MASTER_PORT:-7077}:7077"          # Spark Master port
-      - "6066:6066"                                # Spark REST Submission API
-    environment:
-      SPARK_NO_DAEMONIZE: "true"
-      SPARK_MASTER_OPTS: "-Dspark.master.rest.enabled=true -Dspark.master.rest.port=6066"
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
-    volumes:
-      - spark_data:/opt/spark/work
-      - ./infrastructure/spark/jars:/opt/spark/jars/custom
-      - ./infrastructure/spark/jobs:/opt/spark/jobs
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - novasight-network
-
-  spark-worker-1:
-    build:
-      context: .
-      dockerfile: docker/spark/Dockerfile
-      args:
-        SPARK_IMAGE: ${SPARK_IMAGE:-apache/spark:3.5.4}
-    container_name: novasight-spark-worker-1
-    restart: unless-stopped
-    depends_on:
-      - spark-master
-    environment:
-      SPARK_NO_DAEMONIZE: "true"
-      SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-2G}
-      SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-2}
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-    volumes:
-      - ./infrastructure/spark/jars:/opt/spark/jars/custom
-      - ./infrastructure/spark/jobs:/opt/spark/jobs
-    networks:
-      - novasight-network
-
-  spark-worker-2:
-    build:
-      context: .
-      dockerfile: docker/spark/Dockerfile
-      args:
-        SPARK_IMAGE: ${SPARK_IMAGE:-apache/spark:3.5.4}
-    container_name: novasight-spark-worker-2
-    restart: unless-stopped
-    depends_on:
-      - spark-master
-    environment:
-      SPARK_NO_DAEMONIZE: "true"
-      SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-2G}
-      SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-2}
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-    volumes:
-      - ./infrastructure/spark/jars:/opt/spark/jars/custom
-      - ./infrastructure/spark/jobs:/opt/spark/jobs
-    networks:
-      - novasight-network
-
-  # ============================================
   # MinIO - S3-compatible Object Storage
   # ============================================
   minio:
@@ -166,7 +93,7 @@ services:
     container_name: novasight-minio
     restart: unless-stopped
     ports:
-      - "9000:9000"   # S3 API
+      - "9002:9000"   # S3 API (host 9002 to avoid conflict with ClickHouse native on 9000)
       - "9001:9001"   # MinIO Console
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -221,11 +148,6 @@ services:
       REDIS_URL: redis://redis:6379/0
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_PORT: 9000
-      SPARK_MASTER_URL: ${SPARK_MASTER_URL:-spark://spark-master:7077}
-      SPARK_SSH_HOST: ${SPARK_SSH_HOST:-}
-      SPARK_EXECUTION_MODE: ${SPARK_EXECUTION_MODE:-docker}
-      SPARK_MASTER_CONTAINER: ${SPARK_MASTER_CONTAINER:-novasight-spark-master}
-      SPARK_REST_URL: ${SPARK_REST_URL:-http://spark-master:6066}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       SECRET_KEY: dev-secret-key-change-in-production
       JWT_SECRET_KEY: jwt-dev-secret-key-change-in-production
@@ -237,7 +159,6 @@ services:
       DAGSTER_PORT: 3000
       DAGSTER_GRAPHQL_URL: http://localhost:3000/graphql
       DAGSTER_MAX_CONCURRENT_RUNS: 10
-      DAGSTER_SPARK_CONCURRENCY_LIMIT: 3
       DAGSTER_DBT_CONCURRENCY_LIMIT: 2
       DAGSTER_DLT_CONCURRENCY_LIMIT: 5
       DAGSTER_COMPUTE_LOGS_DIR: /var/dagster/logs
@@ -253,7 +174,6 @@ services:
       ICEBERG_CATALOG_URL: postgresql://novasight:novasight@postgres:5432/novasight_platform
     volumes:
       - ./backend:/app
-      - ./infrastructure/spark/jobs:/opt/spark/jobs
       - ./dbt:/app/dbt
       - dlt_pipelines:/opt/dlt/pipelines
     depends_on:
@@ -305,8 +225,6 @@ volumes:
     name: novasight-clickhouse-data
   redis_data:
     name: novasight-redis-data
-  spark_data:
-    name: novasight-spark-data
   ollama_data:
     name: novasight-ollama-data
   minio_data:

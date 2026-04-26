@@ -7,6 +7,7 @@ Flask-RESTX namespace for data connection endpoint documentation.
 
 from flask import request, jsonify
 from flask_restx import Namespace, Resource, fields
+from flask_jwt_extended import jwt_required
 from app.platform.auth.jwt_handler import get_jwt_identity_dict
 from app.domains.datasources.application.connection_service import ConnectionService
 from app.platform.auth.decorators import authenticated, require_roles, tenant_required

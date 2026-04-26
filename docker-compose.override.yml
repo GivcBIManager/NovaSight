@@ -38,16 +38,3 @@ services:
       - ./frontend:/app
       - /app/node_modules
     command: npm run dev -- --host 0.0.0.0
-
-  # ============================================
-  # Spark - Resources for Dev
-  # ============================================
-  spark-worker-1:
-    environment:
-      SPARK_WORKER_MEMORY: 3G
-      SPARK_WORKER_CORES: 2
-
-  spark-worker-2:
-    environment:
-      SPARK_WORKER_MEMORY: 3G
-      SPARK_WORKER_CORES: 2

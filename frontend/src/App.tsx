@@ -28,10 +28,9 @@ import { JobBuilderPage } from '@/pages/orchestration/JobBuilderPage'
 import { JobDetailPage } from '@/pages/orchestration/JobDetailPage'
 import { DataSourcesPage, DataSourceDetailPage } from '@/features/datasources'
 import { 
-  PySparkAppsListPage, 
-  PySparkAppBuilderPage, 
-  PySparkAppDetailPage 
-} from '@/pages/pyspark'
+  PipelinesListPage, 
+  PipelineBuilderPage, 
+} from '@/pages/pipelines'
 import { SemanticModelsPage, ModelDetailPage } from '@/features/semantic'
 import { EnhancedDbtStudioPage, ModelDetailPage as DbtModelDetailPage } from '@/features/dbt-studio'
 import { DashboardsListPage, DashboardBuilderPage } from '@/features/dashboards'
@@ -118,11 +117,15 @@ function App() {
             <Route path="jobs/:jobId/edit" element={<JobBuilderPage />} />
             <Route path="jobs/:jobId/runs" element={<JobDetailPage />} />
             
-            {/* PySpark Apps */}
-            <Route path="pyspark" element={<PySparkAppsListPage />} />
-            <Route path="pyspark/new" element={<PySparkAppBuilderPage />} />
-            <Route path="pyspark/:id" element={<PySparkAppDetailPage />} />
-            <Route path="pyspark/:id/edit" element={<PySparkAppBuilderPage />} />
+            {/* Data Pipelines */}
+            <Route path="pipelines" element={<PipelinesListPage />} />
+            <Route path="pipelines/new" element={<PipelineBuilderPage />} />
+            <Route path="pipelines/:id" element={<PipelinesListPage />} />
+            <Route path="pipelines/:id/edit" element={<PipelineBuilderPage />} />
+            
+            {/* Legacy PySpark redirect */}
+            <Route path="pyspark" element={<Navigate to="/app/pipelines" replace />} />
+            <Route path="pyspark/*" element={<Navigate to="/app/pipelines" replace />} />
             
             {/* Semantic Layer */}
             <Route path="semantic" element={<SemanticModelsPage />} />
@@ -181,7 +184,7 @@ function App() {
           <Route path="/datasources" element={<Navigate to="/app/datasources" replace />} />
           <Route path="/dags" element={<Navigate to="/app/dags" replace />} />
           <Route path="/jobs" element={<Navigate to="/app/jobs" replace />} />
-          <Route path="/pyspark" element={<Navigate to="/app/pyspark" replace />} />
+          <Route path="/pyspark" element={<Navigate to="/app/pipelines" replace />} />
           <Route path="/semantic" element={<Navigate to="/app/semantic" replace />} />
           <Route path="/dashboards" element={<Navigate to="/app/dashboards" replace />} />
           <Route path="/query" element={<Navigate to="/app/query" replace />} />

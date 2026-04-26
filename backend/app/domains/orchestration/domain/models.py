@@ -61,12 +61,11 @@ class TriggerRule(enum.Enum):
 
 class TaskType(enum.Enum):
     """Task type enumeration."""
-    SPARK_SUBMIT = "spark_submit"  # Legacy - to be removed in Phase 6
-    DLT_RUN = "dlt_run"  # New dlt-based extraction
+    DLT_RUN = "dlt_run"
     DBT_RUN = "dbt_run"
     DBT_TEST = "dbt_test"
-    DBT_RUN_LAKE = "dbt_run_lake"  # dbt-duckdb for Iceberg reads
-    DBT_RUN_WAREHOUSE = "dbt_run_warehouse"  # dbt-clickhouse for marts
+    DBT_RUN_LAKE = "dbt_run_lake"
+    DBT_RUN_WAREHOUSE = "dbt_run_warehouse"
     SQL_QUERY = "sql_query"
     EMAIL = "email"
     HTTP_SENSOR = "http_sensor"

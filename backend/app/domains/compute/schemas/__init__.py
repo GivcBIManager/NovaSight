@@ -1,1 +1,0 @@
-"""Compute domain - schemas layer."""

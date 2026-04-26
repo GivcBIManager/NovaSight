@@ -28,7 +28,7 @@ const mainNavigation = [
 
 // Orchestrate your Data section
 const orchestrateNavigation = [
-  { name: 'Extract & Load', href: '/app/pyspark', icon: Upload },
+  { name: 'Extract & Load', href: '/app/pipelines', icon: Upload },
   { name: 'Scheduling', href: '/app/jobs', icon: Calendar },
   { name: 'Transform', href: '/app/dbt-studio', icon: GitBranch },
   { name: 'SQL Editor', href: '/app/sql', icon: Code2 },
